@@ -1,11 +1,21 @@
-# Memory Bank · Active Context
-**Current Focus (Sprint 1):** Complete Phase‑1 & Phase‑2 checklist items.
 
-### Recent Changes
-* PRD finalized and saved (30 Jun 2025).
-* Checklist generated; ready for implementation.
+# Active Context – The "Now"
 
-### Next Steps
-1. Set up Electron scaffold.
-2. Implement persona YAML loader.
-3. Configure interview folder watcher.
+*Last updated: 2025-06-30*
+
+## Sprint Day 1 Focus (Monday)
+- Scaffold Electron + TypeScript monorepo
+- Add packaging scripts & ESLint/Prettier pipeline
+- Create `personas.yml`, seed mock transcripts
+- Stub Tray menu with "Drop PRD" zone
+- Set up n8n Docker container & initial file‑watch flow
+
+## Recent Changes
+_None yet – project freshly initialised._
+
+## Next Steps
+- Implement LangGraph embed/classify pipeline
+- Define SQLite schema & Drizzle migrations
+- Unit‑test CRUD for personas and PRDs
+- Emit "TranscriptIngested" IPC event to Tray
+

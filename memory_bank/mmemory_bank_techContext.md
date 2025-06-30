@@ -1,19 +1,29 @@
-# Memory Bank · Tech Context
-| Stack Layer | Choice | Notes |
-|-------------|--------|-------|
-| Desktop shell | **Electron 28** | Familiar Chromium env; cross‑platform. |
-| Workflow engine | **n8n** | File‑watch & cron; JSON nodes. |
-| AI orchestration | **LangGraph 0.3** | Persona RAG chains & scoring. |
-| Embeddings | **OpenAI text‑embedding‑3‑small** | Fallback: `all‑MiniLM‑L6‑v2`. |
-| DB | **SQLite 3** + SQLCipher | AES‑256 at rest. |
-| Language | **TypeScript 5** everywhere | Shared types via `ts‑up`. |
-| UI | React 19 + Tailwind + shadcn/ui | Reusable components. |
 
-### Dev Setup
-* Node 20+, pnpm workspace.
-* `scripts/dev` runs Electron + LangGraph hot‑reload.
-* `scripts/package` produces macOS `.dmg` & Windows installer.
+# Tech Context – The "With What"
 
-### Constraints
-* No cloud DB.
-* All Slack/Jira tokens stored via OS keychain helpers.
+*Last updated: 2025-06-30*
+
+## Runtime Stack
+| Layer | Tech | Notes |
+| --- | --- | --- |
+| Desktop Shell | Electron 28 + Node 20 |  Tray menu, notifications, auto‑update stub |
+| Front‑end UI | React 19 + Vite + Tailwind + shadcn/ui |  Dark/light ready |
+| Workflow Orchestrator | n8n (Docker) | File‑watch & OAuth flows |
+| AI / RAG | LangGraph + OpenAI GPT‑4o |  Embeddings + persona chat |
+| Storage | SQLite + Drizzle ORM |  Vector extension optional |
+| Encryption | AES‑256‑GCM via `crypto` module | Token vault |
+| Packaging | Electron‑Builder |  Scripts for Mac, Win, Linux |
+| Testing | Jest + Playwright |  Unit + smoke tests |
+| CI/CD | GitHub Actions |  Lint, unit tests, package artifacts |
+
+## Development Setup
+1. `pnpm install` (monorepo)
+2. `docker compose up n8n`
+3. `pnpm dev` — launches Tray + Core in watch mode
+4. **Env vars:** `OPENAI_API_KEY`, `NOTION_TOKEN`, `SLACK_BOT_TOKEN`, `LINEAR_API_KEY`
+
+## Constraints
+- Entire app must run offline (except optional API calls) for demo judges.
+- Delivery deadline: **Thu 2025-06-30 20:00** local time.
+- No cloud DBs; all data → local filesystem.
+
