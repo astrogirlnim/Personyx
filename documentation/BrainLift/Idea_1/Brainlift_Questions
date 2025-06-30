@@ -1,0 +1,98 @@
+    # DeskLink – Market & User Discovery Questions
+
+This document outlines key discovery questions to help define the target audience, workflow pain points, competitive positioning, and user stories for the DeskLink project.
+
+---
+
+## 🧠 1. User Profile
+
+- Who is the primary user of DeskLink?  
+  _(e.g., developer, marketer, writer, researcher, student, creative professional)_
+  The primary users for DeskLink are developers and researchers, with knowledge workers as a strong secondary group. Developers benefit from code project integration and context-switching support, while researchers gain from organizing diverse research materials. Marketers and creative professionals are less ideal due to their specialized needs, though they could be secondary users with targeted integrations. To validate this, conduct primary research with developers and researchers, focusing on their workflow pain points and openness to AI-driven solutions like DeskLink.
+
+- Are they typically working solo or in a team context?
+The primary users for DeskLink are developers and researchers, with knowledge workers as a strong secondary group. Developers benefit from code project integration and context-switching support, while researchers gain from organizing diverse research materials. Marketers and creative professionals are less ideal due to their specialized needs, though they could be secondary users with targeted integrations. To validate this, conduct primary research with developers and researchers, focusing on their workflow pain points and openness to AI-driven solutions like DeskLink.
+
+
+- What kind of output do they produce daily?  
+  _(e.g., code, documentation, strategy docs, marketing content, research notes)_
+Developers primarily produce code, documentation, commits/pull requests, notes, and configuration files daily, with a mix of solo and team-oriented outputs. Researchers generate research notes, literature reviews, data analyses, reports/papers, presentations, and collaboration documents, leaning more toward solo outputs but with team-sharing components. DeskLink’s semantic context bundles are well-suited to organize these diverse, multi-format outputs, particularly for solo workflows, by linking code, notes, datasets, and browser tabs. For team contexts, integrating with collaborative tools (e.g., GitHub for developers, Google Drive for researchers) could enhance DeskLink’s utility.
+
+Recommendation: Prioritize DeskLink features that organize and link individual outputs (e.g., code files, research notes) with browser tabs, as these are the most frequent daily deliverables. To validate specific output types and their formats, consider primary research (e.g., a Typeform survey asking developers and researchers about their most common file types and tools). 
+
+---
+
+## 💼 2. Workflow Habits
+
+- What 3–5 apps or tools do they typically use during a focused work session?  
+  _(e.g., Brave, Cursor, Notes, Roam, Terminal, Finder, Slack)_
+  Developers typically use Visual Studio Code, Brave/Chrome, Terminal, GitHub, and Notion/Obsidian during focused work sessions, focusing on code and documentation. Researchers use Chrome/Brave, Notion/Evernote/Obsidian, Zotero/Mendeley, Excel/RStudio, and Google Docs/Slack, emphasizing notes, data, and reports. DeskLink’s semantic linking can effectively bundle these tools’ outputs (e.g., code, notes, PDFs, datasets) with browser tabs, enhancing solo productivity. For maximum impact, prioritize compatibility with VS Code and Zotero, and consider browser extensions for tab integration.
+
+Recommendation: Validate tool usage with a quick survey (e.g., via Typeform) targeting developers and researchers to confirm these tools and identify niche preferences. If you want, I can help craft a survey or explore specific integrations for DeskLink. Let me know! 
+
+- Where do they lose context most often?  
+  - Switching between tools?
+  - Forgetting what tabs were open?
+  - Losing track of project files?
+  - Losing notes or scratchpad thoughts?
+Developers: Lose context most often when switching between tools (e.g., VS Code, Terminal, Chrome) and forgetting what tabs were open (e.g., Stack Overflow, GitHub). Losing track of project files and notes are secondary concerns.
+
+Researchers: Lose context most when forgetting what tabs were open (e.g., PubMed, Google Scholar), followed by switching between tools (e.g., Notion, Zotero, RStudio) and losing notes or scratchpad thoughts. Project file loss is less critical due to reference managers.
+DeskLink Fit: DeskLink’s semantic context bundles are ideally suited to address tab overload and tool-switching by linking browser tabs, code, notes, and files (e.g., .py, PDFs). For researchers, bundling notes with tabs and files is also critical. Integrating with browsers and tools like VS Code or Zotero would maximize impact.
+Recommendation: Prioritize DeskLink features that capture and bundle browser tabs with tools like VS Code (for developers) and Zotero/Notion (for researchers). A browser extension for tab management and tool integrations (e.g., GitHub, Google Docs) would enhance context retention. 
+
+- Do they currently use any system to track context?  
+  _(e.g., bookmarking, tab managers, Roam/Obsidian, manual folders, sticky notes)_
+Recommendation: Focus DeskLink on integrating with Obsidian (for notes), Zotero (for researchers’ files), and VS Code/Git (for developers’ code), while prioritizing browser tab management via an extension. Validate current systems with a Typeform survey asking developers and researchers about their context-tracking tools and gaps. 
+---
+
+## 😫 3. Pain Points
+
+- What’s the most frustrating part of returning to a project after a break?
+
+- What causes the most friction when trying to reconstruct past work sessions?
+
+- Where do they feel disorganized or overwhelmed during deep work?
+
+---
+
+## 🕵️ 4. Market Landscape
+
+- Have they used tools like Raycast, Reflect, Mem, Slapdash, Tab Manager Plus?
+
+- What do these tools do well, and where do they fall short?
+
+- Are users discussing this problem (context loss, session recovery) in forums or dev communities?
+
+---
+
+## 🧬 5. Differentiators
+
+- What would make DeskLink uniquely useful compared to other tools?
+
+- Should DeskLink work offline or locally for privacy-conscious users?
+
+- What would make users say, "This is magic"?
+
+---
+
+## 📈 6. Success Criteria
+
+- What concrete outcome tells a user that DeskLink is helping them?
+
+- What behavior or metrics would prove it's delivering value?
+  - Sessions resumed
+  - Time saved reopening files/tabs
+  - # of re-linked notes/files used
+
+---
+
+## 🚀 7. Future Potential
+
+- Should DeskLink integrate with specific tools like GitHub, Obsidian, Notion, or JIRA?
+
+- Would users want to manually curate bundles, or keep it fully automatic?
+
+- Could DeskLink become a visual timeline of their productivity?
+
+---
