@@ -23,14 +23,6 @@
       "@renderer/*": ["src/renderer/*"]
     }
   },
-  "include": [
-    "./**/*",
-    "../shared/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "../../dist",
-    "../../build",
-    "../../release"
-  ]
-} 
+  "include": ["./**/*", "../shared/**/*"],
+  "exclude": ["node_modules", "../../dist", "../../build", "../../release"]
+}

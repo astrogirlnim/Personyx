@@ -12,16 +12,19 @@ PersonaPulse is a desktop application that prevents wasted engineering sprints b
 ## ✨ Features
 
 ### 🎯 **Evidence-First Development**
+
 - **PRD Evidence Scoring**: 0-100 score based on real user evidence coverage
 - **Persona Classification**: Auto-categorize feedback by user personas
 - **Risk Prevention**: Block unfounded features before development starts
 
 ### 🖥️ **Desktop-First Experience**
+
 - **System Tray Integration**: Always accessible without disrupting workflow
 - **Local-First Architecture**: All data encrypted and stored locally
 - **Cross-Platform**: Native support for macOS, Windows, and Linux
 
 ### 🔗 **Workflow Integration**
+
 - **VS Code Extension**: Chat with personas directly in your editor
 - **Slack Bot**: Get evidence scores with `/evidence-check` command
 - **Notion Export**: Generate evidence scorecards for roadmap reviews
@@ -37,7 +40,7 @@ PersonaPulse/
 │   │   ├── main.ts     # App initialization & IPC handlers
 │   │   ├── tray.ts     # System tray management
 │   │   └── utils/      # Logging & utilities
-│   ├── renderer/       # Tray UI (Electron Renderer)  
+│   ├── renderer/       # Tray UI (Electron Renderer)
 │   │   ├── App.tsx     # React application
 │   │   ├── main.tsx    # React entry point
 │   │   └── styles/     # Tailwind CSS + design system
@@ -50,6 +53,7 @@ PersonaPulse/
 ```
 
 ### 🔄 **Process Communication**
+
 - **Main Process**: Business logic, file system access, database operations
 - **Renderer Process**: React UI for evidence analysis and persona chat
 - **IPC Layer**: Type-safe communication via Electron's IPC system
@@ -57,7 +61,8 @@ PersonaPulse/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Node.js** 20.0+ 
+
+- **Node.js** 20.0+
 - **pnpm** 8.0+ (recommended package manager)
 - **Git** for version control
 
@@ -96,29 +101,33 @@ pnpm format           # Auto-format code with Prettier
 # Packaging
 pnpm package          # Create distributable packages
 pnpm package:mac      # macOS-specific build
-pnpm package:win      # Windows-specific build  
+pnpm package:win      # Windows-specific build
 pnpm package:linux    # Linux-specific build
 ```
 
 ## 🛠️ Technology Stack
 
 ### **Core Framework**
+
 - **[Electron 28](https://electronjs.org/)** - Cross-platform desktop apps
 - **[TypeScript 5.3+](https://typescriptlang.org/)** - Type-safe development
 - **[Node.js 20](https://nodejs.org/)** - Runtime environment
 
 ### **Frontend (Renderer Process)**
+
 - **[React 18](https://react.dev/)** - UI framework
 - **[Vite 5](https://vitejs.dev/)** - Fast build tool and dev server
 - **[Tailwind CSS 3+](https://tailwindcss.com/)** - Utility-first CSS framework
 
 ### **Development Tools**
+
 - **[pnpm](https://pnpm.io/)** - Fast, disk space efficient package manager
 - **[ESLint](https://eslint.org/)** - Code linting and quality
 - **[Prettier](https://prettier.io/)** - Code formatting
 - **[Electron Builder](https://electron.build/)** - Packaging and distribution
 
 ### **Future Integrations** (Upcoming Phases)
+
 - **[LangGraph](https://langchain-ai.github.io/langgraph/)** - AI workflow orchestration
 - **[n8n](https://n8n.io/)** - Workflow automation
 - **[SQLite + SQLCipher](https://sqlcipher.net/)** - Encrypted local database
@@ -127,24 +136,28 @@ pnpm package:linux    # Linux-specific build
 ## 📊 Development Progress
 
 ### ✅ **Phase 1: Foundation** (1/4 Complete)
+
 - [x] **1.1** Electron 28 + TypeScript monorepo scaffolding
-- [ ] **1.2** Cross-platform build/packaging scripts + ESLint+Prettier  
+- [ ] **1.2** Cross-platform build/packaging scripts + ESLint+Prettier
 - [ ] **1.3** Tray menu with PRD drop zone
 - [ ] **1.4** Auto-update mechanism placeholder
 
 ### 🔄 **Phase 2: Data Layer** (Upcoming)
+
 - [ ] **2.1** SQLite schema + encrypted token vault
 - [ ] **2.2** Evidence scoring engine
 - [ ] **2.3** Embedding retrieval API
 - [ ] **2.4** Secure file ingest system
 
-### 🔄 **Phase 3: Interface Layer** (Upcoming)  
+### 🔄 **Phase 3: Interface Layer** (Upcoming)
+
 - [ ] **3.1** Core tray UI screens
 - [ ] **3.2** Notion scorecard prototype
 - [ ] **3.3** VS Code extension stub
 - [ ] **3.4** Slack bot MVP
 
 ### 🔄 **Phase 4: Implementation Layer** (Upcoming)
+
 - [ ] **4.1** Evidence scorecard export
 - [ ] **4.2** Linear evidence-score labeler
 - [ ] **4.3** Security & maintenance utilities
@@ -155,7 +168,7 @@ pnpm package:linux    # Linux-specific build
 PersonaPulse implements the **DeskResearcher Design System** with:
 
 - **Evidence Blue** (`#2F80ED`) - Primary actions and scores
-- **Persona Green** (`#27AE60`) - Success states and persona tags  
+- **Persona Green** (`#27AE60`) - Success states and persona tags
 - **Insight Violet** (`#9B51E0`) - Data visualization accents
 - **Risk Red** (`#EB5757`) - Warnings and low evidence alerts
 - **Typography**: Inter + JetBrains Mono for clean, readable interfaces
@@ -172,6 +185,7 @@ PersonaPulse implements the **DeskResearcher Design System** with:
 We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) for details.
 
 ### Development Workflow
+
 1. **Fork** the repository
 2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
 3. **Commit** your changes (`git commit -m 'feat: add amazing feature'`)
@@ -179,10 +193,12 @@ We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.
 5. **Open** a Pull Request
 
 ### Commit Message Format
+
 We use [Conventional Commits](https://conventionalcommits.org/):
+
 ```
 feat: add new evidence scoring algorithm
-fix: resolve tray icon display issue  
+fix: resolve tray icon display issue
 docs: update installation instructions
 refactor: improve IPC type safety
 ```
@@ -190,7 +206,7 @@ refactor: improve IPC type safety
 ## 📝 Documentation
 
 - **[Architecture Guide](docs/architecture.md)** - System design and patterns
-- **[API Reference](docs/api.md)** - IPC events and data structures  
+- **[API Reference](docs/api.md)** - IPC events and data structures
 - **[Development Guide](docs/development.md)** - Local setup and workflows
 - **[Deployment Guide](docs/deployment.md)** - Building and distribution
 
@@ -201,6 +217,7 @@ refactor: improve IPC type safety
 **Target Release**: Q2 2025
 
 ### Immediate Roadmap
+
 - [ ] Complete Phase 1 Foundation (cross-platform packaging)
 - [ ] Implement Phase 2 Data Layer (SQLite + evidence scoring)
 - [ ] MVP demo-ready build for FlowGenius competition
@@ -218,7 +235,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **FlowGenius Competition** - Inspiration for the desktop-first approach
-- **DeskResearcher Design System** - Visual identity and UX patterns  
+- **DeskResearcher Design System** - Visual identity and UX patterns
 - **Electron Community** - Cross-platform desktop framework
 - **React + TypeScript Ecosystem** - Modern development tools
 
@@ -226,4 +243,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for product teams who ship features users actually want.**
 
-For questions, issues, or feature requests, please [open an issue](https://github.com/astrogirlnim/PersonaPulse/issues) or reach out to the team. 
+For questions, issues, or feature requests, please [open an issue](https://github.com/astrogirlnim/PersonaPulse/issues) or reach out to the team.

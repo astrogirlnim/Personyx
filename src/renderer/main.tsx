@@ -20,4 +20,4 @@ root.render(
   </React.StrictMode>
 );
 
-console.log('🎨 PersonaPulse renderer initialized'); 
+console.log('🎨 PersonaPulse renderer initialized');

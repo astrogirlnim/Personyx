@@ -70,10 +70,10 @@ export interface IPCEvents {
     title: string;
     evidenceScores: EvidenceScore[];
   };
-  'app-ready': {};
-  'error': {
+  'app-ready': Record<string, never>;
+  error: {
     message: string;
-    details?: any;
+    details?: unknown;
   };
 
   // Renderer to Main
@@ -88,8 +88,8 @@ export interface IPCEvents {
     message: string;
     context?: string;
   };
-  'get-personas': {};
-  'app-quit': {};
+  'get-personas': Record<string, never>;
+  'app-quit': Record<string, never>;
 }
 
 // Configuration and settings
@@ -136,14 +136,16 @@ export interface LogEntry {
   message: string;
   timestamp: Date;
   source: 'main' | 'renderer';
-  details?: any;
+  details?: unknown;
 }
 
 // Event callback types
-export type IPCEventCallback<T extends keyof IPCEvents> = (data: IPCEvents[T]) => void;
+export type IPCEventCallback<T extends keyof IPCEvents> = (
+  data: IPCEvents[T]
+) => void;
 
 // Tray menu actions
-export type TrayAction = 
+export type TrayAction =
   | 'show-window'
   | 'import-prd'
   | 'view-scores'
@@ -155,4 +157,4 @@ export interface TrayMenuItem {
   label: string;
   enabled: boolean;
   accelerator?: string;
-} 
+}

@@ -20,7 +20,7 @@ DeskResearcher **blocks costly feature bets** by scoring every PRD against real�
 
 ## 1 · Purpose
 
-> *Give makers an evidence‑backed go/no‑go gate that prevents wasted sprints before the first line of code — and provides live persona feedback while they build.*
+> _Give makers an evidence‑backed go/no‑go gate that prevents wasted sprints before the first line of code — and provides live persona feedback while they build._
 
 ---
 
@@ -108,4 +108,3 @@ DeskResearcher **blocks costly feature bets** by scoring every PRD against real�
 ### TL;DR
 
 **Phase‑1 proves we can stop one bad feature before demo day — saving two engineering sprints — inside the tools teams already use.**
-

@@ -21,14 +21,6 @@
       "@main/*": ["src/main/*"]
     }
   },
-  "include": [
-    "./**/*",
-    "../shared/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "../../dist",
-    "../../build",
-    "../../release"
-  ]
-} 
+  "include": ["./**/*", "../shared/**/*"],
+  "exclude": ["node_modules", "../../dist", "../../build", "../../release"]
+}

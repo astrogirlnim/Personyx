@@ -21,10 +21,10 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     console.log('🚀 PersonaPulse App component mounted');
-    
+
     // TODO: Set up IPC communication with main process
     // TODO: Load initial data
-    
+
     setAppState(prev => ({ ...prev, isReady: true }));
   }, []);
 
@@ -58,7 +58,6 @@ export function App(): JSX.Element {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
           {/* Import Section */}
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -67,11 +66,23 @@ export function App(): JSX.Element {
               </h2>
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
                 <div className="text-gray-500 dark:text-gray-400">
-                  <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg
+                    className="mx-auto h-12 w-12 mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
                   </svg>
                   <p className="text-lg font-medium mb-2">Drop your PRD here</p>
-                  <p className="text-sm">or click to browse for .md or .txt files</p>
+                  <p className="text-sm">
+                    or click to browse for .md or .txt files
+                  </p>
                 </div>
               </div>
             </div>
@@ -79,7 +90,6 @@ export function App(): JSX.Element {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            
             {/* Evidence Scores */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -99,10 +109,9 @@ export function App(): JSX.Element {
                 <p className="text-sm">Loading personas...</p>
               </div>
             </div>
-
           </div>
         </div>
       </main>
     </div>
   );
-} 
+}

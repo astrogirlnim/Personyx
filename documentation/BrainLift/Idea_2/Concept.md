@@ -34,6 +34,7 @@ By bridging the gap between engineering and user context, DeskResearcher elimina
 Build a functioning proof-of-concept that delivers real value in <4 days and meets grading expectations:
 
 #### ✅ Core Features
+
 - **Tray/Desktop UI**: Cross-platform Electron or Tauri app with a minimal insight feed.
 - **Authentication Setup**:
   - OAuth 2.0 for Slack & Intercom (read-only)
@@ -58,6 +59,7 @@ Build a functioning proof-of-concept that delivers real value in <4 days and mee
 Demonstrate polish, UX empathy, and extensibility for future growth.
 
 #### 🧩 Enhancements
+
 - **Weekly Digest View**:
   - Auto-generate a weekly PDF or Markdown summary of “Top 3 areas users mention”
 - **Sentiment Tags & Severity Heatmap**:
@@ -74,14 +76,14 @@ Demonstrate polish, UX empathy, and extensibility for future growth.
 
 ## ✅ Grading Alignment
 
-| Requirement                    | Addressed In Phase |
-|-------------------------------|---------------------|
-| Desktop-native productivity   | Phase 1             |
-| Intelligent automation (LangGraph/LLM) | Phase 1         |
-| Connects to user data sources | Phase 1             |
-| Offers personal utility       | Phase 1             |
-| Clear privacy model + config  | Phase 1             |
-| Advanced UX polish            | Phase 2 (optional)  |
+| Requirement                            | Addressed In Phase |
+| -------------------------------------- | ------------------ |
+| Desktop-native productivity            | Phase 1            |
+| Intelligent automation (LangGraph/LLM) | Phase 1            |
+| Connects to user data sources          | Phase 1            |
+| Offers personal utility                | Phase 1            |
+| Clear privacy model + config           | Phase 1            |
+| Advanced UX polish                     | Phase 2 (optional) |
 
 ---
 
@@ -91,4 +93,3 @@ Demonstrate polish, UX empathy, and extensibility for future growth.
 - Config panel with secure OAuth/API Key flows
 - Live demo showing syncing and summary logic
 - Optional: VS Code plugin, PDF digest, inline insights
-

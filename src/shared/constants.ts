@@ -16,7 +16,7 @@ export const IPC_CHANNELS = {
   PRD_IMPORTED: 'prd-imported',
   APP_READY: 'app-ready',
   ERROR: 'error',
-  
+
   // Renderer to Main
   IMPORT_PRD: 'import-prd',
   GET_EVIDENCE_SCORES: 'get-evidence-scores',
@@ -176,4 +176,4 @@ export const URL_SCHEMES = {
 } as const;
 
 // Note: Environment detection (IS_DEV, IS_PROD, IS_MAC, etc.) moved to main process files
-// since renderer process doesn't have access to process object 
+// since renderer process doesn't have access to process object

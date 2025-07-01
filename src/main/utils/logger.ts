@@ -6,7 +6,7 @@
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
-import { LOGGING, PATHS } from '@shared/constants';
+import { PATHS } from '@shared/constants';
 import type { LogLevel, LogEntry } from '@shared/types';
 
 export class Logger {
@@ -24,11 +24,11 @@ export class Logger {
   private setupLogFile(): void {
     const userDataPath = app.getPath('userData');
     const logsDir = join(userDataPath, PATHS.LOGS);
-    
+
     if (!existsSync(logsDir)) {
       mkdirSync(logsDir, { recursive: true });
     }
-    
+
     const logFileName = `${this.source}-${new Date().toISOString().split('T')[0]}.log`;
     this.logFilePath = join(logsDir, logFileName);
   }
@@ -36,35 +36,35 @@ export class Logger {
   /**
    * Log debug message
    */
-  public debug(message: string, details?: any): void {
+  public debug(message: string, details?: unknown): void {
     this.log('debug', message, details);
   }
 
   /**
    * Log info message
    */
-  public info(message: string, details?: any): void {
+  public info(message: string, details?: unknown): void {
     this.log('info', message, details);
   }
 
   /**
    * Log warning message
    */
-  public warn(message: string, details?: any): void {
+  public warn(message: string, details?: unknown): void {
     this.log('warn', message, details);
   }
 
   /**
    * Log error message
    */
-  public error(message: string, details?: any): void {
+  public error(message: string, details?: unknown): void {
     this.log('error', message, details);
   }
 
   /**
    * Core logging method
    */
-  private log(level: LogLevel, message: string, details?: any): void {
+  private log(level: LogLevel, message: string, details?: unknown): void {
     const logEntry: LogEntry = {
       level,
       message,
@@ -77,7 +77,7 @@ export class Logger {
     const emoji = this.getLogEmoji(level);
     const timestamp = logEntry.timestamp.toISOString();
     const formattedMessage = `${emoji} [${timestamp}] [${this.source.toUpperCase()}] ${message}`;
-    
+
     if (details) {
       console.log(formattedMessage, details);
     } else {
@@ -93,11 +93,16 @@ export class Logger {
    */
   private getLogEmoji(level: LogLevel): string {
     switch (level) {
-      case 'debug': return '🐛';
-      case 'info': return 'ℹ️';
-      case 'warn': return '⚠️';
-      case 'error': return '❌';
-      default: return '📝';
+      case 'debug':
+        return '🐛';
+      case 'info':
+        return 'ℹ️';
+      case 'warn':
+        return '⚠️';
+      case 'error':
+        return '❌';
+      default:
+        return '📝';
     }
   }
 
@@ -120,4 +125,4 @@ export class Logger {
   public getLogFilePath(): string {
     return this.logFilePath;
   }
-} 
+}

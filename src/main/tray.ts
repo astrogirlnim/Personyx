@@ -5,7 +5,7 @@
 import { Tray, Menu, nativeImage, dialog } from 'electron';
 import { join } from 'path';
 import { personaPulseApp } from './main';
-import { TRAY_MENU, FILE_FILTERS } from '@shared/constants';
+import { FILE_FILTERS } from '@shared/constants';
 import type { Logger } from './utils/logger';
 import type { TrayAction } from '@shared/types';
 
@@ -23,20 +23,20 @@ export class TrayManager {
   public async initialize(): Promise<void> {
     try {
       this.logger.info('🎯 Initializing system tray');
-      
+
       // Create tray icon
       const icon = this.createTrayIcon();
       this.tray = new Tray(icon);
-      
+
       // Set tray tooltip
       this.tray.setToolTip('PersonaPulse - Evidence-based PRD analysis');
-      
+
       // Create context menu
       this.updateContextMenu();
-      
+
       // Handle click events
       this.setupEventHandlers();
-      
+
       this.logger.info('✅ System tray initialized');
     } catch (error) {
       this.logger.error('❌ Failed to initialize tray', error);
@@ -50,7 +50,7 @@ export class TrayManager {
   private createTrayIcon(): Electron.NativeImage {
     // Try to load icon from assets, fall back to generated icon
     const iconPath = join(__dirname, '../../assets/tray-icon.png');
-    
+
     try {
       return nativeImage.createFromPath(iconPath);
     } catch {
@@ -153,10 +153,12 @@ export class TrayManager {
     try {
       const result = await dialog.showOpenDialog({
         title: 'Import PRD',
-        filters: [{
-          name: FILE_FILTERS.PRD.name,
-          extensions: [...FILE_FILTERS.PRD.extensions]
-        }],
+        filters: [
+          {
+            name: FILE_FILTERS.PRD.name,
+            extensions: [...FILE_FILTERS.PRD.extensions],
+          },
+        ],
         properties: ['openFile'],
       });
 
@@ -177,7 +179,9 @@ export class TrayManager {
     if (!this.tray) return;
 
     // TODO: Change icon color/overlay based on evidence scores
-    this.logger.debug(`🎯 Tray status updated: ${hasLowScores ? 'warning' : 'normal'}`);
+    this.logger.debug(
+      `🎯 Tray status updated: ${hasLowScores ? 'warning' : 'normal'}`
+    );
   }
 
   /**
@@ -190,4 +194,4 @@ export class TrayManager {
       this.logger.info('🗑 Tray destroyed');
     }
   }
-} 
+}
