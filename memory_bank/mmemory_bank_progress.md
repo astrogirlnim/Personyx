@@ -167,12 +167,24 @@ All foundation components validated and ready for SQLite schema implementation.
 - **Icon Verification**: ✅ Tray icon loads properly from new background-free design
 - **Development Workflow**: ✅ Both `npm run electron` and `./dev.sh` working perfectly
 
+### ✅ Icon Display Issues Fixed (2025-07-01 12:03AM)
+
+- **Tray Icon Size Issue**: ✅ Fixed - Original 1024x1024 icon was too large for system tray
+- **Proper Icon Sizing**: ✅ Created 20x20px and 40x40px versions using `sips` for macOS tray requirements
+- **Tray Icon Path**: ✅ Updated `tray.ts` to use `tray-icon-20.png` (977 bytes vs 910KB original)
+- **Window Icon Missing**: ✅ Fixed - Added `nativeImage` import and icon property to `BrowserWindow` config
+- **Icon Assets**: ✅ Both sized icons properly copied to `dist/assets/` for runtime access
+- **Display Verification**: ✅ System tray icon now appears correctly in macOS menu bar
+- **Window Icon**: ✅ App icon displays correctly in taskbar/dock instead of default Electron icon
+
 ### 📱 Current App Status
 
-- **System Tray**: ✅ Fully functional with new icon
+- **System Tray**: ✅ Fully functional with properly sized custom icon visible in menu bar
+- **Window Icon**: ✅ Custom icon displays in taskbar/dock (no more default Electron icon)
 - **Auto-updater**: ✅ Initialized and ready
 - **Core Services**: ✅ All systems operational
 - **Development Environment**: ✅ Hot reload and debugging working
 - **Build Pipeline**: ✅ Clean builds with proper asset handling
+- **Icon Assets**: ✅ Multiple sizes available (1024x1024, 40x40, 20x20) for different use cases
 
 **Ready for Phase 2.1 Development** 🚀
