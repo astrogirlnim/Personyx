@@ -189,19 +189,28 @@ jobs:
 
       - name: 🔧 Setup Python 3.11 for native modules (Windows)
         if: matrix.platform == 'win'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Configure Python for Windows native modules
+        if: matrix.platform == 'win'
         run: |
-          echo "🔧 Setting up Python 3.11 for Windows native module compilation..."
-          # Install Python 3.11 specifically for Windows
-          choco install python --version=3.11.9 --force --yes
-          # Update PATH to ensure Python 3.11 is found first
-          echo "C:\Python311" >> $env:GITHUB_PATH
-          echo "C:\Python311\Scripts" >> $env:GITHUB_PATH
+          echo "🔧 Configuring Python 3.11 for Windows native module compilation..."
+          # Get Python installation path
+          $pythonPath = (Get-Command python).Source
+          $pythonDir = Split-Path $pythonPath -Parent
+          echo "Python found at: $pythonPath"
+          echo "Python directory: $pythonDir"
+
           # Configure Python paths for node-gyp
-          echo "PYTHON=C:\Python311\python.exe" >> $env:GITHUB_ENV
-          echo "npm_config_python=C:\Python311\python.exe" >> $env:GITHUB_ENV
+          echo "PYTHON=$pythonPath" >> $env:GITHUB_ENV
+          echo "npm_config_python=$pythonPath" >> $env:GITHUB_ENV
+
           # Verify Python setup
-          refreshenv
-          C:\Python311\python.exe --version
+          python --version
+          python -c "import sys; print('Python executable:', sys.executable)"
+          python -c "import distutils; print('✅ distutils available')" 2>$null || echo "⚠️ distutils not available but setuptools should work"
           echo "✅ Windows Python 3.11 setup completed successfully"
 
       # ---------- Install Dependencies (Python 3.11 now available) ----------
