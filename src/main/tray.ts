@@ -473,7 +473,7 @@ export class TrayManager {
   }
 
   /**
-   * Process a dropped PRD file
+   * Process a dropped PRD file (Phase 2.3 - Secure File Ingest)
    */
   private async processDroppedFile(filePath: string): Promise<void> {
     try {
@@ -483,15 +483,23 @@ export class TrayManager {
       const validation = this.validatePRDFile(filePath);
       if (!validation.valid) {
         this.logger.error(`❌ Invalid file: ${validation.error}`);
+        this.showDropNotification(filePath, false);
         return;
       }
 
-      // Show notification
+      // Trigger the actual PRD processing pipeline through main process
+      this.logger.info(`🚀 Sending file to secure ingest service: ${filePath}`);
+
+      // Emit IPC event to main process for file processing
+      const mainWindow = personyxApp.getMainWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send('import-prd', { filePath });
+      }
+
+      // Show initial notification (final result will come from main process)
       this.showDropNotification(filePath, true);
 
-      // TODO: In Phase 2, this will trigger the actual PRD processing pipeline
-      // For now, just log the successful drop
-      this.logger.info(`✅ PRD file accepted: ${filePath}`);
+      this.logger.info(`✅ PRD file sent to processing pipeline: ${filePath}`);
     } catch (error) {
       this.logger.error('❌ Failed to process dropped file', error);
       this.showDropNotification(filePath, false);
