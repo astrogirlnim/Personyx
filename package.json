@@ -33,6 +33,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "setup-api-key": "npm run build && node scripts/setup-api-key.js",
+    "test-embedding-api": "npm run build && node scripts/test-embedding-api.js",
     "db:migrate": "drizzle-kit generate && drizzle-kit push",
     "db:validate": "npm run build:main && pnpm rebuild better-sqlite3 && node scripts/validate-database.js",
     "fix-native-modules": "bash scripts/fix-native-modules.sh",

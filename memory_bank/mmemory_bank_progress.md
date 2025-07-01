@@ -23,11 +23,11 @@ _(Source: Personyx v0.1 checklist)_
     [X] 1.4 Auto‑update placeholder ✅ COMPLETE
     [X] 1.4 Persona definitions & mock data ✅ COMPLETE
 
-🔄 Phase 2 – Data Layer (2/4 Complete)
+🔄 Phase 2 – Data Layer (3/4 Complete)
     [X] 2.1 SQLite schema + encrypted token vault ✅ COMPLETE (Phase 1.2)
     [X] 2.2 Evidence Score Engine ✅ COMPLETE ✅ VERIFIED (Phase 2.1)
-    [ ] 2.3 Embedding retrieval API → NEXT PRIORITY
-    [ ] 2.4 Secure file ingest system
+    [X] 2.3 Embedding retrieval API ✅ COMPLETE (Phase 2.2)
+    [ ] 2.4 Secure file ingest system → NEXT PRIORITY
 
 🔄 Phase 3 – Interface Layer (Not Started)
     [ ] 3.1 Core tray UI screens

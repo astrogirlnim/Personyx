@@ -66,12 +66,12 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **1.3** Persist score snapshots with timestamp to SQLite. ✅ COMPLETE
 - [x] **1.4** Add unit tests covering min, max, and median score paths. ✅ COMPLETE
 
-[ ] **Feature 2 – Embedding Retrieval API**
+[X] **Feature 2 – Embedding Retrieval API** ✅ COMPLETE
 
-- [ ] **2.1** Provide a similarity-search endpoint that returns top-N persona pull-quotes.
-- [ ] **2.2** Optimise vector-index (e.g., HNSW) for < 200 ms queries.
-- [ ] **2.3** Cache repeat queries in memory for 5 min sliding window.
-- [ ] **2.4** Document API in OpenAPI 3 format.
+- [x] **2.1** Provide a similarity-search endpoint that returns top-N persona pull-quotes. ✅ COMPLETE
+- [x] **2.2** Optimise vector-index (e.g., HNSW) for < 200 ms queries. ✅ COMPLETE
+- [x] **2.3** Cache repeat queries in memory for 5 min sliding window. ✅ COMPLETE
+- [x] **2.4** Document API in OpenAPI 3 format. ✅ COMPLETE
 
 [ ] **Feature 3 – Secure File Ingest**
 
@@ -86,6 +86,15 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [ ] **4.2** Add row-level encryption tests for sensitive tables.
 - [ ] **4.3** Provide CLI `db:seed --mock` for local demos.
 - [ ] **4.4** Generate ER-diagram in `/docs`.
+
+[ ] **Feature 5 – Hybrid AI Key Management & Cloud Option**
+
+- [ ] **5.1** Add UI for API key management (enter OpenAI key or select Personyx Cloud)
+- [ ] **5.2** Implement secure local storage for user-provided keys (AES-256-GCM)
+- [ ] **5.3** Integrate Personyx Cloud API endpoint for managed embedding (with auth)
+- [ ] **5.4** Add logic to select between local and cloud embedding at runtime
+- [ ] **5.5** Update onboarding and settings UI to guide user through both options
+- [ ] **5.6** Document privacy, billing, and troubleshooting for both modes
 
 ---
 
@@ -120,6 +129,11 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [ ] **4.2** Fetch score + top quotes and post an interactive message.
 - [ ] **4.3** Provide install script with required OAuth scopes.
 - [ ] **4.4** Add rate-limit guard (max 3 calls / min / workspace).
+
+[ ] Add "AI Service" or "Manage API Key" modal to Tray UI/Settings
+
+- [ ] Show error/warning if no key/service is configured
+- [ ] Allow switching between local and cloud AI modes at any time
 
 ---
 
