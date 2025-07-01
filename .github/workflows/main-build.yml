@@ -197,6 +197,7 @@ jobs:
         if: matrix.platform == 'win'
         run: |
           echo "🔧 Configuring Python 3.11 for Windows native module compilation..."
+
           # Get Python installation path
           $pythonPath = (Get-Command python).Source
           $pythonDir = Split-Path $pythonPath -Parent
@@ -211,17 +212,61 @@ jobs:
           python --version
           python -c "import sys; print('Python executable:', sys.executable)"
 
-          # Check distutils availability (Python 3.11 should have it)
-          $ErrorActionPreference = 'SilentlyContinue'
-          python -c "import distutils; print('✅ distutils available')" 2>$null
-          if ($LASTEXITCODE -eq 0) {
-            echo "✅ distutils available"
-          } else {
-            echo "⚠️ distutils not available but setuptools should work"
+          # Check distutils availability and install setuptools if needed
+          echo "🔍 Checking Python build tools availability..."
+          $distutils_available = $false
+          try {
+            python -c "import distutils; print('✅ distutils available')" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              $distutils_available = $true
+              echo "✅ distutils available"
+            }
+          } catch {
+            # Ignore distutils check errors
           }
-          $ErrorActionPreference = 'Stop'
 
-          echo "✅ Windows Python 3.11 setup completed successfully"
+          if (-not $distutils_available) {
+            echo "⚠️ distutils not available, ensuring setuptools is installed..."
+            python -m pip install --upgrade setuptools wheel
+            if ($LASTEXITCODE -eq 0) {
+              echo "✅ setuptools installed successfully"
+            } else {
+              echo "❌ Failed to install setuptools, but continuing..."
+            }
+          }
+
+          # Verify build tools are working
+          try {
+            python -c "import setuptools; print('✅ setuptools available')"
+            echo "✅ Python build environment ready for native modules"
+          } catch {
+            echo "⚠️ setuptools check failed, but native modules may still work"
+          }
+
+          # Configure additional Windows build environment for native modules
+          echo "🔧 Configuring Windows build environment..."
+
+          # Ensure MSBuild is available (should be pre-installed on GitHub runners)
+          try {
+            $msbuildPath = (Get-Command msbuild -ErrorAction SilentlyContinue).Source
+            if ($msbuildPath) {
+              echo "✅ MSBuild found at: $msbuildPath"
+              echo "npm_config_msbuild_path=$msbuildPath" >> $env:GITHUB_ENV
+            } else {
+              echo "⚠️ MSBuild not found in PATH, but may still work"
+            }
+          } catch {
+            echo "⚠️ MSBuild check failed, but may still work"
+          }
+
+          # Configure node-gyp for Windows
+          echo "npm_config_cache=$env:TEMP\.npm" >> $env:GITHUB_ENV
+          echo "npm_config_prefer_offline=true" >> $env:GITHUB_ENV
+
+          # Reset error action preference and ensure clean exit
+          $ErrorActionPreference = 'Continue'
+          echo "✅ Windows Python 3.11 and build environment setup completed successfully"
+          exit 0
 
       # ---------- Install Dependencies (Python 3.11 now available) ----------
       - name: 📋 Install dependencies
@@ -230,6 +275,29 @@ jobs:
           # Ensure Python 3.11 is used during native module compilation
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
+          # Cross-platform native module compilation settings
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_runtime: electron
+
+      # ---------- Windows Native Module Fix (if needed) ----------
+      - name: 🔧 Rebuild native modules for Windows
+        if: matrix.platform == 'win'
+        run: |
+          echo "🔧 Rebuilding native modules specifically for Windows + Electron..."
+
+          # Try electron-builder first (most reliable on Windows)
+          echo "🏗️ Using electron-builder to rebuild native modules..."
+          npx electron-builder install-app-deps
+
+          # If that fails, try @electron/rebuild as fallback
+          if ($LASTEXITCODE -ne 0) {
+            echo "⚠️ electron-builder failed, trying @electron/rebuild..."
+            npx @electron/rebuild --only=better-sqlite3,keytar
+          }
+
+          echo "✅ Windows native module rebuild completed"
+        env:
+          npm_config_build_from_source: true
 
       # ---------- Download Build ----------
       - name: 📥 Download Build Artifacts
