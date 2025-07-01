@@ -3,7 +3,14 @@
  * Entry point for the Electron main process (Core)
  */
 
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  nativeImage,
+} from 'electron';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { TrayManager } from './tray';
@@ -85,6 +92,7 @@ class PersonyxApp {
       minWidth: UI.MIN_WINDOW_WIDTH,
       minHeight: UI.MIN_WINDOW_HEIGHT,
       show: false,
+      icon: nativeImage.createFromPath(join(__dirname, '../../build/icon.png')),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,

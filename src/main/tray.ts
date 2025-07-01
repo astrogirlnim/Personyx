@@ -62,7 +62,7 @@ export class TrayManager {
    */
   private createTrayIcon(): Electron.NativeImage {
     // Try to load icon from assets, fall back to generated icon
-    const iconPath = join(__dirname, '../../assets/tray-icon.png');
+    const iconPath = join(__dirname, '../../assets/tray-icon-20.png');
 
     this.logger.debug(`📱 Attempting to load tray icon from: ${iconPath}`);
 
