@@ -12,6 +12,34 @@ import { randomUUID } from 'crypto';
 
 const logger = new Logger('embedding-repo');
 
+// Enhanced interfaces for pagination and filtering
+export interface EmbeddingPaginationOptions {
+  offset?: number;
+  limit?: number;
+}
+
+export interface EmbeddingFilters {
+  model?: string;
+  evidenceId?: string;
+  minDimensions?: number;
+  maxDimensions?: number;
+  createdAfter?: Date;
+  createdBefore?: Date;
+}
+
+export interface EmbeddingPaginatedResult<T> {
+  data: T[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface EmbeddingSortOptions {
+  field: 'createdAt' | 'dimensions' | 'chunkIndex';
+  direction: 'asc' | 'desc';
+}
+
 export class EmbeddingRepo {
   /**
    * Create a new embedding record
@@ -89,6 +117,199 @@ export class EmbeddingRepo {
       return results;
     } catch (error) {
       logger.error('❌ Failed to find embeddings by evidence ID', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all embeddings with advanced pagination and filtering
+   */
+  async listWithPagination(options?: {
+    pagination?: EmbeddingPaginationOptions;
+    filters?: EmbeddingFilters;
+    sort?: EmbeddingSortOptions;
+  }): Promise<EmbeddingPaginatedResult<Embedding>> {
+    logger.debug('📋 Listing embeddings with pagination/filtering', options);
+
+    try {
+      const {
+        pagination = { offset: 0, limit: 50 },
+        filters = {},
+        sort = { field: 'createdAt', direction: 'desc' },
+      } = options || {};
+
+      // Get all embeddings first (for now - can be optimized with SQL later)
+      const allEmbeddings = await this.list();
+
+      // Apply filters
+      let filteredEmbeddings = allEmbeddings;
+
+      if (filters.model) {
+        filteredEmbeddings = filteredEmbeddings.filter(
+          e => e.model === filters.model
+        );
+      }
+
+      if (filters.evidenceId) {
+        filteredEmbeddings = filteredEmbeddings.filter(
+          e => e.evidenceId === filters.evidenceId
+        );
+      }
+
+      if (filters.minDimensions) {
+        filteredEmbeddings = filteredEmbeddings.filter(
+          e => e.dimensions >= filters.minDimensions!
+        );
+      }
+
+      if (filters.maxDimensions) {
+        filteredEmbeddings = filteredEmbeddings.filter(
+          e => e.dimensions <= filters.maxDimensions!
+        );
+      }
+
+      if (filters.createdAfter) {
+        filteredEmbeddings = filteredEmbeddings.filter(
+          e => new Date(e.createdAt) >= filters.createdAfter!
+        );
+      }
+
+      if (filters.createdBefore) {
+        filteredEmbeddings = filteredEmbeddings.filter(
+          e => new Date(e.createdAt) <= filters.createdBefore!
+        );
+      }
+
+      // Apply sorting
+      filteredEmbeddings.sort((a, b) => {
+        let aVal, bVal;
+        switch (sort.field) {
+          case 'createdAt':
+            aVal = new Date(a.createdAt).getTime();
+            bVal = new Date(b.createdAt).getTime();
+            break;
+          case 'dimensions':
+            aVal = a.dimensions;
+            bVal = b.dimensions;
+            break;
+          case 'chunkIndex':
+            aVal = a.chunkIndex;
+            bVal = b.chunkIndex;
+            break;
+          default:
+            aVal = new Date(a.createdAt).getTime();
+            bVal = new Date(b.createdAt).getTime();
+        }
+
+        if (sort.direction === 'desc') {
+          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+        } else {
+          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        }
+      });
+
+      const total = filteredEmbeddings.length;
+      const offset = pagination.offset || 0;
+      const limit = pagination.limit || 50;
+
+      // Apply pagination
+      const paginatedData = filteredEmbeddings.slice(offset, offset + limit);
+      const hasMore = offset + limit < total;
+
+      const result: EmbeddingPaginatedResult<Embedding> = {
+        data: paginatedData,
+        total,
+        offset,
+        limit,
+        hasMore,
+      };
+
+      logger.debug(
+        `✅ Found ${paginatedData.length}/${total} embeddings with pagination`,
+        {
+          offset,
+          limit,
+          hasMore,
+        }
+      );
+
+      return result;
+    } catch (error) {
+      logger.error('❌ Failed to list embeddings with pagination', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get embeddings by model with pagination
+   */
+  async findByModelPaginated(
+    model: string,
+    options?: EmbeddingPaginationOptions
+  ): Promise<EmbeddingPaginatedResult<Embedding>> {
+    logger.debug(
+      `🔍 Finding embeddings by model with pagination: ${model}`,
+      options
+    );
+
+    return this.listWithPagination({
+      pagination: options,
+      filters: { model },
+    });
+  }
+
+  /**
+   * Get embedding statistics
+   */
+  async getStatistics(): Promise<{
+    totalEmbeddings: number;
+    uniqueModels: string[];
+    averageDimensions: number;
+    totalEvidence: number;
+    oldestEmbedding?: Date;
+    newestEmbedding?: Date;
+  }> {
+    logger.debug('📊 Getting embedding statistics...');
+
+    try {
+      const allEmbeddings = await this.list();
+
+      if (allEmbeddings.length === 0) {
+        return {
+          totalEmbeddings: 0,
+          uniqueModels: [],
+          averageDimensions: 0,
+          totalEvidence: 0,
+        };
+      }
+
+      const uniqueModels = [...new Set(allEmbeddings.map(e => e.model))];
+      const averageDimensions =
+        allEmbeddings.reduce((sum, e) => sum + e.dimensions, 0) /
+        allEmbeddings.length;
+      const uniqueEvidence = [...new Set(allEmbeddings.map(e => e.evidenceId))];
+
+      const dates = allEmbeddings.map(e => new Date(e.createdAt));
+      const oldestEmbedding = new Date(
+        Math.min(...dates.map(d => d.getTime()))
+      );
+      const newestEmbedding = new Date(
+        Math.max(...dates.map(d => d.getTime()))
+      );
+
+      const stats = {
+        totalEmbeddings: allEmbeddings.length,
+        uniqueModels,
+        averageDimensions: Math.round(averageDimensions),
+        totalEvidence: uniqueEvidence.length,
+        oldestEmbedding,
+        newestEmbedding,
+      };
+
+      logger.debug('✅ Embedding statistics calculated', stats);
+      return stats;
+    } catch (error) {
+      logger.error('❌ Failed to get embedding statistics', error);
       throw error;
     }
   }

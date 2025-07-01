@@ -20,6 +20,31 @@ interface PersonaInput {
 
 const logger = new Logger('persona-repo');
 
+// Enhanced interfaces for pagination and filtering
+export interface PaginationOptions {
+  offset?: number;
+  limit?: number;
+}
+
+export interface PersonaFilters {
+  name?: string;
+  keyword?: string;
+  searchTerm?: string; // Search across name, description, goal
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface PersonaSortOptions {
+  field: 'name' | 'createdAt' | 'updatedAt';
+  direction: 'asc' | 'desc';
+}
+
 export class PersonaRepo {
   /**
    * Create a new persona
@@ -228,6 +253,180 @@ export class PersonaRepo {
       return count;
     } catch (error) {
       logger.error('❌ Failed to count personas', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List personas with pagination and filtering
+   */
+  async listWithPagination(options?: {
+    pagination?: PaginationOptions;
+    filters?: PersonaFilters;
+    sort?: PersonaSortOptions;
+  }): Promise<PaginatedResult<Persona>> {
+    try {
+      logger.debug('📋 Listing personas with pagination/filtering', options);
+
+      const {
+        pagination = { offset: 0, limit: 10 },
+        filters = {},
+        sort = { field: 'name', direction: 'asc' },
+      } = options || {};
+
+      // Get all personas first (for now - can be optimized with SQL later)
+      const allPersonas = await this.list();
+
+      // Apply filters
+      let filteredPersonas = allPersonas;
+
+      if (filters.name) {
+        filteredPersonas = filteredPersonas.filter(p =>
+          p.name.toLowerCase().includes(filters.name!.toLowerCase())
+        );
+      }
+
+      if (filters.keyword) {
+        filteredPersonas = filteredPersonas.filter(p => {
+          const keywords = Array.isArray(p.keywords) ? p.keywords : [];
+          return keywords.some(k =>
+            k.toLowerCase().includes(filters.keyword!.toLowerCase())
+          );
+        });
+      }
+
+      if (filters.searchTerm) {
+        const searchLower = filters.searchTerm.toLowerCase();
+        filteredPersonas = filteredPersonas.filter(
+          p =>
+            p.name.toLowerCase().includes(searchLower) ||
+            p.description.toLowerCase().includes(searchLower) ||
+            p.primaryGoal.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Apply sorting
+      filteredPersonas.sort((a, b) => {
+        let aVal, bVal;
+        switch (sort.field) {
+          case 'name':
+            aVal = a.name.toLowerCase();
+            bVal = b.name.toLowerCase();
+            break;
+          case 'createdAt':
+            aVal = new Date(a.createdAt).getTime();
+            bVal = new Date(b.createdAt).getTime();
+            break;
+          case 'updatedAt':
+            aVal = new Date(a.updatedAt).getTime();
+            bVal = new Date(b.updatedAt).getTime();
+            break;
+          default:
+            aVal = a.name.toLowerCase();
+            bVal = b.name.toLowerCase();
+        }
+
+        if (sort.direction === 'desc') {
+          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+        } else {
+          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        }
+      });
+
+      const total = filteredPersonas.length;
+      const offset = pagination.offset || 0;
+      const limit = pagination.limit || 10;
+
+      // Apply pagination
+      const paginatedData = filteredPersonas.slice(offset, offset + limit);
+      const hasMore = offset + limit < total;
+
+      const result: PaginatedResult<Persona> = {
+        data: paginatedData,
+        total,
+        offset,
+        limit,
+        hasMore,
+      };
+
+      logger.debug(
+        `✅ Found ${paginatedData.length}/${total} personas with pagination`,
+        {
+          offset,
+          limit,
+          hasMore,
+        }
+      );
+
+      return result;
+    } catch (error) {
+      logger.error('❌ Failed to list personas with pagination', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Advanced search with multiple filters
+   */
+  async search(query: {
+    text?: string;
+    keywords?: string[];
+    createdAfter?: Date;
+    createdBefore?: Date;
+    limit?: number;
+  }): Promise<Persona[]> {
+    try {
+      logger.debug('🔍 Advanced persona search', query);
+
+      const allPersonas = await this.list();
+      let results = allPersonas;
+
+      // Text search across multiple fields
+      if (query.text) {
+        const searchText = query.text.toLowerCase();
+        results = results.filter(
+          p =>
+            p.name.toLowerCase().includes(searchText) ||
+            p.description.toLowerCase().includes(searchText) ||
+            p.primaryGoal.toLowerCase().includes(searchText) ||
+            p.mainPainPoint.toLowerCase().includes(searchText)
+        );
+      }
+
+      // Keyword matching
+      if (query.keywords && query.keywords.length > 0) {
+        results = results.filter(p => {
+          const personaKeywords = Array.isArray(p.keywords) ? p.keywords : [];
+          return query.keywords!.some(searchKeyword =>
+            personaKeywords.some(pk =>
+              pk.toLowerCase().includes(searchKeyword.toLowerCase())
+            )
+          );
+        });
+      }
+
+      // Date range filtering
+      if (query.createdAfter) {
+        results = results.filter(
+          p => new Date(p.createdAt) >= query.createdAfter!
+        );
+      }
+
+      if (query.createdBefore) {
+        results = results.filter(
+          p => new Date(p.createdAt) <= query.createdBefore!
+        );
+      }
+
+      // Apply limit
+      if (query.limit && query.limit > 0) {
+        results = results.slice(0, query.limit);
+      }
+
+      logger.debug(`✅ Advanced search found ${results.length} personas`);
+      return results;
+    } catch (error) {
+      logger.error('❌ Failed to perform advanced persona search', error);
       throw error;
     }
   }
