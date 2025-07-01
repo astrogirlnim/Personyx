@@ -1,19 +1,36 @@
-# Memory Bank · Project Brief
-**Project:** DeskResearcher — Persona‑Lens  
-**Date:** 2025-06-30
+# DeskResearcher – Project Brief
 
-## Core Requirements
-1. Desktop application (Electron/Tauri) that assists developers & PMs with persona‑based evidence before & during coding.
-2. Must ingest customer‑interview transcripts, classify insights by persona, and compute an Evidence Score for any PRD.
-3. Provide a tray dashboard, VS Code command, and chat interface powered by LangGraph RAG.
-4. Run fully local: data encrypted at rest, no external storage beyond optional Slack webhook.
-5. Deliver Phase‑1 core loop within 4‑day FlowGenius sprint; subsequent “Wow” features are stretch.
+_Last updated: 2025-06-30_
 
-## Goals (Sprint 1)
-* Block low‑evidence features (score < 60).
-* Give in‑editor persona feedback ≤ 2 s latency.
-* Auto‑ingest interviews within 5 min of drop‑in.
+## Vision
 
----
+DeskResearcher stops costly feature bets **before** code is written by demanding real‑user evidence for every Product Requirements Document (PRD).
 
-_This file is the single source of truth for project scope._
+## Mission Objectives
+
+1. **Evidence Gate:** Provide a go/no‑go score (0‑100) for each PRD based on persona coverage.
+2. **Time Savings:** Save at least _1.5 engineering sprints per month_ by rejecting low‑evidence features.
+3. **Seamless Workflow:** Embed insights inside the desktop tools product teams already use (Tray, VS Code, Notion, Slack, Linear).
+
+## Primary Users & Personas
+
+- **Solo Founder** – Needs rapid validation with minimal overhead.
+- **Agency Marketer** – Optimises multiple client funnels and demands proof of ROI.
+
+## Key KPIs
+
+| Metric                      | Target             |
+| --------------------------- | ------------------ |
+| Features rejected pre‑build | ≥ 25 % per quarter |
+| Engineering sprints saved   | ≥ 1.5 / month      |
+| Avg. PRD Evidence Score     | ≥ 80               |
+
+## MVP (4‑day Sprint) Scope
+
+Ship the items marked _Phase 1 – Foundation_ through _Phase 4 – Implementation Layer_ in the **PersonaPulse v0.1** checklist. Anything labelled _Wow & Impress_ is post‑sprint.
+
+## Out‑of‑Scope (Sprint‑1)
+
+- Multi‑source ingest (App‑store reviews, analytics CSV)
+- Renewal‑risk radar & Proactive tray alerts
+- Retro Wizard for failed features

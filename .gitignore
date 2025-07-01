@@ -121,6 +121,7 @@ dist/
 out/
 release/
 build/
+dist-test/
 
 # macOS
 .DS_Store
