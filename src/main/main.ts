@@ -20,6 +20,7 @@ import { initDatabase, closeDatabase } from './db/connection';
 import { testTokenVault } from './security/tokenVault';
 import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
 import { PersonaLoader } from './services/PersonaLoader';
+import { EmbeddingRetrievalService } from './services/EmbeddingRetrievalService';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type { IPCEvents, ImportResult } from '@shared/types';
 
@@ -33,6 +34,7 @@ class PersonyxApp {
   private autoUpdater: AutoUpdater | null = null;
   private workflowOrchestrator: WorkflowOrchestrator | null = null;
   private personaLoader: PersonaLoader | null = null;
+  private embeddingRetrievalService: EmbeddingRetrievalService | null = null;
   private logger: Logger;
   private isAppReady = false;
 
@@ -259,6 +261,17 @@ class PersonyxApp {
       }
     );
 
+    // Similarity search
+    ipcMain.handle(
+      'similarity-search',
+      async (_, data: IPCEvents['similarity-search']) => {
+        this.logger.info(
+          `🔍 Similarity search: ${data.query.substring(0, 50)}...`
+        );
+        return await this.handleSimilaritySearch(data);
+      }
+    );
+
     // App quit
     ipcMain.on(IPC_CHANNELS.APP_QUIT, () => {
       this.logger.info('🛑 Quit request from renderer');
@@ -323,6 +336,11 @@ class PersonyxApp {
       this.personaLoader = new PersonaLoader();
       const personaCount = await this.personaLoader.loadPersonas();
       this.logger.info(`✅ Loaded ${personaCount} personas from configuration`);
+
+      // Initialize embedding retrieval service (Phase 2.2)
+      this.logger.info('🔍 Initializing embedding retrieval service...');
+      this.embeddingRetrievalService = new EmbeddingRetrievalService();
+      this.logger.info('✅ Embedding retrieval service initialized');
 
       this.logger.info('✅ Core services initialized');
     } catch (error) {
@@ -426,6 +444,43 @@ class PersonyxApp {
       };
     } catch (error) {
       this.logger.error('❌ Chat failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle similarity search request
+   */
+  private async handleSimilaritySearch(data: IPCEvents['similarity-search']) {
+    try {
+      this.logger.info(
+        `🔍 Processing similarity search: ${data.query.substring(0, 50)}...`
+      );
+
+      if (!this.embeddingRetrievalService) {
+        this.logger.warn('⚠️ EmbeddingRetrievalService not initialized');
+        throw new Error('Embedding retrieval service not available');
+      }
+
+      const searchQuery = {
+        query: data.query,
+        personaId: data.personaId,
+        topN: data.topN || 10,
+        minSimilarity: data.minSimilarity || 0.7,
+      };
+
+      const result =
+        await this.embeddingRetrievalService.searchSimilar(searchQuery);
+
+      this.logger.info('✅ Similarity search completed', {
+        results: result.results.length,
+        queryTime: result.queryTime,
+        cached: result.cached,
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('❌ Similarity search failed', error);
       throw error;
     }
   }

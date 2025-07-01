@@ -89,6 +89,12 @@ export interface IPCEvents {
     context?: string;
   };
   'get-personas': Record<string, never>;
+  'similarity-search': {
+    query: string;
+    personaId?: string;
+    topN?: number;
+    minSimilarity?: number;
+  };
   'app-quit': Record<string, never>;
 }
 

@@ -30,6 +30,7 @@ module.exports = {
     'build/',
     'release/',
     'node_modules/',
+    'scripts/',
     '*.config.js',
   ],
 };

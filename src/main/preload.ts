@@ -19,6 +19,12 @@ interface ElectronAPI {
     context?: string
   ) => Promise<unknown>;
   getEvidenceScores: (documentId: string) => Promise<unknown>;
+  similaritySearch: (
+    query: string,
+    personaId?: string,
+    topN?: number,
+    minSimilarity?: number
+  ) => Promise<unknown>;
 
   // Event listeners
   onEvidenceScoreUpdated: (callback: (data: unknown) => void) => void;
@@ -62,6 +68,24 @@ const electronAPI: ElectronAPI = {
   getEvidenceScores: (documentId: string) => {
     console.log('📊 Getting evidence scores for:', documentId);
     return ipcRenderer.invoke('get-evidence-scores', { documentId });
+  },
+
+  similaritySearch: (
+    query: string,
+    personaId?: string,
+    topN?: number,
+    minSimilarity?: number
+  ) => {
+    console.log(
+      '🔍 Performing similarity search:',
+      query.substring(0, 50) + '...'
+    );
+    return ipcRenderer.invoke('similarity-search', {
+      query,
+      personaId,
+      topN,
+      minSimilarity,
+    });
   },
 
   // Event listeners

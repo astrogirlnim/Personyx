@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: Personyx Embedding Retrieval API
+  description: |
+    Personyx Embedding Retrieval API provides similarity search functionality for persona pull-quotes.
+    This API enables efficient vector similarity search with caching for optimal performance.
+
+    **Phase 2, Feature 2 - Embedding Retrieval API**
+
+    Features:
+    - Similarity search returning top-N persona pull-quotes
+    - Optimized vector calculations for <200ms query response times
+    - 5-minute sliding window cache for repeat queries
+    - Cross-platform desktop application support
+  version: '0.1.0'
+  contact:
+    name: Personyx Team
+    email: support@personyx.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: 'ipc://main-process'
+    description: Electron Main Process (IPC)
+
+tags:
+  - name: similarity-search
+    description: Vector similarity search operations
+  - name: cache
+    description: Query caching operations
+  - name: service-status
+    description: Service health and monitoring
+
+paths:
+  /similarity-search:
+    post:
+      tags:
+        - similarity-search
+      summary: Perform similarity search for persona pull-quotes
+      description: |
+        Search for similar content across persona evidence using vector embeddings.
+        Returns top-N most similar quotes with persona context and metadata.
+
+        **Performance:** Optimized for <200ms response times
+        **Caching:** 5-minute sliding window for repeat queries
+      operationId: searchSimilar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchQuery'
+            examples:
+              basic_search:
+                summary: Basic similarity search
+                value:
+                  query: 'What do users think about onboarding?'
+                  topN: 10
+                  minSimilarity: 0.7
+              persona_filtered:
+                summary: Search filtered by specific persona
+                value:
+                  query: 'Payment processing concerns'
+                  personaId: 'solo-founder'
+                  topN: 5
+                  minSimilarity: 0.8
+      responses:
+        '200':
+          description: Similarity search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              examples:
+                successful_search:
+                  summary: Successful search with results
+                  value:
+                    results:
+                      - evidenceId: 'evidence-123'
+                        similarity: 0.92
+                        quote: 'The onboarding process is too complex and confusing for new users'
+                        persona:
+                          id: 'solo-founder'
+                          name: 'Solo Founder'
+                        evidence:
+                          id: 'evidence-123'
+                          source: 'user-interview-001.md'
+                          sourceType: 'interview'
+                          importance: 8
+                    queryTime: 145
+                    cached: false
+                    totalResults: 3
+                cached_search:
+                  summary: Cached search result
+                  value:
+                    results: []
+                    queryTime: 12
+                    cached: true
+                    totalResults: 0
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_query:
+                  summary: Empty or invalid query
+                  value:
+                    error: 'Invalid request'
+                    message: 'Query cannot be empty'
+                    code: 'INVALID_QUERY'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                service_error:
+                  summary: Service initialization error
+                  value:
+                    error: 'Internal server error'
+                    message: 'Embedding retrieval service not available'
+                    code: 'SERVICE_UNAVAILABLE'
+
+  /cache/stats:
+    get:
+      tags:
+        - cache
+      summary: Get cache statistics
+      description: |
+        Retrieve current cache statistics including size, hit rate, and oldest entry age.
+        Useful for monitoring and debugging cache performance.
+      operationId: getCacheStats
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+              examples:
+                cache_stats:
+                  summary: Current cache statistics
+                  value:
+                    size: 25
+                    maxSize: 100
+                    hitRate: 0.73
+                    oldestEntry: 180000
+
+  /cache/clear:
+    post:
+      tags:
+        - cache
+      summary: Clear query cache
+      description: |
+        Manually clear all cached query results.
+        Useful for testing or when fresh results are required.
+      operationId: clearCache
+      responses:
+        '200':
+          description: Cache cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Cache cleared successfully'
+
+  /service/status:
+    get:
+      tags:
+        - service-status
+      summary: Get service status
+      description: |
+        Check the health and initialization status of the embedding retrieval service.
+      operationId: getServiceStatus
+      responses:
+        '200':
+          description: Service status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+              examples:
+                healthy_service:
+                  summary: Healthy service status
+                  value:
+                    initialized: true
+                    cacheSize: 25
+                    langGraphReady: true
+
+components:
+  schemas:
+    SearchQuery:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: The search query text
+          minLength: 1
+          maxLength: 1000
+          example: 'What do users think about the onboarding process?'
+        personaId:
+          type: string
+          description: Optional persona ID to filter results
+          pattern: '^[a-zA-Z0-9-_]+$'
+          example: 'solo-founder'
+        topN:
+          type: integer
+          description: Maximum number of results to return
+          minimum: 1
+          maximum: 50
+          default: 10
+          example: 10
+        minSimilarity:
+          type: number
+          description: Minimum similarity threshold (0.0 to 1.0)
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+          example: 0.7
+
+    SearchResponse:
+      type: object
+      required:
+        - results
+        - queryTime
+        - cached
+        - totalResults
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarityResult'
+          description: Array of similarity search results
+        queryTime:
+          type: integer
+          description: Query execution time in milliseconds
+          minimum: 0
+          example: 145
+        cached:
+          type: boolean
+          description: Whether this result was served from cache
+          example: false
+        totalResults:
+          type: integer
+          description: Total number of results found
+          minimum: 0
+          example: 3
+
+    SimilarityResult:
+      type: object
+      required:
+        - evidenceId
+        - similarity
+        - quote
+        - evidence
+        - embedding
+      properties:
+        evidenceId:
+          type: string
+          description: Unique evidence identifier
+          example: 'evidence-123'
+        similarity:
+          type: number
+          description: Cosine similarity score (0.0 to 1.0)
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.92
+        quote:
+          type: string
+          description: Relevant excerpt from the evidence
+          maxLength: 500
+          example: 'The onboarding process is too complex and confusing for new users'
+        persona:
+          $ref: '#/components/schemas/Persona'
+        evidence:
+          $ref: '#/components/schemas/Evidence'
+        embedding:
+          $ref: '#/components/schemas/Embedding'
+
+    Persona:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - primaryGoal
+        - mainPainPoint
+        - keywords
+      properties:
+        id:
+          type: string
+          example: 'solo-founder'
+        name:
+          type: string
+          example: 'Solo Founder'
+        description:
+          type: string
+          example: 'Independent entrepreneur building their first product'
+        primaryGoal:
+          type: string
+          example: 'ship MVP fast'
+        mainPainPoint:
+          type: string
+          example: 'uncertain feature value'
+        keywords:
+          type: array
+          items:
+            type: string
+          example: ['startup', 'mvp', 'validation', 'lean']
+
+    Evidence:
+      type: object
+      required:
+        - id
+        - personaId
+        - content
+        - source
+        - sourceType
+        - timestamp
+        - importance
+      properties:
+        id:
+          type: string
+          example: 'evidence-123'
+        personaId:
+          type: string
+          example: 'solo-founder'
+        content:
+          type: string
+          description: Full evidence content
+          example: 'The onboarding process is too complex...'
+        source:
+          type: string
+          description: Source identifier or filename
+          example: 'user-interview-001.md'
+        sourceType:
+          type: string
+          enum: ['interview', 'prd', 'feedback', 'other']
+          example: 'interview'
+        timestamp:
+          type: string
+          format: date-time
+          description: When the evidence was collected
+        tags:
+          type: array
+          items:
+            type: string
+          description: Associated tags
+          example: ['onboarding', 'ux', 'user-feedback']
+        sentiment:
+          type: string
+          enum: ['positive', 'negative', 'neutral']
+          nullable: true
+          example: 'negative'
+        importance:
+          type: integer
+          description: Evidence importance score (1-10)
+          minimum: 1
+          maximum: 10
+          example: 8
+
+    Embedding:
+      type: object
+      required:
+        - id
+        - evidenceId
+        - model
+        - dimensions
+        - chunkIndex
+        - chunkCount
+      properties:
+        id:
+          type: string
+          description: Unique embedding identifier
+          example: 'embed-456'
+        evidenceId:
+          type: string
+          description: Associated evidence ID
+          example: 'evidence-123'
+        model:
+          type: string
+          description: Embedding model used
+          example: 'text-embedding-3-small'
+        dimensions:
+          type: integer
+          description: Vector dimensions
+          example: 1536
+        chunkIndex:
+          type: integer
+          description: Chunk index for multi-chunk content
+          minimum: 0
+          example: 0
+        chunkCount:
+          type: integer
+          description: Total chunks for this evidence
+          minimum: 1
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          description: When the embedding was created
+
+    CacheStats:
+      type: object
+      required:
+        - size
+        - maxSize
+        - hitRate
+        - oldestEntry
+      properties:
+        size:
+          type: integer
+          description: Current number of cached entries
+          minimum: 0
+          example: 25
+        maxSize:
+          type: integer
+          description: Maximum cache size
+          minimum: 1
+          example: 100
+        hitRate:
+          type: number
+          description: Cache hit rate (0.0 to 1.0)
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.73
+        oldestEntry:
+          type: integer
+          description: Age of oldest cache entry in milliseconds
+          minimum: 0
+          example: 180000
+
+    ServiceStatus:
+      type: object
+      required:
+        - initialized
+        - cacheSize
+        - langGraphReady
+      properties:
+        initialized:
+          type: boolean
+          description: Whether the service is initialized
+          example: true
+        cacheSize:
+          type: integer
+          description: Current cache size
+          minimum: 0
+          example: 25
+        langGraphReady:
+          type: boolean
+          description: Whether LangGraph service is ready
+          example: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error category
+          example: 'Invalid request'
+        message:
+          type: string
+          description: Human-readable error message
+          example: 'Query cannot be empty'
+        code:
+          type: string
+          description: Machine-readable error code
+          example: 'INVALID_QUERY'
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  examples:
+    BasicSearchQuery:
+      summary: Basic similarity search
+      value:
+        query: 'What do users think about onboarding?'
+        topN: 10
+        minSimilarity: 0.7
+
+    PersonaFilteredQuery:
+      summary: Search filtered by persona
+      value:
+        query: 'Payment processing concerns'
+        personaId: 'solo-founder'
+        topN: 5
+        minSimilarity: 0.8
+
+security: []
+
+externalDocs:
+  description: Personyx Documentation
+  url: https://docs.personyx.com
