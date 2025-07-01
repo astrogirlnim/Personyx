@@ -9,6 +9,47 @@ PersonaPulse is a desktop application that prevents wasted engineering sprints b
 [![Electron](https://img.shields.io/badge/Electron-28+-purple)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
+## 🚀 Quick Start
+
+### Run PersonaPulse Locally
+
+**Option 1: Using npm scripts**
+```bash
+# Start full development environment (recommended)
+npm start
+
+# Or use the alias
+npm run dev:app
+```
+
+**Option 2: Using the shell script**
+```bash
+# Make executable (first time only)
+chmod +x dev.sh
+
+# Run the development environment
+./dev.sh
+```
+
+**Option 3: Manual step-by-step**
+```bash
+# Start development servers
+npm run dev
+
+# In another terminal, launch Electron
+npm run electron:dev
+```
+
+This will:
+1. ✅ Start TypeScript compilation in watch mode
+2. ✅ Launch Vite dev server on `http://localhost:3000`
+3. ✅ Open PersonaPulse in Electron when ready
+4. ✅ Enable hot reloading for both main and renderer processes
+
+---
+
+## Overview
+
 ## ✨ Features
 
 ### 🎯 **Evidence-First Development**
@@ -57,53 +98,6 @@ PersonaPulse/
 - **Main Process**: Business logic, file system access, database operations
 - **Renderer Process**: React UI for evidence analysis and persona chat
 - **IPC Layer**: Type-safe communication via Electron's IPC system
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Node.js** 20.0+
-- **pnpm** 8.0+ (recommended package manager)
-- **Git** for version control
-
-### Installation
-
-```bash
-# Clone the repository
-git clone git@github.com:astrogirlnim/PersonaPulse.git
-cd PersonaPulse
-
-# Install dependencies
-pnpm install
-
-# Start development mode
-pnpm dev
-```
-
-### Development Commands
-
-```bash
-# Development
-pnpm dev              # Start both main and renderer in watch mode
-pnpm dev:main         # Start only main process compilation
-pnpm dev:renderer     # Start only renderer with Vite dev server
-
-# Building
-pnpm build            # Build both processes for production
-pnpm build:main       # Build main process only
-pnpm build:renderer   # Build renderer process only
-
-# Quality Assurance
-pnpm typecheck        # TypeScript validation
-pnpm lint             # ESLint + Prettier checks
-pnpm format           # Auto-format code with Prettier
-
-# Packaging
-pnpm package          # Create distributable packages
-pnpm package:mac      # macOS-specific build
-pnpm package:win      # Windows-specific build
-pnpm package:linux    # Linux-specific build
-```
 
 ## 🛠️ Technology Stack
 

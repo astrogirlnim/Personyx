@@ -11,7 +11,9 @@
     "url": "git@github.com:astrogirlnim/PersonaPulse.git"
   },
   "scripts": {
+    "start": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron:dev\"",
     "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:app": "npm run start",
     "dev:main": "concurrently \"tsc -p src/main/tsconfig.json --watch\" \"tsc-alias -p src/main/tsconfig.json --watch\"",
     "dev:renderer": "vite src/renderer --port 3000",
     "build": "npm run build:main && npm run build:renderer",
@@ -57,7 +59,8 @@
     "tailwindcss": "^3.3.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.3.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "wait-on": "^8.0.3"
   },
   "engines": {
     "node": ">=20.0.0",
