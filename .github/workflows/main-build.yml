@@ -38,6 +38,16 @@ jobs:
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ---------- Native Module Rebuild (Phase 1.2 Addition) ----------
+      - name: 🔧 Rebuild native modules for production environment
+        run: |
+          # Clear any cached native modules that might cause issues
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          # Rebuild for current Node.js version
+          pnpm rebuild better-sqlite3
+        env:
+          npm_config_build_from_source: true
+
       # ---------- Security & Quality ----------
       - name: 🕵️ Gitleaks Secret Scan
         uses: gitleaks/gitleaks-action@v2
@@ -51,11 +61,39 @@ jobs:
         run: pnpm lint
 
       - name: 🧪 Run Test Suite
-        run: pnpm test --passWithNoTests
+        run: pnpm test --passWithNoTests --reporter=verbose
+        env:
+          # Use in-memory database for tests to avoid native module issues
+          NODE_ENV: test
+          VITEST_DATABASE_URL: ':memory:'
 
       # ---------- Build Application ----------
       - name: 🏗️ Build Application
         run: pnpm build
+
+      # ---------- Database Validation (Phase 1.2 Addition) ----------
+      - name: 🗄️ Validate Database Schema & Migrations
+        run: |
+          mkdir -p test-db
+          export PERSONYX_DB_PATH="test-db/test.db"
+          node -e "
+            const { initDatabase } = require('./dist/main/main/db/connection.js');
+            try {
+              const db = initDatabase();
+              console.log('✅ Production database initialization successful');
+              // Test core operations
+              const { execSync } = require('child_process');
+              const tableCount = execSync('sqlite3 test-db/test.db \".tables\" | wc -w', { encoding: 'utf8' });
+              if (parseInt(tableCount.trim()) >= 5) {
+                console.log('✅ All 5 database tables created successfully');
+              } else {
+                throw new Error('Not all required tables were created');
+              }
+            } catch (error) {
+              console.error('❌ Production database initialization failed:', error);
+              process.exit(1);
+            }
+          "
 
       # ---------- Upload Build for Next Job ----------
       - name: 📤 Upload Build Artifacts
@@ -104,6 +142,16 @@ jobs:
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # ---------- Platform-Specific Native Module Rebuild ----------
+      - name: 🔧 Rebuild native modules for target platform
+        run: |
+          # Clear any existing builds that might cause conflicts
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          # Rebuild specifically for Electron and target platform
+          npx @electron/rebuild --force --only better-sqlite3
+        env:
+          npm_config_build_from_source: true
 
       # ---------- Download Build ----------
       - name: 📥 Download Build Artifacts

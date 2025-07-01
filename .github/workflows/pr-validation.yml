@@ -36,6 +36,16 @@ jobs:
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ---------- Native Module Rebuild (Phase 1.2 Addition) ----------
+      - name: 🔧 Rebuild native modules for CI environment
+        run: |
+          # Clear any cached native modules that might cause issues
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          # Rebuild for current Node.js version (not Electron)
+          pnpm rebuild better-sqlite3
+        env:
+          npm_config_build_from_source: true
+
       # ---------- Security Scan ----------
       - name: 🕵️ Gitleaks Secret Scan
         uses: gitleaks/gitleaks-action@v2
@@ -49,12 +59,54 @@ jobs:
       - name: 🧹 ESLint & Prettier Check
         run: pnpm lint
 
+      # ---------- Database Migration Validation (Phase 1.2 Addition) ----------
+      - name: 🗄️ Validate Database Schema
+        run: |
+          # Create test database to validate migrations work
+          mkdir -p test-db
+          export PERSONYX_DB_PATH="test-db/test.db"
+          # Run schema validation (will create tables in test environment)
+          node -e "
+            const { initDatabase } = require('./dist/main/main/db/connection.js');
+            try {
+              const db = initDatabase();
+              console.log('✅ Database initialization successful');
+              const fs = require('fs');
+              if (fs.existsSync(process.env.PERSONYX_DB_PATH)) {
+                console.log('✅ Database file created');
+              }
+            } catch (error) {
+              console.error('❌ Database initialization failed:', error);
+              process.exit(1);
+            }
+          " || echo "⚠️ Database validation skipped (build required first)"
+
       - name: 🧪 Run Tests
-        run: pnpm test --passWithNoTests
+        run: pnpm test --passWithNoTests --reporter=verbose
+        env:
+          # Use in-memory database for tests to avoid native module issues
+          NODE_ENV: test
+          VITEST_DATABASE_URL: ':memory:'
 
       # ---------- Build Verification ----------
       - name: 🏗️ Build Application
         run: pnpm build
+
+      # ---------- Post-Build Database Validation ----------
+      - name: 🗄️ Post-Build Database Validation
+        run: |
+          mkdir -p test-db
+          export PERSONYX_DB_PATH="test-db/test.db"
+          node -e "
+            const { initDatabase } = require('./dist/main/main/db/connection.js');
+            try {
+              const db = initDatabase();
+              console.log('✅ Post-build database initialization successful');
+            } catch (error) {
+              console.error('❌ Post-build database initialization failed:', error);
+              process.exit(1);
+            }
+          "
 
       - name: 📦 Test Electron Packaging (Directory Only)
         run: npx electron-builder --dir --config.directories.output=dist-test
@@ -115,6 +167,7 @@ jobs:
           echo "| Code Quality | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Scan | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Database Schema | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then

@@ -33,6 +33,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "db:migrate": "drizzle-kit generate && drizzle-kit push",
+    "db:validate": "npm run build:main && pnpm rebuild better-sqlite3 && node scripts/validate-database.js",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
