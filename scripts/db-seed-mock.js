@@ -167,7 +167,7 @@ async function clearDatabase(db) {
       productDocuments,
       personas,
       apiTokens,
-    } = require('../src/main/db/schema.js');
+    } = require('../dist/main/main/db/schema.js');
 
     // Clear in dependency order
     await db.delete(evidenceScores);
@@ -311,7 +311,7 @@ async function seedDatabase(db, config) {
       productDocuments,
       embeddings,
       evidenceScores,
-    } = require('../src/main/db/schema.js');
+    } = require('../dist/main/main/db/schema.js');
 
     // 1. Create personas
     console.log('👥 Creating personas...');
@@ -394,7 +394,7 @@ async function showStats(db) {
       productDocuments,
       embeddings,
       evidenceScores,
-    } = require('../src/main/db/schema.js');
+    } = require('../dist/main/main/db/schema.js');
 
     const personaCount = (await db.select().from(personas)).length;
     const evidenceCount = (await db.select().from(evidence)).length;

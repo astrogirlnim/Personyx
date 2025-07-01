@@ -205,14 +205,14 @@ async function runEncryptionTests() {
     console.log('\n📝 Test 13: Encryption Metadata Validation');
     const validMetadata = finalRows.every(row => {
       try {
-        // Verify base64 encoding
-        Buffer.from(row.tokenEncrypted, 'base64');
-        Buffer.from(row.iv, 'base64');
-        Buffer.from(row.authTag, 'base64');
+        // Verify hex encoding (matches our implementation)
+        Buffer.from(row.tokenEncrypted, 'hex');
+        Buffer.from(row.iv, 'hex');
+        Buffer.from(row.authTag, 'hex');
         
         // Verify expected lengths
-        const ivBuffer = Buffer.from(row.iv, 'base64');
-        const authTagBuffer = Buffer.from(row.authTag, 'base64');
+        const ivBuffer = Buffer.from(row.iv, 'hex');
+        const authTagBuffer = Buffer.from(row.authTag, 'hex');
         
         return ivBuffer.length === 16 && authTagBuffer.length === 16; // GCM standard
       } catch {
@@ -223,11 +223,16 @@ async function runEncryptionTests() {
 
     // Clean up test tokens
     console.log('\n🧹 Cleaning up test data...');
-    await vault.removeToken('openai');
-    await vault.removeToken('notion');
-    await vault.removeToken('slack');
-    await vault.removeToken('linear');
-    await vault.removeToken('test-empty');
+    const { removeToken } = await import('../dist/main/main/security/tokenVault.js');
+    try {
+      await removeToken('openai');
+      await removeToken('notion'); 
+      await removeToken('slack');
+      await removeToken('linear');
+      await removeToken('test-strength');
+    } catch (error) {
+      console.log('⚠️ Cleanup warning:', error.message);
+    }
 
   } catch (error) {
     console.error('❌ CRITICAL: Encryption test setup failed:', error);
