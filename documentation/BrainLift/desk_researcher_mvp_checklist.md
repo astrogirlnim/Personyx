@@ -23,9 +23,9 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 *Criteria: essential build & tooling; no cross-dependencies.*
 
 [ ] **Feature 1 – Project Bootstrap & Tooling**  
-  - [ ] **1.1** Scaffold an Electron 28 + TypeScript monorepo with one “Tray UI” process and one “Core” process.  
+  - [X] **1.1** Scaffold an Electron 28 + TypeScript monorepo with one "Tray UI" process and one "Core" process.  
   - [ ] **1.2** Add cross-platform build / packaging scripts (Mac, Win, Linux) and ESLint+Prettier pipeline.  
-  - [ ] **1.3** Stub a Tray menu containing a “Drop PRD (.md / .txt)” zone.  
+  - [ ] **1.3** Stub a Tray menu containing a "Drop PRD (.md / .txt)" zone.  
   - [ ] **1.4** Wire a basic auto-update placeholder (no server yet).  
 
 [ ] **Feature 2 – Core Data Structures & Security**  
@@ -38,7 +38,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
   - [ ] **3.1** Create an n8n flow that *file-watches* `/interviews` and publishes raw transcript text.  
   - [ ] **3.2** Build a LangGraph pipeline to embed transcripts and *classify by persona*.  
   - [ ] **3.3** Persist embeddings and metadata to SQLite.  
-  - [ ] **3.4** Emit a “TranscriptIngested” IPC event to the Tray process.  
+  - [ ] **3.4** Emit a "TranscriptIngested" IPC event to the Tray process.  
 
 [ ] **Feature 4 – Persona Definitions & Mock Data**  
   - [ ] **4.1** Author `personas.yml` with **Solo Founder** & **Agency Marketer** objects.  
