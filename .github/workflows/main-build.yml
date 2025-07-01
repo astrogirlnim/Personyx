@@ -34,6 +34,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # ---------- Install System Dependencies ----------
+      - name: 🔧 Install system dependencies for native modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev libsecret-1-dev
+
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
@@ -43,8 +49,9 @@ jobs:
         run: |
           # Clear any cached native modules that might cause issues
           rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
           # Rebuild for current Node.js version
-          pnpm rebuild better-sqlite3
+          pnpm rebuild better-sqlite3 keytar
         env:
           npm_config_build_from_source: true
 
@@ -123,6 +130,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # ---------- Install System Dependencies (Linux Only) ----------
+      - name: 🔧 Install system dependencies for native modules
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev libsecret-1-dev
+
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
@@ -132,8 +146,9 @@ jobs:
         run: |
           # Clear any existing builds that might cause conflicts
           rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
           # Rebuild specifically for Electron and target platform
-          npx @electron/rebuild --force --only better-sqlite3
+          npx @electron/rebuild --force --only better-sqlite3,keytar
         env:
           npm_config_build_from_source: true
 
