@@ -65,7 +65,7 @@ jobs:
 
           # Rebuild native modules specifically for Electron's Node version
           echo "🏗️ Rebuilding with electron-builder..."
-          npx electron-builder install-app-deps --force
+          npx electron-builder install-app-deps
 
           echo "✅ Native module rebuild completed successfully"
         env:
