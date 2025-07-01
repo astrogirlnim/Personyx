@@ -23,18 +23,34 @@ if [ ! -d "node_modules" ]; then
     echo ""
 fi
 
-# Always rebuild native modules for Electron to prevent version conflicts
-echo "🔧 Rebuilding native modules for Electron..."
+# Enhanced native module rebuilding for Electron compatibility
+echo "🔧 Fixing native modules for Electron compatibility..."
 echo "   This prevents Node.js version mismatches between system and Electron"
 echo ""
 
-# Use the existing fix script if it exists, otherwise use direct rebuild
-if [ -f "scripts/fix-native-modules.sh" ]; then
-    bash scripts/fix-native-modules.sh
+# Force rebuild better-sqlite3 for Electron
+echo "🔄 Rebuilding better-sqlite3 specifically for Electron..."
+npx @electron/rebuild --only=better-sqlite3 --force
+
+# Verify the rebuild worked
+echo "🧪 Verifying native module compatibility..."
+if [ -f "node_modules/better-sqlite3/build/Release/better_sqlite3.node" ]; then
+    echo "✅ better-sqlite3 native module found"
+    # Check the module info
+    file node_modules/better-sqlite3/build/Release/better_sqlite3.node | head -1
 else
-    echo "🔄 Rebuilding better-sqlite3 for Electron..."
-    npx @electron/rebuild
+    echo "❌ better-sqlite3 native module not found - attempting full rebuild..."
+    npm rebuild better-sqlite3
 fi
+
+# Additional fallback - use the comprehensive fix script if rebuild issues persist
+if [ -f "scripts/fix-native-modules.sh" ]; then
+    echo "🔧 Running comprehensive native module fix..."
+    bash scripts/fix-native-modules.sh
+fi
+
+echo ""
+echo "✅ Native module preparation complete"
 echo ""
 
 # Enhanced debugging environment variables
@@ -46,6 +62,14 @@ echo "🔍 Enhanced debugging enabled:"
 echo "  - ELECTRON_ENABLE_LOGGING=1 (Electron internal logs)"
 echo "  - Chrome DevTools: --inspect=9229"
 echo "  - Verbose logging: --verbose"
+echo ""
+
+# Build the project first to ensure latest code
+echo "🔨 Building project..."
+npm run build
+
+echo ""
+echo "🚀 Starting development servers..."
 echo ""
 
 # Start the development environment with enhanced debugging using npm scripts
