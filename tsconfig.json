@@ -24,8 +24,8 @@
       "@main/*": ["src/main/*"],
       "@renderer/*": ["src/renderer/*"]
     },
-    "types": ["node", "jest"]
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules", "dist", "build", "release"]
 }

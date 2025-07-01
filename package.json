@@ -55,6 +55,7 @@
     "openai": "^5.8.2"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.10.0",

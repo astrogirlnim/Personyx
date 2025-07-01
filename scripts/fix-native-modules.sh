@@ -16,15 +16,23 @@ echo "📍 Current Electron version:"
 npx electron --version
 echo ""
 
-# Check if Python distutils issue exists
-if python3 -c "from distutils.version import StrictVersion" 2>/dev/null; then
-    echo "✅ Python distutils available"
-    echo "🔨 Rebuilding native modules with electron-builder..."
-    npx electron-builder install-app-deps
+# Primary rebuild strategy: Use @electron/rebuild (most reliable)
+echo "🔄 Using @electron/rebuild to rebuild native modules..."
+if npx @electron/rebuild --only=better-sqlite3; then
+    echo "✅ Successfully rebuilt better-sqlite3 for Electron"
 else
-    echo "⚠️  Python distutils not available (Python 3.12+ issue)"
-    echo "🔄 Using @electron/rebuild as fallback..."
-    npx @electron/rebuild
+    echo "⚠️  @electron/rebuild failed, trying electron-builder as fallback..."
+    
+    # Check if Python distutils issue exists
+    if python3 -c "from distutils.version import StrictVersion" 2>/dev/null; then
+        echo "✅ Python distutils available"
+        echo "🔨 Rebuilding native modules with electron-builder..."
+        npx electron-builder install-app-deps
+    else
+        echo "❌ Python distutils not available (Python 3.12+ issue)"
+        echo "🔄 Trying pnpm rebuild as last resort..."
+        pnpm rebuild better-sqlite3
+    fi
 fi
 
 echo ""

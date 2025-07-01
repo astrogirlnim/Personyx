@@ -23,6 +23,20 @@ if [ ! -d "node_modules" ]; then
     echo ""
 fi
 
+# Always rebuild native modules for Electron to prevent version conflicts
+echo "🔧 Rebuilding native modules for Electron..."
+echo "   This prevents Node.js version mismatches between system and Electron"
+echo ""
+
+# Use the existing fix script if it exists, otherwise use direct rebuild
+if [ -f "scripts/fix-native-modules.sh" ]; then
+    bash scripts/fix-native-modules.sh
+else
+    echo "🔄 Rebuilding better-sqlite3 for Electron..."
+    npx @electron/rebuild
+fi
+echo ""
+
 # Enhanced debugging environment variables
 export ELECTRON_ENABLE_LOGGING=1
 export ELECTRON_LOG_LEVEL=debug
