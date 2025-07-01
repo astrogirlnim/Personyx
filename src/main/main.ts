@@ -16,6 +16,8 @@ import { existsSync, mkdirSync } from 'fs';
 import { TrayManager } from './tray';
 import { Logger } from './utils/logger';
 import { AutoUpdater } from './utils/auto-updater';
+import { initDatabase, closeDatabase } from './db/connection';
+import { testTokenVault } from './security/tokenVault';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type { IPCEvents, ImportResult } from '@shared/types';
 
@@ -281,17 +283,35 @@ class PersonyxApp {
   }
 
   /**
-   * Initialize core services (placeholder for now)
+   * Initialize core services
    */
   private async initializeCoreServices(): Promise<void> {
     this.logger.info('⚙️ Initializing core services...');
 
-    // TODO: Initialize database (Phase 1.2)
-    // TODO: Initialize LangGraph service (Phase 1.3)
-    // TODO: Initialize n8n workflow manager (Phase 1.3)
-    // TODO: Load personas configuration (Phase 1.4)
+    try {
+      // Initialize database (Phase 1.2)
+      this.logger.info('🗄️ Initializing database...');
+      initDatabase();
+      this.logger.info('✅ Database initialized successfully');
 
-    this.logger.info('✅ Core services initialized');
+      // Test token vault functionality (Phase 1.2)
+      this.logger.info('🔐 Testing token vault...');
+      const vaultTest = await testTokenVault();
+      if (vaultTest) {
+        this.logger.info('✅ Token vault test passed');
+      } else {
+        this.logger.warn('⚠️ Token vault test failed - continuing anyway');
+      }
+
+      // TODO: Initialize LangGraph service (Phase 1.3)
+      // TODO: Initialize n8n workflow manager (Phase 1.3)
+      // TODO: Load personas configuration (Phase 1.4)
+
+      this.logger.info('✅ Core services initialized');
+    } catch (error) {
+      this.logger.error('❌ Failed to initialize core services', error);
+      throw error;
+    }
   }
 
   /**
@@ -432,7 +452,14 @@ class PersonyxApp {
       this.autoUpdater = null;
     }
 
-    // TODO: Close database connections
+    // Close database connections (Phase 1.2)
+    try {
+      closeDatabase();
+      this.logger.info('✅ Database connection closed');
+    } catch (error) {
+      this.logger.error('❌ Failed to close database', error);
+    }
+
     // TODO: Stop background services
   }
 

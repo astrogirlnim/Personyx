@@ -32,12 +32,12 @@ _Criteria: essential build & tooling; no cross-dependencies._
 - [x] **1.3** Stub a Tray menu containing a "Drop PRD (.md / .txt)" zone.
 - [x] **1.4** Wire a basic auto-update placeholder (no server yet).
 
-[ ] **Feature 2 – Core Data Structures & Security**
+[X] **Feature 2 – Core Data Structures & Security**
 
-- [ ] **2.1** Define an SQLite schema for _personas, evidence, product docs, scores_.
-- [ ] **2.2** Implement an AES-encrypted token vault for API keys (Notion, Slack, Linear).
-- [ ] **2.3** Add typed DAL (e.g., Drizzle ORM) with migration script.
-- [ ] **2.4** Unit-test CRUD operations against an in-memory SQLite db.
+- [x] **2.1** Define an SQLite schema for _personas, evidence, product docs, scores_.
+- [x] **2.2** Implement an AES-encrypted token vault for API keys (Notion, Slack, Linear).
+- [x] **2.3** Add typed DAL (e.g., Drizzle ORM) with migration script.
+- [x] **2.4** Unit-test CRUD operations against an in-memory SQLite db.
 
 [ ] **Feature 3 – LangGraph + n8n Workflow**
 
@@ -78,7 +78,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [ ] **3.1** Accept PRD markdown uploads via Tray drop or REST `/import` route.
 - [ ] **3.2** Validate file type & size; reject on failure with JSON error.
 - [ ] **3.3** Extract sections, chunk, embed, and store atoms + embeddings.
-- [ ] **3.4** Emit “PRDImported” event with new evidence scores.
+- [ ] **3.4** Emit "PRDImported" event with new evidence scores.
 
 [ ] **Feature 4 – Data Access Layer Utilities**
 
@@ -95,16 +95,16 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 
 [ ] **Feature 1 – Tray UI Core Screens**
 
-- [ ] **1.1** Build “Chat with Persona” window (single persona dropdown).
-- [ ] **1.2** Add “Import PRD” modal with drag-&-drop and progress bar.
+- [ ] **1.1** Build "Chat with Persona" window (single persona dropdown).
+- [ ] **1.2** Add "Import PRD" modal with drag-&-drop and progress bar.
 - [ ] **1.3** Display real-time Evidence Score banner after import.
 - [ ] **1.4** Show global error toast for failed ingest events.
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
 
-- [ ] **2.1** Implement OAuth connect flow to user’s Notion workspace.
+- [ ] **2.1** Implement OAuth connect flow to user's Notion workspace.
 - [ ] **2.2** Render a scorecard preview inside a resizable panel.
-- [ ] **2.3** Add **one-click “Export to Notion”** button.
+- [ ] **2.3** Add one-click "Export to Notion" button.
 - [ ] **2.4** Gracefully handle token expiry & permission errors.
 
 [ ] **Feature 3 – VS Code Extension (stub)**
@@ -132,7 +132,7 @@ _Criteria: value-delivering capabilities built atop 1–3._
 - [ ] **1.1** Generate a Notion page summarising scores & persona quotes.
 - [ ] **1.2** Convert that page to a slide deck via Notion API and return link.
 - [ ] **1.3** Persist export history with `deckUrl` and timestamp.
-- [ ] **1.4** Add “Open Deck” button in Tray notifications.
+- [ ] **1.4** Add "Open Deck" button in Tray notifications.
 
 [ ] **Feature 2 – Linear Evidence-Score Labeler**
 
@@ -146,13 +146,13 @@ _Criteria: value-delivering capabilities built atop 1–3._
 - [ ] **3.1** Implement a 30-day auto-prune job for expired transcripts & logs.
 - [ ] **3.2** Write audit-log exporter (CSV) with checksum verification.
 - [ ] **3.3** Add dark / light theme toggle persisting to local prefs.
-- [ ] **3.4** Integrate a one-click “Check for Updates” menu item (touches auto-update stub).
+- [ ] **3.4** Integrate a one-click "Check for Updates" menu item (touches auto-update stub).
 
 [ ] **Feature 4 – Proactive Notifications & Retro Tools**
 
-- [ ] **4.1** Send a weekly Slack digest: “Proposals lacking persona evidence”.
-- [ ] **4.2** Turn Tray badge red when any open PRD’s Evidence Score < 60.
-- [ ] **4.3** Schedule a “Renewal-risk radar” job that flags missing capabilities 90 days pre-renewal.
+- [ ] **4.1** Send a weekly Slack digest: "Proposals lacking persona evidence".
+- [ ] **4.2** Turn Tray badge red when any open PRD's Evidence Score < 60.
+- [ ] **4.3** Schedule a "Renewal-risk radar" job that flags missing capabilities 90 days pre-renewal.
 - [ ] **4.4** Build a _Retro Wizard_ that imports a failed feature (CSV or Jira) and quantifies wasted effort.
 
 ---
