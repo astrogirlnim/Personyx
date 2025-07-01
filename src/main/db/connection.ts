@@ -18,8 +18,26 @@ let drizzleInstance: ReturnType<typeof drizzle> | null = null;
 
 /**
  * Get SQLite database path in userData directory
+ * Handles test environment by using temporary or in-memory database
  */
 function getDatabasePath(): string {
+  // Check if we're in a test environment
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+    // Use in-memory database for tests
+    logger.info('🧪 Test environment detected, using in-memory database');
+    return ':memory:';
+  }
+
+  // Check if app is available (Electron environment)
+  if (typeof app === 'undefined' || !app.getPath) {
+    // Not in Electron context, use local directory for testing
+    const testDbPath = join(process.cwd(), 'test.db');
+    logger.info('🔧 Non-Electron environment, using local test database', {
+      path: testDbPath,
+    });
+    return testDbPath;
+  }
+
   const userDataPath = app.getPath('userData');
   const dbDir = join(userDataPath, 'db');
 
@@ -301,7 +319,7 @@ export function getDatabaseStats(): {
   const isConnected = dbInstance !== null;
 
   let size: number | undefined;
-  if (existsSync(path)) {
+  if (path !== ':memory:' && existsSync(path)) {
     const stats = statSync(path);
     size = stats.size;
   }
