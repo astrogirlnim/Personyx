@@ -2,11 +2,12 @@
 
 **Date:** January 15, 2025  
 **Duration:** 35 minutes  
-**Participant:** Marcus Rodriguez, Marketing Director at ScaleUp Agency
+**Participant:** Marcus Rodriguez, Marketing Director at ScaleUp Agency  
+**Persona:** agency_marketer
 
 ## Background
 
-Marcus runs marketing campaigns for 8 different clients at a digital marketing agency. He's responsible for conversion optimization and demonstrating ROI to client stakeholders.
+Marcus runs marketing campaigns for 8 different clients at a digital marketing agency. He's responsible for conversion optimization and demonstrating ROI to client stakeholders. He represents the classic Agency Marketer persona - focused on client retention through measurable performance improvements.
 
 ## Key Pain Points
 

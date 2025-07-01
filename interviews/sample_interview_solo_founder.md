@@ -2,11 +2,12 @@
 
 **Date:** January 15, 2025  
 **Duration:** 45 minutes  
-**Participant:** Sarah Chen, Solo Founder at FlowTech
+**Participant:** Sarah Chen, Solo Founder at FlowTech  
+**Persona:** solo_founder
 
 ## Background
 
-Sarah is a solo founder building an MVP for workflow automation. She's been working independently for 8 months after leaving her corporate job.
+Sarah is a solo founder building an MVP for workflow automation. She's been working independently for 8 months after leaving her corporate job. She embodies the Solo Founder persona - working with minimal resources and needing to ship fast.
 
 ## Key Pain Points
 
