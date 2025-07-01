@@ -32,10 +32,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "db:migrate": "drizzle-kit generate:sqlite && drizzle-kit push",
+    "db:migrate": "drizzle-kit generate && drizzle-kit push",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
+    "postinstall": "npx @electron/rebuild",
     "prepare": "husky"
   },
   "dependencies": {
@@ -46,6 +47,7 @@
     "keytar": "^7.9.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^29.5.0",
     "@types/keytar": "^4.4.2",
