@@ -193,73 +193,22 @@ jobs:
           echo "🔧 Setting up Python 3.11 for Windows native module compilation..."
           # Install Python 3.11 specifically for Windows
           choco install python --version=3.11.9 --force --yes
+          # Update PATH to ensure Python 3.11 is found first
+          echo "C:\Python311" >> $env:GITHUB_PATH
+          echo "C:\Python311\Scripts" >> $env:GITHUB_PATH
           # Configure Python paths for node-gyp
           echo "PYTHON=C:\Python311\python.exe" >> $env:GITHUB_ENV
           echo "npm_config_python=C:\Python311\python.exe" >> $env:GITHUB_ENV
           # Verify Python setup
-          python --version
+          refreshenv
+          C:\Python311\python.exe --version
           echo "✅ Windows Python 3.11 setup completed successfully"
 
       # ---------- Install Dependencies (Python 3.11 now available) ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
         env:
-          # Ensure Python 3.11 is used during postinstall scripts
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-
-      # ---------- Additional Native Module Rebuild (if needed) ----------
-      - name: 🔧 Additional native module rebuild (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          echo "🔧 Performing additional native module rebuild for Linux..."
-          # Clear any existing builds that might cause conflicts
-          echo "🧹 Cleaning build artifacts..."
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-          # Additional rebuild to ensure Electron compatibility
-          echo "🏗️ Additional rebuild with electron-builder..."
-          pnpm exec electron-builder install-app-deps
-          echo "✅ Linux additional native module rebuild completed"
-        env:
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-          PYTHON: /usr/bin/python3.11
-
-      - name: 🔧 Additional native module rebuild (macOS)
-        if: matrix.platform == 'mac'
-        run: |
-          echo "🔧 Performing additional native module rebuild for macOS..."
-          # Clear any existing builds that might cause conflicts
-          echo "🧹 Cleaning build artifacts..."
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-          # Set up Python path for additional rebuild
-          export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
-          export PYTHON="/opt/homebrew/opt/python@3.11/bin/python3.11"
-          # Additional rebuild to ensure Electron compatibility
-          echo "🏗️ Additional rebuild with electron-builder..."
-          pnpm exec electron-builder install-app-deps
-          echo "✅ macOS additional native module rebuild completed"
-        env:
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-
-      - name: 🔧 Additional native module rebuild (Windows)
-        if: matrix.platform == 'win'
-        run: |
-          echo "🔧 Performing additional native module rebuild for Windows..."
-          # Clear any existing builds that might cause conflicts
-          echo "🧹 Cleaning build artifacts..."
-          if (Test-Path "node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build") { Remove-Item -Recurse -Force "node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build" }
-          if (Test-Path "node_modules/.pnpm/keytar*/node_modules/keytar/build") { Remove-Item -Recurse -Force "node_modules/.pnpm/keytar*/node_modules/keytar/build" }
-          # Additional rebuild to ensure Electron compatibility
-          echo "🏗️ Additional rebuild with electron-builder..."
-          pnpm exec electron-builder install-app-deps
-          echo "✅ Windows additional native module rebuild completed"
-        env:
+          # Ensure Python 3.11 is used during native module compilation
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
 
