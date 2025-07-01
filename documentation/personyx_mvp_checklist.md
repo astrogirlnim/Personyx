@@ -39,12 +39,12 @@ _Criteria: essential build & tooling; no cross-dependencies._
 - [x] **2.3** Add typed DAL (e.g., Drizzle ORM) with migration script.
 - [x] **2.4** Unit-test CRUD operations against an in-memory SQLite db.
 
-[ ] **Feature 3 – LangGraph + n8n Workflow**
+[X] **Feature 3 – LangGraph + n8n Workflow**
 
-- [ ] **3.1** Create an n8n flow that _file-watches_ `/interviews` and publishes raw transcript text.
-- [ ] **3.2** Build a LangGraph pipeline to embed transcripts and _classify by persona_.
-- [ ] **3.3** Persist embeddings and metadata to SQLite.
-- [ ] **3.4** Emit a "TranscriptIngested" IPC event to the Tray process.
+- [x] **3.1** Create an n8n flow that _file-watches_ `/interviews` and publishes raw transcript text.
+- [x] **3.2** Build a LangGraph pipeline to embed transcripts and _classify by persona_.
+- [x] **3.3** Persist embeddings and metadata to SQLite.
+- [x] **3.4** Emit a "TranscriptIngested" IPC event to the Tray process.
 
 [ ] **Feature 4 – Persona Definitions & Mock Data**
 
