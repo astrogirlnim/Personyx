@@ -74,26 +74,12 @@ jobs:
       # ---------- Database Validation (Phase 1.2 Addition) ----------
       - name: 🗄️ Validate Database Schema & Migrations
         run: |
-          mkdir -p test-db
-          export PERSONYX_DB_PATH="test-db/test.db"
-          node -e "
-            const { initDatabase } = require('./dist/main/main/db/connection.js');
-            try {
-              const db = initDatabase();
-              console.log('✅ Production database initialization successful');
-              // Test core operations
-              const { execSync } = require('child_process');
-              const tableCount = execSync('sqlite3 test-db/test.db \".tables\" | wc -w', { encoding: 'utf8' });
-              if (parseInt(tableCount.trim()) >= 5) {
-                console.log('✅ All 5 database tables created successfully');
-              } else {
-                throw new Error('Not all required tables were created');
-              }
-            } catch (error) {
-              console.error('❌ Production database initialization failed:', error);
-              process.exit(1);
-            }
-          "
+          # Rebuild better-sqlite3 for current Node.js version
+          pnpm rebuild better-sqlite3
+          # Use dedicated validation script for production build verification
+          node scripts/validate-database.js
+        env:
+          npm_config_build_from_source: true
 
       # ---------- Upload Build for Next Job ----------
       - name: 📤 Upload Build Artifacts
