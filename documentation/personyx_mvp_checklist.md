@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[X] **Phase 2:** Data Layer ✅ COMPLETE  
+[X] **Phase 2:** Data Layer ✅ COMPLETE (4/4 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -80,7 +80,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **3.3** Extract sections, chunk, embed, and store atoms + embeddings. ✅ COMPLETE
 - [x] **3.4** Emit "PRDImported" event with new evidence scores. ✅ COMPLETE
 
-[ ] **Feature 4 – Data Access Layer Utilities**
+[~] **Feature 4 – Data Access Layer Utilities** ⏳ NEXT PRIORITY
 
 - [ ] **4.1** Implement a repository pattern for pagination & filtering.
 - [ ] **4.2** Add row-level encryption tests for sensitive tables.
