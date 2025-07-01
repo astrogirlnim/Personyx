@@ -20,7 +20,12 @@ const MASTER_KEY_ACCOUNT = 'vault-master-key';
 /**
  * Supported API services
  */
-export type ApiService = 'openai' | 'notion' | 'slack' | 'linear';
+export type ApiService =
+  | 'openai'
+  | 'notion'
+  | 'slack'
+  | 'linear'
+  | 'personyx-cloud';
 
 /**
  * Encrypted token data structure

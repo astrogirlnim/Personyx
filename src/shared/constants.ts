@@ -15,6 +15,9 @@ export const IPC_CHANNELS = {
   TRANSCRIPT_INGESTED: 'transcript-ingested',
   PRD_IMPORTED: 'prd-imported',
   APP_READY: 'app-ready',
+  SETTINGS_UPDATED: 'settings-updated',
+  API_KEY_TEST_RESULT: 'api-key-test-result',
+  CLOUD_SUBSCRIPTION_INFO: 'cloud-subscription-info',
   ERROR: 'error',
 
   // Renderer to Main
@@ -22,6 +25,11 @@ export const IPC_CHANNELS = {
   GET_EVIDENCE_SCORES: 'get-evidence-scores',
   CHAT_WITH_PERSONA: 'chat-with-persona',
   GET_PERSONAS: 'get-personas',
+  GET_SETTINGS: 'get-settings',
+  UPDATE_SETTINGS: 'update-settings',
+  CONFIGURE_AI_SERVICE: 'configure-ai-service',
+  TEST_API_KEY: 'test-api-key',
+  GET_CLOUD_SUBSCRIPTION_INFO: 'get-cloud-subscription-info',
   APP_QUIT: 'app-quit',
 } as const;
 
@@ -113,6 +121,19 @@ export const API = {
     OPENAI_REQUESTS_PER_MINUTE: 60,
     EMBEDDINGS_BATCH_SIZE: 100,
   },
+  // Hybrid AI Service Configuration
+  PERSONYX_CLOUD: {
+    BASE_URL: 'https://api.personyx.com',
+    EMBEDDING_ENDPOINT: '/v1/embeddings',
+    CLASSIFY_ENDPOINT: '/v1/classify',
+    AUTH_ENDPOINT: '/v1/auth',
+    SUBSCRIPTION_ENDPOINT: '/v1/subscription',
+    DEFAULT_TIMEOUT: 10000, // 10 seconds
+  },
+  SERVICE_PROVIDERS: {
+    LOCAL: 'local',
+    CLOUD: 'cloud',
+  },
 } as const;
 
 // Logging configuration
@@ -137,6 +158,11 @@ export const DEFAULT_SETTINGS = {
   autoUpdate: true,
   notifications: true,
   evidenceRetentionDays: 30,
+  aiService: {
+    provider: 'local' as const,
+    localApiKey: undefined,
+    cloudSubscription: undefined,
+  },
 } as const;
 
 // Tray menu configuration

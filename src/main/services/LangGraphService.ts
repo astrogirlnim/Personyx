@@ -1,7 +1,8 @@
 /**
  * LangGraph Service
- * Handles transcript embedding and persona classification using OpenAI
+ * Handles transcript embedding and persona classification using OpenAI or Personyx Cloud
  * Phase 1, Feature 3.2 - Build a LangGraph pipeline to embed transcripts and classify by persona
+ * Phase 2.5, Feature 5.4 - Add logic to select between local and cloud embedding at runtime
  */
 
 import OpenAI from 'openai';
@@ -10,7 +11,8 @@ import { PersonaRepo } from '@main/db/repositories/PersonaRepo';
 import { EvidenceRepo } from '@main/db/repositories/EvidenceRepo';
 import { EmbeddingRepo } from '@main/db/repositories/EmbeddingRepo';
 import { getToken } from '@main/security/tokenVault';
-import type { Persona } from '@shared/types';
+import { PersonyxCloudService } from './PersonyxCloudService';
+import type { Persona, AIServiceProvider } from '@shared/types';
 import type { TranscriptFileEvent } from './InterviewFolderWatcher';
 
 const logger = new Logger('langgraph-service');
@@ -45,6 +47,8 @@ export interface ProcessingResult {
 
 export class LangGraphService {
   private openai: OpenAI | null = null;
+  private cloudService: PersonyxCloudService | null = null;
+  private currentProvider: AIServiceProvider = 'local';
   private personaRepo: PersonaRepo;
   private evidenceRepo: EvidenceRepo;
   private embeddingRepo: EmbeddingRepo;
@@ -62,37 +66,111 @@ export class LangGraphService {
     this.personaRepo = new PersonaRepo();
     this.evidenceRepo = new EvidenceRepo();
     this.embeddingRepo = new EmbeddingRepo();
+    this.cloudService = new PersonyxCloudService();
   }
 
   /**
-   * Initialize the LangGraph service with OpenAI API key
+   * Initialize the LangGraph service with hybrid AI provider support
    */
-  async initialize(): Promise<void> {
+  async initialize(provider?: AIServiceProvider): Promise<void> {
     logger.info('🔧 Initializing LangGraph service...');
 
     try {
-      // Get OpenAI API key from secure token vault
-      const apiKey = await getToken('openai');
+      // Determine which provider to use
+      this.currentProvider = provider || 'local';
+      logger.info(`🎯 Using AI provider: ${this.currentProvider}`);
 
-      if (!apiKey) {
-        logger.warn(
-          '⚠️ No OpenAI API key found - LangGraph service limited functionality'
-        );
-        return;
+      if (this.currentProvider === 'local') {
+        await this.initializeLocalProvider();
+      } else if (this.currentProvider === 'cloud') {
+        await this.initializeCloudProvider();
+      } else {
+        throw new Error(`Unknown AI provider: ${this.currentProvider}`);
       }
-
-      // Initialize OpenAI client
-      this.openai = new OpenAI({
-        apiKey: apiKey,
-      });
-
-      // Test the connection
-      await this.testOpenAIConnection();
 
       this.isInitialized = true;
       logger.info('✅ LangGraph service initialized successfully');
     } catch (error) {
       logger.error('❌ Failed to initialize LangGraph service', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Initialize local OpenAI provider
+   */
+  private async initializeLocalProvider(): Promise<void> {
+    logger.debug('🔧 Initializing local OpenAI provider...');
+
+    // Get OpenAI API key from secure token vault
+    const apiKey = await getToken('openai');
+
+    if (!apiKey) {
+      logger.warn(
+        '⚠️ No OpenAI API key found - LangGraph service limited functionality'
+      );
+      return;
+    }
+
+    // Initialize OpenAI client
+    this.openai = new OpenAI({
+      apiKey: apiKey,
+    });
+
+    // Test the connection
+    await this.testOpenAIConnection();
+
+    logger.info('✅ Local OpenAI provider initialized');
+  }
+
+  /**
+   * Initialize cloud provider
+   */
+  private async initializeCloudProvider(): Promise<void> {
+    logger.debug('🔧 Initializing Personyx Cloud provider...');
+
+    // Get Personyx Cloud API key from secure token vault
+    const apiKey = await getToken('personyx-cloud');
+
+    if (!apiKey) {
+      logger.warn(
+        '⚠️ No Personyx Cloud API key found - falling back to local provider'
+      );
+      this.currentProvider = 'local';
+      await this.initializeLocalProvider();
+      return;
+    }
+
+    if (!this.cloudService) {
+      this.cloudService = new PersonyxCloudService();
+    }
+
+    // Initialize cloud service
+    await this.cloudService.initialize(apiKey);
+
+    logger.info('✅ Personyx Cloud provider initialized');
+  }
+
+  /**
+   * Switch AI provider at runtime
+   */
+  async switchProvider(provider: AIServiceProvider): Promise<void> {
+    logger.info(
+      `🔄 Switching AI provider from ${this.currentProvider} to ${provider}`
+    );
+
+    try {
+      this.currentProvider = provider;
+
+      if (provider === 'local') {
+        await this.initializeLocalProvider();
+      } else if (provider === 'cloud') {
+        await this.initializeCloudProvider();
+      }
+
+      logger.info('✅ AI provider switched successfully');
+    } catch (error) {
+      logger.error('❌ Failed to switch AI provider', error);
       throw error;
     }
   }
@@ -219,9 +297,33 @@ export class LangGraphService {
   }
 
   /**
-   * Generate embeddings for content chunks
+   * Generate embeddings for content chunks using current AI provider
    */
   private async generateEmbeddings(chunks: ChunkData[]): Promise<
+    Array<{
+      chunkIndex: number;
+      embedding: number[];
+      model: string;
+      dimensions: number;
+    }>
+  > {
+    logger.debug(
+      `🧠 Generating embeddings using ${this.currentProvider} provider`
+    );
+
+    if (this.currentProvider === 'local') {
+      return await this.generateLocalEmbeddings(chunks);
+    } else if (this.currentProvider === 'cloud') {
+      return await this.generateCloudEmbeddings(chunks);
+    } else {
+      throw new Error(`Unknown AI provider: ${this.currentProvider}`);
+    }
+  }
+
+  /**
+   * Generate embeddings using local OpenAI API
+   */
+  private async generateLocalEmbeddings(chunks: ChunkData[]): Promise<
     Array<{
       chunkIndex: number;
       embedding: number[];
@@ -238,7 +340,7 @@ export class LangGraphService {
     for (const chunk of chunks) {
       try {
         logger.debug(
-          `🧠 Generating embedding for chunk ${chunk.index + 1}/${chunk.totalChunks}`
+          `🧠 Generating local embedding for chunk ${chunk.index + 1}/${chunk.totalChunks}`
         );
 
         const response = await this.retryWithBackoff(async () => {
@@ -257,7 +359,7 @@ export class LangGraphService {
           });
         }
       } catch (error) {
-        logger.error('❌ Failed to generate embedding for chunk', {
+        logger.error('❌ Failed to generate local embedding for chunk', {
           chunkIndex: chunk.index,
           error,
         });
@@ -269,11 +371,75 @@ export class LangGraphService {
   }
 
   /**
-   * Classify content by persona using OpenAI
+   * Generate embeddings using Personyx Cloud API
+   */
+  private async generateCloudEmbeddings(chunks: ChunkData[]): Promise<
+    Array<{
+      chunkIndex: number;
+      embedding: number[];
+      model: string;
+      dimensions: number;
+    }>
+  > {
+    if (!this.cloudService) {
+      throw new Error('Personyx Cloud service not initialized');
+    }
+
+    try {
+      logger.debug(
+        `🧠 Generating cloud embeddings for ${chunks.length} chunks`
+      );
+
+      // Prepare texts for batch processing
+      const texts = chunks.map(chunk => chunk.content);
+
+      const response = await this.cloudService.generateEmbeddings({
+        texts,
+        model: this.EMBEDDING_MODEL,
+        dimensions: this.EMBEDDING_DIMENSIONS,
+      });
+
+      // Map response back to chunk format
+      const embeddings = response.embeddings.map((embedding, index) => ({
+        chunkIndex: chunks[index].index,
+        embedding,
+        model: response.model,
+        dimensions: response.dimensions,
+      }));
+
+      logger.debug(`✅ Generated ${embeddings.length} cloud embeddings`);
+      return embeddings;
+    } catch (error) {
+      logger.error('❌ Failed to generate cloud embeddings', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Classify content by persona using current AI provider
    */
   private async classifyByPersona(
     content: string,
     _chunks: ChunkData[]
+  ): Promise<PersonaClassification[]> {
+    logger.debug(
+      `🎯 Classifying content using ${this.currentProvider} provider`
+    );
+
+    if (this.currentProvider === 'local') {
+      return await this.classifyLocalContent(content);
+    } else if (this.currentProvider === 'cloud') {
+      return await this.classifyCloudContent(content);
+    } else {
+      throw new Error(`Unknown AI provider: ${this.currentProvider}`);
+    }
+  }
+
+  /**
+   * Classify content using local OpenAI API
+   */
+  private async classifyLocalContent(
+    content: string
   ): Promise<PersonaClassification[]> {
     if (!this.openai) {
       throw new Error('OpenAI client not initialized');
@@ -287,7 +453,9 @@ export class LangGraphService {
       return [];
     }
 
-    logger.debug(`🎯 Classifying content against ${personas.length} personas`);
+    logger.debug(
+      `🎯 Classifying content locally against ${personas.length} personas`
+    );
 
     const classifications: PersonaClassification[] = [];
 
@@ -338,6 +506,55 @@ export class LangGraphService {
     }
 
     return classifications;
+  }
+
+  /**
+   * Classify content using Personyx Cloud API
+   */
+  private async classifyCloudContent(
+    content: string
+  ): Promise<PersonaClassification[]> {
+    if (!this.cloudService) {
+      throw new Error('Personyx Cloud service not initialized');
+    }
+
+    try {
+      // Get available personas
+      const personas = await this.personaRepo.list();
+
+      if (personas.length === 0) {
+        logger.warn('⚠️ No personas available for classification');
+        return [];
+      }
+
+      logger.debug(
+        `🎯 Classifying content via cloud against ${personas.length} personas`
+      );
+
+      // Prepare personas for cloud API
+      const cloudPersonas = personas.map(persona => ({
+        id: persona.id,
+        name: persona.name,
+        description: persona.description,
+        keywords:
+          typeof persona.keywords === 'string'
+            ? JSON.parse(persona.keywords)
+            : persona.keywords,
+      }));
+
+      const response = await this.cloudService.classifyContent({
+        content,
+        personas: cloudPersonas,
+      });
+
+      logger.debug(
+        `✅ Generated ${response.classifications.length} cloud classifications`
+      );
+      return response.classifications;
+    } catch (error) {
+      logger.error('❌ Failed to classify content via cloud', error);
+      throw error;
+    }
   }
 
   /**
@@ -505,13 +722,17 @@ Be specific about pain points, goals, and language patterns that indicate this p
    */
   public getStatus(): {
     initialized: boolean;
-    hasApiKey: boolean;
+    currentProvider: AIServiceProvider;
+    hasLocalKey: boolean;
+    hasCloudKey: boolean;
     model: string;
     embeddingDimensions: number;
   } {
     return {
       initialized: this.isInitialized,
-      hasApiKey: this.openai !== null,
+      currentProvider: this.currentProvider,
+      hasLocalKey: this.openai !== null,
+      hasCloudKey: this.cloudService?.getStatus().hasApiKey || false,
       model: this.CLASSIFICATION_MODEL,
       embeddingDimensions: this.EMBEDDING_DIMENSIONS,
     };
