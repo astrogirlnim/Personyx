@@ -18,6 +18,7 @@ import { Logger } from './utils/logger';
 import { AutoUpdater } from './utils/auto-updater';
 import { initDatabase, closeDatabase } from './db/connection';
 import { testTokenVault } from './security/tokenVault';
+import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type { IPCEvents, ImportResult } from '@shared/types';
 
@@ -29,6 +30,7 @@ class PersonyxApp {
   private mainWindow: BrowserWindow | null = null;
   private trayManager: TrayManager | null = null;
   private autoUpdater: AutoUpdater | null = null;
+  private workflowOrchestrator: WorkflowOrchestrator | null = null;
   private logger: Logger;
   private isAppReady = false;
 
@@ -126,6 +128,11 @@ class PersonyxApp {
         this.mainWindow.show();
         if (IS_DEV) {
           this.mainWindow.webContents.openDevTools();
+        }
+
+        // Set main window for workflow orchestrator IPC communication
+        if (this.workflowOrchestrator) {
+          this.workflowOrchestrator.setMainWindow(this.mainWindow);
         }
       }
     });
@@ -303,9 +310,11 @@ class PersonyxApp {
         this.logger.warn('⚠️ Token vault test failed - continuing anyway');
       }
 
-      // TODO: Initialize LangGraph service (Phase 1.3)
-      // TODO: Initialize n8n workflow manager (Phase 1.3)
-      // TODO: Load personas configuration (Phase 1.4)
+      // Initialize workflow orchestrator (Phase 1.3)
+      this.logger.info('🔄 Initializing workflow orchestrator...');
+      this.workflowOrchestrator = new WorkflowOrchestrator();
+      await this.workflowOrchestrator.initialize();
+      this.logger.info('✅ Workflow orchestrator initialized');
 
       this.logger.info('✅ Core services initialized');
     } catch (error) {
@@ -439,7 +448,7 @@ class PersonyxApp {
   /**
    * Clean up resources
    */
-  private cleanup(): void {
+  private async cleanup(): Promise<void> {
     this.logger.info('🧹 Cleaning up resources');
 
     if (this.trayManager) {
@@ -460,7 +469,16 @@ class PersonyxApp {
       this.logger.error('❌ Failed to close database', error);
     }
 
-    // TODO: Stop background services
+    // Stop workflow orchestrator
+    if (this.workflowOrchestrator) {
+      try {
+        await this.workflowOrchestrator.stop();
+        this.workflowOrchestrator = null;
+        this.logger.info('✅ Workflow orchestrator stopped');
+      } catch (error) {
+        this.logger.error('❌ Failed to stop workflow orchestrator', error);
+      }
+    }
   }
 
   /**
