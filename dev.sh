@@ -24,13 +24,11 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Enhanced debugging environment variables
-export DEBUG="*"
 export ELECTRON_ENABLE_LOGGING=1
 export ELECTRON_LOG_LEVEL=debug
 export NODE_ENV=development
 
 echo "🔍 Enhanced debugging enabled:"
-echo "  - DEBUG=* (all debug messages)"
 echo "  - ELECTRON_ENABLE_LOGGING=1 (Electron internal logs)"
 echo "  - Chrome DevTools: --inspect=9229"
 echo "  - Verbose logging: --verbose"

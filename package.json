@@ -2,7 +2,7 @@
   "name": "personyx",
   "version": "0.1.0",
   "description": "Personyx - Persona-based evidence analysis for product requirements",
-  "main": "dist/main/main.js",
+  "main": "dist/main/main/main.js",
   "author": "Personyx Team",
   "license": "MIT",
   "homepage": "https://github.com/astrogirlnim/Personyx",
@@ -85,8 +85,10 @@
       "dist/**/*",
       "package.json"
     ],
+    "icon": "build/icon.png",
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "dmg",
@@ -98,6 +100,7 @@
       ]
     },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -108,6 +111,7 @@
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "AppImage",
