@@ -52,7 +52,11 @@ jobs:
 
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "🔧 Installing dependencies with proper Electron native module configuration..."
+          # Install dependencies first
+          pnpm install --frozen-lockfile
+          echo "✅ Dependencies installed successfully"
 
       # ---------- Comprehensive Native Module Setup ----------
       - name: 🔧 Rebuild native modules for Electron
@@ -73,6 +77,9 @@ jobs:
         env:
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_runtime: electron
+          npm_config_target: 28.3.3
           PYTHON: /usr/bin/python3.11
 
       # ---------- Security & Quality ----------
@@ -270,14 +277,13 @@ jobs:
 
       # ---------- Install Dependencies (Python 3.11 now available) ----------
       - name: 📋 Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          # Ensure Python 3.11 is used during native module compilation
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-          # Cross-platform native module compilation settings
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_runtime: electron
+        run: |
+          echo "🔧 Installing dependencies with proper Electron native module configuration..."
+          # Use electron-builder to handle native modules properly
+          pnpm install --frozen-lockfile
+          echo "🏗️ Rebuilding native modules for Electron..."
+          pnpm exec electron-builder install-app-deps
+          echo "✅ Dependencies and native modules installed successfully"
 
       # ---------- Windows Native Module Fix (if needed) ----------
       - name: 🔧 Rebuild native modules for Windows
