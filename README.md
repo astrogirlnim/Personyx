@@ -14,6 +14,7 @@ PersonaPulse is a desktop application that prevents wasted engineering sprints b
 ### Run PersonaPulse Locally
 
 **Option 1: Using npm scripts**
+
 ```bash
 # Start full development environment (recommended)
 npm start
@@ -23,6 +24,7 @@ npm run dev:app
 ```
 
 **Option 2: Using the shell script**
+
 ```bash
 # Make executable (first time only)
 chmod +x dev.sh
@@ -32,6 +34,7 @@ chmod +x dev.sh
 ```
 
 **Option 3: Manual step-by-step**
+
 ```bash
 # Start development servers
 npm run dev
@@ -41,6 +44,7 @@ npm run electron:dev
 ```
 
 This will:
+
 1. ✅ Start TypeScript compilation in watch mode
 2. ✅ Launch Vite dev server on `http://localhost:3000`
 3. ✅ Open PersonaPulse in Electron when ready

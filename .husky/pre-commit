@@ -1,0 +1,14 @@
+#!/bin/sh
+
+echo "🕵️ Running local pre-commit checks..."
+
+# 1. Secret scanning with gitleaks
+echo "🔍 Scanning for secrets..."
+gitleaks detect --source . --no-git -v || {
+  echo "❌ Secret scan failed! Please remove any secrets before committing."
+  exit 1
+}
+
+# 2. ESLint + Prettier only on staged files
+echo "🧹 Running linters on staged files..."
+npx lint-staged

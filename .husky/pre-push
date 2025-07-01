@@ -1,0 +1,26 @@
+#!/bin/sh
+
+echo "🧪 Running pre-push validation suite..."
+
+# Type checking
+echo "🔍 Type checking..."
+npm run typecheck || {
+  echo "❌ TypeScript type checking failed!"
+  exit 1
+}
+
+# Linting
+echo "🧹 Linting codebase..."
+npm run lint || {
+  echo "❌ ESLint validation failed!"
+  exit 1
+}
+
+# Testing
+echo "🧪 Running tests..."
+npm run test --passWithNoTests || {
+  echo "❌ Test suite failed!"
+  exit 1
+}
+
+echo "✅ All pre-push checks passed!" 

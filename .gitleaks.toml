@@ -1,0 +1,43 @@
+# Gitleaks Configuration for PersonaPulse
+title = "PersonaPulse Security Configuration"
+
+# Custom rules for our project
+[[rules]]
+description = "OpenAI API Key"
+id = "openai-api-key"
+regex = '''sk-[a-zA-Z0-9]{48}'''
+tags = ["key", "openai"]
+
+[[rules]]
+description = "Anthropic API Key"
+id = "anthropic-api-key"
+regex = '''sk-ant-[a-zA-Z0-9\-_]{95,100}'''
+tags = ["key", "anthropic"]
+
+# Global allowlists (v8.25+ syntax)
+[[allowlists]]
+description = "Ignore Electron release files and build artifacts"
+paths = [
+  '''release/.*''',
+  '''dist/.*''',
+  '''dist-test/.*''',
+  '''node_modules/.*''',
+  '''build/.*''',
+  '''out/.*''',
+]
+
+[[allowlists]]
+description = "Ignore package manager files"
+paths = [
+  '''pnpm-lock\.yaml''',
+  '''package-lock\.json''',
+  '''yarn\.lock''',
+]
+
+[[allowlists]]
+description = "Ignore config files only"
+paths = [
+  '''\.gitignore''',
+  '''\.eslintrc\..*''',
+  '''\.prettierrc\..*''',
+] 
