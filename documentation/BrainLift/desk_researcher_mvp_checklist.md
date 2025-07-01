@@ -25,12 +25,12 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 
 _Criteria: essential build & tooling; no cross-dependencies._
 
-[ ] **Feature 1 – Project Bootstrap & Tooling**
+[X] **Feature 1 – Project Bootstrap & Tooling**
 
 - [x] **1.1** Scaffold an Electron 28 + TypeScript monorepo with one "Tray UI" process and one "Core" process.
-- [ ] **1.2** Add cross-platform build / packaging scripts (Mac, Win, Linux) and ESLint+Prettier pipeline.
-- [ ] **1.3** Stub a Tray menu containing a "Drop PRD (.md / .txt)" zone.
-- [ ] **1.4** Wire a basic auto-update placeholder (no server yet).
+- [x] **1.2** Add cross-platform build / packaging scripts (Mac, Win, Linux) and ESLint+Prettier pipeline.
+- [x] **1.3** Stub a Tray menu containing a "Drop PRD (.md / .txt)" zone.
+- [x] **1.4** Wire a basic auto-update placeholder (no server yet).
 
 [ ] **Feature 2 – Core Data Structures & Security**
 
