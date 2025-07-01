@@ -1,0 +1,120 @@
+name: 🔍 PR Validation
+
+on:
+  pull_request:
+    branches: [main, '*']
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 10
+
+jobs:
+  validate:
+    name: 🧪 Validate Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ---------- Checkout & Setup ----------
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better gitleaks scanning
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # ---------- Install Dependencies ----------
+      - name: 📋 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ---------- Security Scan ----------
+      - name: 🕵️ Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---------- Code Quality Checks (Parallel) ----------
+      - name: 🔍 TypeScript Type Check
+        run: pnpm typecheck
+
+      - name: 🧹 ESLint & Prettier Check
+        run: pnpm lint
+
+      - name: 🧪 Run Tests
+        run: pnpm test --passWithNoTests
+
+      # ---------- Build Verification ----------
+      - name: 🏗️ Build Application
+        run: pnpm build
+
+      - name: 📦 Test Electron Packaging (Directory Only)
+        run: npx electron-builder --dir --config.directories.output=dist-test
+        env:
+          # Skip notarization and signing for PR builds
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      # ---------- Upload Build Artifacts ----------
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: pr-build-${{ github.event.number }}
+          path: |
+            dist/
+            dist-test/
+          retention-days: 7
+
+  # ---------- Security & Dependency Analysis ----------
+  security:
+    name: 🔒 Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: 🔍 CodeQL Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # ---------- PR Summary ----------
+  summary:
+    name: 📊 PR Summary
+    runs-on: ubuntu-latest
+    needs: [validate, security]
+    if: always()
+
+    steps:
+      - name: 📊 Generate Summary
+        run: |
+          echo "## 🎯 PR Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then
+            echo "🎉 All checks passed! This PR is ready for review." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Some checks failed. Please review the logs and fix issues." >> $GITHUB_STEP_SUMMARY
+          fi

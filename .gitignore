@@ -229,7 +229,7 @@ api-keys.json
 credentials.json
 
 # n8n workflow data
-workflows/
+/workflows/
 .n8n/
 
 # AI model files

@@ -1,0 +1,258 @@
+name: 🚀 Main Build & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggers
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 10
+
+jobs:
+  # ---------- Full Validation ----------
+  validate:
+    name: 🧪 Full Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ---------- Checkout & Setup ----------
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # ---------- Install Dependencies ----------
+      - name: 📋 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ---------- Security & Quality ----------
+      - name: 🕵️ Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔍 TypeScript Type Check
+        run: pnpm typecheck
+
+      - name: 🧹 ESLint & Prettier Check
+        run: pnpm lint
+
+      - name: 🧪 Run Test Suite
+        run: pnpm test --passWithNoTests
+
+      # ---------- Build Application ----------
+      - name: 🏗️ Build Application
+        run: pnpm build
+
+      # ---------- Upload Build for Next Job ----------
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: dist/
+          retention-days: 30
+
+  # ---------- Multi-Platform Packaging ----------
+  package:
+    name: 📦 Package (${{ matrix.os }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            arch: universal
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: windows-latest
+            platform: win
+            arch: x64
+
+    steps:
+      # ---------- Checkout & Setup ----------
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # ---------- Install Dependencies ----------
+      - name: 📋 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ---------- Download Build ----------
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: dist/
+
+      # ---------- Platform-Specific Packaging ----------
+      - name: 📦 Package for macOS
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac --universal --publish never
+        env:
+          # Add macOS signing secrets when available
+          # CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          # NOTARIZE: true
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: 📦 Package for Linux
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux --x64 --publish never
+
+      - name: 📦 Package for Windows
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win --x64 --publish never
+        env:
+          # Add Windows signing secrets when available
+          # CSC_LINK: ${{ secrets.WIN_CERTIFICATE }}
+          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      # ---------- Upload Platform Packages ----------
+      - name: 📤 Upload Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.platform }}-${{ github.sha }}
+          path: |
+            release/**/*
+            !release/**/builder-debug.yml
+          retention-days: 90
+
+  # ---------- Security Analysis ----------
+  security:
+    name: 🔒 Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: 🔍 CodeQL Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # ---------- Release Preparation ----------
+  release:
+    name: 🎉 Prepare Release
+    needs: [validate, package, security]
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      # ---------- Download All Packages ----------
+      - name: 📥 Download macOS Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages-mac-${{ github.sha }}
+          path: release-assets/
+
+      - name: 📥 Download Linux Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages-linux-${{ github.sha }}
+          path: release-assets/
+
+      - name: 📥 Download Windows Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages-win-${{ github.sha }}
+          path: release-assets/
+
+      # ---------- Generate Release Notes ----------
+      - name: 📝 Generate Release Notes
+        id: release_notes
+        run: |
+          echo "## 🎉 PersonaPulse Build ${{ github.sha }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "### 📦 Available Downloads" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "| Platform | File | Size |" >> release_notes.md
+          echo "|----------|------|------|" >> release_notes.md
+
+          # List all release files with sizes
+          find release-assets -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" | while read file; do
+            size=$(du -h "$file" | cut -f1)
+            basename=$(basename "$file")
+            echo "| $(echo $basename | cut -d'.' -f1) | $basename | $size |" >> release_notes.md
+          done
+
+          echo "" >> release_notes.md
+          echo "### 🔍 Validation Results" >> release_notes.md
+          echo "- ✅ TypeScript type checking passed" >> release_notes.md
+          echo "- ✅ ESLint validation passed" >> release_notes.md
+          echo "- ✅ Security scan passed" >> release_notes.md
+          echo "- ✅ All tests passed" >> release_notes.md
+          echo "- ✅ Cross-platform builds completed" >> release_notes.md
+
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ---------- Create Development Release ----------
+      - name: 🏷️ Create Development Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-${{ github.sha }}
+          name: 'Development Build - ${{ github.sha }}'
+          body: ${{ steps.release_notes.outputs.release_notes }}
+          files: release-assets/**/*
+          prerelease: true
+          generate_release_notes: true
+
+      # ---------- Deployment Summary ----------
+      - name: 📊 Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Packages Built" >> $GITHUB_STEP_SUMMARY
+          echo "- 🍎 macOS Universal" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐧 Linux x64" >> $GITHUB_STEP_SUMMARY
+          echo "- 🪟 Windows x64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Release" >> $GITHUB_STEP_SUMMARY
+          echo "[📥 Download Development Build](https://github.com/${{ github.repository }}/releases/tag/dev-${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏱️ Build Time" >> $GITHUB_STEP_SUMMARY
+          echo "Started: ${{ github.event.head_commit.timestamp }}" >> $GITHUB_STEP_SUMMARY
+          echo "Completed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
