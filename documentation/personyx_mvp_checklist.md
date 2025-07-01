@@ -1,4 +1,4 @@
-# MVP Development Checklist – **PersonaPulse v0.1**
+# MVP Development Checklist – **Personyx v0.1**
 
 _All items are written as independent, testable tasks for your AI developer. Work straight down every phase; within each feature, sub-items have **zero internal dependencies**._
 
@@ -61,10 +61,10 @@ _Criteria: storage & computation services, depends only on Phase 1._
 
 [X] **Feature 1 – Evidence Score Engine** ✅ COMPLETE
 
-- [X] **1.1** Implement a scoring algorithm (0-100) per persona using evidence coverage heuristics. ✅ COMPLETE
-- [X] **1.2** Expose `calculateEvidenceScore(prdId, personaId)` as a service. ✅ COMPLETE
-- [X] **1.3** Persist score snapshots with timestamp to SQLite. ✅ COMPLETE
-- [X] **1.4** Add unit tests covering min, max, and median score paths. ✅ COMPLETE
+- [x] **1.1** Implement a scoring algorithm (0-100) per persona using evidence coverage heuristics. ✅ COMPLETE
+- [x] **1.2** Expose `calculateEvidenceScore(prdId, personaId)` as a service. ✅ COMPLETE
+- [x] **1.3** Persist score snapshots with timestamp to SQLite. ✅ COMPLETE
+- [x] **1.4** Add unit tests covering min, max, and median score paths. ✅ COMPLETE
 
 [ ] **Feature 2 – Embedding Retrieval API**
 

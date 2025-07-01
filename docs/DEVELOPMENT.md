@@ -2,9 +2,9 @@
 
 ## 🚀 Quick Start
 
-### Run PersonaPulse Locally
+### Run Personyx Locally
 
-The fastest way to get PersonaPulse running locally:
+The fastest way to get Personyx running locally:
 
 ```bash
 npm start
@@ -79,7 +79,7 @@ npm run electron    # Launch built app (production mode)
 
 ```bash
 git clone <repository>
-cd PersonaPulse
+cd Personyx
 pnpm install
 ```
 
@@ -155,7 +155,7 @@ npm run build       # Verify production build works
 
 - [ ] App launches with system tray icon
 - [ ] Main window opens when clicking tray
-- [ ] React UI loads with PersonaPulse branding
+- [ ] React UI loads with Personyx branding
 - [ ] No console errors in either process
 - [ ] Hot reload works for renderer changes
 
@@ -169,7 +169,7 @@ npm run lint       # Check code quality
 
 ## 🚀 Ready for Development
 
-Your PersonaPulse development environment is now ready! Start with:
+Your Personyx development environment is now ready! Start with:
 
 ```bash
 npm start

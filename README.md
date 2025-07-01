@@ -174,7 +174,7 @@ Personyx aims to save teams **1.5+ engineering sprints per month** by rejecting 
 
 ## 🛠️ Architecture
 
-PersonaPulse uses a **monorepo architecture** with clear separation between processes:
+Personyx uses a **monorepo architecture** with clear separation between processes:
 
 ```
 Personyx/
@@ -261,7 +261,7 @@ Personyx/
 
 ## 🎨 Design System
 
-PersonaPulse implements the **DeskResearcher Design System** with:
+Personyx implements the **DeskResearcher Design System** with:
 
 - **Evidence Blue** (`#2F80ED`) - Primary actions and scores
 - **Persona Green** (`#27AE60`) - Success states and persona tags
@@ -322,7 +322,7 @@ refactor: improve IPC type safety
 
 > **Give makers an evidence-backed go/no-go gate that prevents wasted sprints before the first line of code — and provides live persona feedback while they build.**
 
-PersonaPulse aims to save teams **1.5+ engineering sprints per month** by rejecting low-evidence features and surfacing persona-specific insights directly in development tools.
+Personyx aims to save teams **1.5+ engineering sprints per month** by rejecting low-evidence features and surfacing persona-specific insights directly in development tools.
 
 ## 📄 License
 
@@ -343,7 +343,7 @@ For questions, issues, or feature requests, please [open an issue](https://githu
 
 ## Native Modules & Electron
 
-PersonaPulse uses native modules (better-sqlite3, keytar) that must be compiled for Electron's specific Node.js version.
+Personyx uses native modules (better-sqlite3, keytar) that must be compiled for Electron's specific Node.js version.
 
 ### Automatic Handling
 

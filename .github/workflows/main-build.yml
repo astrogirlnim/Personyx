@@ -401,7 +401,7 @@ jobs:
       - name: 📝 Generate Release Notes
         id: release_notes
         run: |
-          echo "## 🎉 PersonaPulse Build ${{ github.sha }}" > release_notes.md
+          echo "## 🎉 Personyx Build ${{ github.sha }}" > release_notes.md
           echo "" >> release_notes.md
           echo "### 📦 Available Downloads" >> release_notes.md
           echo "" >> release_notes.md

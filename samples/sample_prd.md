@@ -1,6 +1,6 @@
 # PRD: Smart Copy Assistant for Marketing Teams
 
-**Product:** PersonaPulse Copy Intelligence  
+**Product:** Personyx Copy Intelligence  
 **Version:** 1.0  
 **Date:** 2024-01-25  
 **Owner:** Product Team
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-PersonaPulse Copy Intelligence enables marketing teams to generate persona-aligned copy variations in minutes instead of weeks. By analyzing user evidence and persona insights, the system produces targeted messaging that optimizes conversion rates and reduces iteration time.
+Personyx Copy Intelligence enables marketing teams to generate persona-aligned copy variations in minutes instead of weeks. By analyzing user evidence and persona insights, the system produces targeted messaging that optimizes conversion rates and reduces iteration time.
 
 ## Problem Statement
 

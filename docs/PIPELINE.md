@@ -1,6 +1,6 @@
-# 🚀 PersonaPulse CI/CD Pipeline
+# 🚀 Personyx CI/CD Pipeline
 
-This document describes the comprehensive CI/CD pipeline setup for PersonaPulse, including local git hooks, GitHub Actions workflows, and security scanning.
+This document describes the comprehensive CI/CD pipeline setup for Personyx, including local git hooks, GitHub Actions workflows, and security scanning.
 
 ## 📋 Overview
 

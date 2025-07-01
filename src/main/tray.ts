@@ -37,7 +37,7 @@ export class TrayManager {
 
       // Set tray tooltip and title for visual confirmation
       this.tray.setToolTip('Personyx - Evidence-based PRD analysis');
-      this.tray.setTitle('PP'); // Visual confirmation - shows text in macOS menu bar
+      this.tray.setTitle('PY'); // Visual confirmation - shows text in macOS menu bar
       this.logger.debug('📱 Tray tooltip and title set');
 
       // Create context menu
