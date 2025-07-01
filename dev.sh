@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# PersonaPulse Development Script
+# Personyx Development Script
 # Starts the full development environment
 
-echo "🚀 Starting PersonaPulse Development Environment..."
+echo ""
+echo "🚀 Starting Personyx Development Environment..."
 echo ""
 echo "This will:"
 echo "  1. Start TypeScript compilation in watch mode"

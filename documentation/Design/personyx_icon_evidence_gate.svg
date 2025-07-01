@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Open gate bars -->
+  <rect x="20" y="10" width="15" height="80" rx="3" fill="#1B2D4F"/>
+  <rect x="65" y="10" width="15" height="80" rx="3" fill="#1B2D4F"/>
+  <!-- Check mark -->
+  <path d="M30 55 L45 70 L70 40" stroke="#00A86B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

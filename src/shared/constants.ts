@@ -1,12 +1,12 @@
 /**
- * Shared constants for PersonaPulse
+ * Shared constants for Personyx
  * Used across main and renderer processes
  */
 
 // Application information
-export const APP_NAME = 'PersonaPulse';
+export const APP_NAME = 'Personyx';
 export const APP_VERSION = '0.1.0';
-export const APP_IDENTIFIER = 'com.personapulse.deskresearcher';
+export const APP_IDENTIFIER = 'com.personyx.app';
 
 // IPC Channels
 export const IPC_CHANNELS = {
@@ -28,7 +28,7 @@ export const IPC_CHANNELS = {
 // File paths and directories
 export const PATHS = {
   USER_DATA: 'userData',
-  DATABASE: 'persona-pulse.db',
+  DATABASE: 'personyx.db',
   SETTINGS: 'settings.json',
   LOGS: 'logs',
   INTERVIEWS: 'interviews',
@@ -39,7 +39,7 @@ export const PATHS = {
 
 // Database configuration
 export const DATABASE = {
-  NAME: 'persona-pulse.db',
+  NAME: 'personyx.db',
   VERSION: 1,
   ENCRYPTION_ALGORITHM: 'aes-256-gcm',
   BACKUP_RETENTION_DAYS: 7,
@@ -127,7 +127,7 @@ export const LOGGING = {
 export const SECURITY = {
   TOKEN_ENCRYPTION_KEY_LENGTH: 32,
   AES_IV_LENGTH: 16,
-  KEYCHAIN_SERVICE_NAME: 'PersonaPulse',
+  KEYCHAIN_SERVICE_NAME: 'Personyx',
   SESSION_TIMEOUT_MINUTES: 60,
 } as const;
 
@@ -144,7 +144,7 @@ export const TRAY_MENU = {
   ITEMS: [
     {
       id: 'show-window',
-      label: 'Show PersonaPulse',
+      label: 'Show Personyx',
       accelerator: 'CmdOrCtrl+Shift+P',
     },
     {
@@ -163,7 +163,7 @@ export const TRAY_MENU = {
     },
     {
       id: 'quit-app',
-      label: 'Quit PersonaPulse',
+      label: 'Quit Personyx',
       accelerator: 'CmdOrCtrl+Q',
     },
   ],

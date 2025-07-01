@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E1624"/>
+      <stop offset="100%" stop-color="#071018"/>
+    </linearGradient>
+
+    <!-- Gem Gradient -->
+    <linearGradient id="gemGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#33D7D1"/>
+      <stop offset="100%" stop-color="#0C304A"/>
+    </linearGradient>
+
+    <!-- Highlight Gradient -->
+    <linearGradient id="highlightGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3ff0e4"/>
+      <stop offset="100%" stop-color="#1ca1b8"/>
+    </linearGradient>
+
+    <!-- Clip path for rounded square -->
+    <clipPath id="appMask">
+      <rect x="0" y="0" width="512" height="512" rx="110" ry="110"/>
+    </clipPath>
+
+    <!-- Mask to punch head silhouette out of gem -->
+    <mask id="headCut">
+      <!-- everything visible by default -->
+      <rect width="512" height="512" fill="white"/>
+      <!-- The head silhouette: black area will become transparent -->
+      <path d="
+        M 270 120
+        C 240 120 205 150 205 200
+        C 205 235 225 250 225 250
+        C 225 250 205 260 205 300
+        C 205 350 245 372 245 372
+        L 245 412
+        L 330 412
+        L 330 380
+        C 330 380 335 370 350 354
+        C 365 338 377 310 377 270
+        C 377 190 330 120 270 120
+        Z" fill="black"/>
+    </mask>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect x="0" y="0" width="512" height="512" rx="110" ry="110" fill="url(#bgGrad)"/>
+
+  <!-- Tilt group for gem & head -->
+  <g transform="rotate(-8 256 256)">
+    <!-- Outer gem polygon -->
+    <polygon points="256,60 348,100 412,180 412,280 348,360 256,400 164,360 100,280 100,180 164,100"
+             fill="url(#gemGrad)" mask="url(#headCut)"/>
+
+    <!-- Accent facet creating subtle 'Y' -->
+    <polygon points="348,100 380,160 320,140"
+             fill="url(#highlightGrad)" opacity="0.9" mask="url(#headCut)"/>
+
+    <!-- Tiny star highlight -->
+    <polygon points="300,180 306,196 322,196 309,206 314,222 300,214 286,222 291,206 278,196 294,196"
+             fill="#ffffff" opacity="0.8" mask="url(#headCut)"/>
+  </g>
+</svg>

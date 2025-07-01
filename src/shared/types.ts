@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript interfaces for PersonaPulse
+ * Shared TypeScript interfaces for Personyx
  * Used across main and renderer processes
  */
 

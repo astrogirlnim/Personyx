@@ -1,5 +1,5 @@
 /**
- * Auto-updater service for PersonaPulse
+ * Auto-updater service for Personyx
  * Placeholder implementation for Phase 1.4
  */
 
@@ -139,8 +139,8 @@ export class AutoUpdater {
       // Show dialog if user is actively using the app
       const result = await dialog.showMessageBox({
         type: 'info',
-        title: 'Update Available',
-        message: `PersonaPulse ${updateInfo.version} is available`,
+        title: 'Personyx Update Available',
+        message: `Personyx ${updateInfo.version} is available`,
         detail: updateInfo.releaseNotes,
         buttons: ['Download & Install', 'Remind Me Later', 'Skip This Version'],
         defaultId: 0,
@@ -187,9 +187,9 @@ export class AutoUpdater {
       // Show installation dialog
       const installResult = await dialog.showMessageBox({
         type: 'question',
-        title: 'Install Update',
+        title: 'Personyx Update Available',
         message: 'Update downloaded successfully',
-        detail: 'Would you like to restart PersonaPulse to install the update?',
+        detail: 'Would you like to restart Personyx to install the update?',
         buttons: ['Restart Now', 'Install on Next Restart'],
         defaultId: 0,
       });
@@ -214,7 +214,7 @@ export class AutoUpdater {
   private showUpdateNotification(updateInfo: UpdateInfo): void {
     try {
       const notification = new Notification({
-        title: 'PersonaPulse Update Available',
+        title: 'Personyx Update Available',
         body: `Version ${updateInfo.version} is ready to download`,
         icon: undefined, // TODO: Add app icon
         silent: false,

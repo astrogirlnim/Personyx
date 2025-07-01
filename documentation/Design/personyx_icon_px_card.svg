@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main card -->
+  <rect x="20" y="10" width="60" height="80" rx="4" fill="#0057FF"/>
+  <!-- Folded corner -->
+  <polygon points="80,10 80,30 60,10" fill="#FFFFFF" opacity="0.9"/>
+  <!-- 'P' stroke -->
+  <path d="M32 28 L32 72 L40 72 L40 60 L48 60 Q57 60 57 45 Q57 30 48 30 L32 30 Z" fill="#FFFFFF"/>
+  <!-- 'X' stroke -->
+  <path d="M60 35 L72 65 M72 35 L60 65" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+</svg>

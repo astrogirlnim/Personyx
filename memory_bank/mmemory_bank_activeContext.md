@@ -39,7 +39,7 @@ _Last updated: 2025-01-02_
 - ✅ **Event-driven IPC**: Type-safe communication between main and renderer processes
 - ✅ **Fallback Icon System**: Graceful degradation when assets missing
 - ✅ **TypeScript Path Aliases**: `@shared/*`, `@main/*`, `@renderer/*` working correctly
-- ✅ **Tailwind + Design System**: DeskResearcher colors and typography implemented
+- ✅ **Tailwind + Design System**: Personyx colors and typography implemented
 
 ## Development Experience Quality
 
@@ -65,7 +65,7 @@ _Last updated: 2025-01-02_
 1. **Complete Phase 1.2**: Packaging scripts and quality pipeline verification
 2. **Phase 1.3 Planning**: Design functional PRD drop zone user experience
 3. **Phase 2 Preparation**: SQLite schema design and security implementation
-4. **Icon Design**: Create actual PersonaPulse branding assets
+4. **Icon Design**: Create actual Personyx branding assets
 
 ## Technology Stack Status
 

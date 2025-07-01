@@ -1,5 +1,5 @@
 /**
- * PersonaPulse Main Process
+ * Personyx Main Process
  * Entry point for the Electron main process (Core)
  */
 
@@ -16,7 +16,7 @@ import type { IPCEvents, ImportResult } from '@shared/types';
 const IS_DEV = process.env.NODE_ENV === 'development';
 const IS_MAC = process.platform === 'darwin';
 
-class PersonaPulseApp {
+class PersonyxApp {
   private mainWindow: BrowserWindow | null = null;
   private trayManager: TrayManager | null = null;
   private autoUpdater: AutoUpdater | null = null;
@@ -25,8 +25,10 @@ class PersonaPulseApp {
 
   constructor() {
     this.logger = new Logger('main');
+    this.logger.info('🚀 Personyx starting up...');
     this.setupAppEventHandlers();
     this.setupIpcHandlers();
+    this.logger.info('✅ Personyx ready');
   }
 
   /**
@@ -34,7 +36,7 @@ class PersonaPulseApp {
    */
   public async initialize(): Promise<void> {
     try {
-      this.logger.info('🚀 PersonaPulse starting up...');
+      this.logger.info('🚀 Personyx starting up...');
 
       // Create necessary directories
       await this.createDirectories();
@@ -54,14 +56,14 @@ class PersonaPulseApp {
       await this.initializeCoreServices();
 
       this.isAppReady = true;
-      this.logger.info('✅ PersonaPulse ready');
+      this.logger.info('✅ Personyx ready');
 
       // Notify renderer if window exists
       if (this.mainWindow) {
         this.mainWindow.webContents.send(IPC_CHANNELS.APP_READY, {});
       }
     } catch (error) {
-      this.logger.error('❌ Failed to initialize PersonaPulse', error);
+      this.logger.error('❌ Failed to initialize Personyx', error);
       this.handleError('Failed to initialize application', error);
     }
   }
@@ -232,7 +234,7 @@ class PersonaPulseApp {
    */
   private setupProtocols(): void {
     // Handle deep links if needed
-    app.setAsDefaultProtocolClient('personapulse');
+    app.setAsDefaultProtocolClient('personyx');
   }
 
   /**
@@ -360,7 +362,7 @@ class PersonaPulseApp {
     // Show error dialog
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
-    dialog.showErrorBox('PersonaPulse Error', `${message}\n\n${errorMessage}`);
+    dialog.showErrorBox('Personyx Error', `${message}\n\n${errorMessage}`);
 
     // Send error to renderer if available
     if (this.mainWindow) {
@@ -395,7 +397,7 @@ class PersonaPulseApp {
    * Quit the application
    */
   public quit(): void {
-    this.logger.info('🛑 Quitting PersonaPulse');
+    this.logger.info('🛑 Quitting Personyx');
     app.quit();
   }
 
@@ -422,7 +424,7 @@ class PersonaPulseApp {
 }
 
 // Create and start the application
-const personaPulseApp = new PersonaPulseApp();
+const personyxApp = new PersonyxApp();
 
 // Export for other modules
-export { personaPulseApp };
+export { personyxApp };

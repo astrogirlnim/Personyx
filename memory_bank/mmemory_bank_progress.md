@@ -13,7 +13,7 @@ _Last updated: 2025-07-01_
 
 ## Detailed Checklist Snapshot
 
-_(Source: PersonaPulse v0.1 checklist)_
+_(Source: Personyx v0.1 checklist)_
 
 ```text
 ✅ Phase 1 – Foundation (4/4 Complete - FINISHED)
@@ -75,7 +75,7 @@ _(Source: PersonaPulse v0.1 checklist)_
 - **Visual Drop Zone**: Clean UI implementation with proper design system styling
 - **Tray Menu Integration**: "Import PRD" option available in system tray context menu
 - **IPC Infrastructure**: Backend handlers and preload API ready for future phases
-- **Design Compliance**: Follows DeskResearcher design tokens and component patterns
+- **Design Compliance**: Follows Personyx design tokens and component patterns
 - **Stub Status**: Visual-only implementation as planned - click/drag handlers deferred to Phase 2.3 & 3.1.2
 
 ### ✅ Phase 1.4 - Auto-Update Service (COMPLETE)
@@ -91,7 +91,7 @@ _(Source: PersonaPulse v0.1 checklist)_
 - **Time‑boxed sprint**: Only 4 days leaves minimal buffer for Phase 2-4
 - **OpenAI rate limits**: May slow batch PRD embedding; consider local model fallback
 - **Cross‑platform packaging**: Windows code‑signing could eat half a day
-- **Icon assets**: Need actual PersonaPulse tray icons (currently using fallback)
+- **Icon assets**: Need actual Personyx tray icons (currently using fallback)
 
 ## Implementation Quality Notes
 
@@ -101,7 +101,7 @@ _(Source: PersonaPulse v0.1 checklist)_
 - **Code Organization**: Clean monorepo structure with proper boundaries
 - **Build Pipeline**: Fast development with hot reloading for both processes
 - **Error Handling**: Robust logging system with file + console output
-- **Design System**: DeskResearcher colors and typography implemented
+- **Design System**: Personyx colors and typography implemented
 - **Security**: Prepared for AES encryption and local-first architecture
 - **Module Resolution**: Perfect TypeScript path alias resolution in compiled output
 

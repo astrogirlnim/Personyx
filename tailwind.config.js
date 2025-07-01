@@ -4,7 +4,40 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // DeskResearcher design system colors - Light variants
+        // Personyx design system colors - Evidence Gate palette
+        evidence: {
+          DEFAULT: '#2F80ED',
+          dark: '#5C9EFF',
+        },
+        persona: {
+          DEFAULT: '#27AE60',
+          dark: '#5BC686',
+        },
+        insight: {
+          DEFAULT: '#9B51E0',
+          dark: '#BB7BFF',
+        },
+        mist: {
+          DEFAULT: '#F7F9FC',
+          dark: '#1F1F24',
+        },
+        paper: {
+          DEFAULT: '#FFFFFF',
+          dark: '#26262C',
+        },
+        graphite: {
+          DEFAULT: '#CED4DA',
+          dark: '#3A3E46',
+        },
+        slate: {
+          DEFAULT: '#212529',
+          dark: '#E9ECEF',
+        },
+        steel: {
+          DEFAULT: '#495057',
+          dark: '#ADB5BD',
+        },
+        // Legacy colors for backwards compatibility
         'evidence-blue': {
           DEFAULT: '#2F80ED',
           dark: '#5C9EFF',
@@ -33,18 +66,6 @@ module.exports = {
           DEFAULT: '#FFFFFF',
           dark: '#26262C',
         },
-        graphite: {
-          DEFAULT: '#CED4DA',
-          dark: '#3A3E46',
-        },
-        slate: {
-          DEFAULT: '#212529',
-          dark: '#E9ECEF',
-        },
-        steel: {
-          DEFAULT: '#495057',
-          dark: '#ADB5BD',
-        },
       },
       fontFamily: {
         sans: ['Inter', 'Roboto', 'system-ui', 'sans-serif'],
@@ -69,6 +90,7 @@ module.exports = {
       },
       boxShadow: {
         'dr-sm': '0 1px 2px rgba(0,0,0,0.05)', // Component token
+        'dr-md': '0 4px 6px rgba(0,0,0,0.1)', // Elevation for top-level tray
         'dr-depth':
           '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', // 4dp shadow
       },
