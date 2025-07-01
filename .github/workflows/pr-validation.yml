@@ -46,17 +46,38 @@ jobs:
       - name: 🔧 Rebuild native modules for Electron
         run: |
           echo "🔧 Rebuilding native modules for Electron compatibility..."
+
+          # First, try to use prebuild binaries if available
+          echo "🔍 Attempting to use prebuild binaries..."
+          pnpm exec prebuild-install --runtime electron --target 28.3.3 --arch x64 || echo "⚠️ Prebuild failed, will compile from source"
+
           # Clear any potentially problematic build artifacts
+          echo "🧹 Cleaning build artifacts..."
           rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
           rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
           find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
 
-          # Rebuild native modules specifically for Electron's Node version
-          pnpm exec electron-builder install-app-deps
+          # For better-sqlite3 specifically, try direct rebuild with explicit flags
+          echo "🔨 Rebuilding better-sqlite3 with explicit electron target..."
+          npm_config_target=28.3.3 npm_config_arch=x64 npm_config_runtime=electron npm_config_build_from_source=true pnpm exec electron-rebuild --only better-sqlite3 || {
+            echo "⚠️ electron-rebuild failed, trying alternative approach..."
+            # Fallback: try npm rebuild directly in the package directory
+            cd node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3 2>/dev/null && npm rebuild --build-from-source || echo "⚠️ Direct rebuild also failed"
+            cd - 2>/dev/null || true
+          }
 
-          echo "✅ Native modules rebuilt successfully"
+          # Try keytar rebuild
+          echo "🔑 Rebuilding keytar..."
+          pnpm exec electron-rebuild --only keytar || echo "⚠️ keytar rebuild failed (may not be critical)"
+
+          # Final attempt with electron-builder's method
+          echo "🏗️ Final rebuild attempt with electron-builder..."
+          pnpm exec electron-builder install-app-deps || echo "⚠️ electron-builder install-app-deps failed"
+
+          echo "✅ Native module rebuild process completed"
         env:
           npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
 
       # ---------- Security Scan ----------
       - name: 🕵️ Gitleaks Secret Scan

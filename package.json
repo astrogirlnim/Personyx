@@ -63,6 +63,7 @@
     "cross-env": "^7.0.3",
     "electron": "28.3.3",
     "electron-builder": "24.13.3",
+    "electron-rebuild": "^3.2.9",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
