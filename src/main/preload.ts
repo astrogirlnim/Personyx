@@ -8,7 +8,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Define the electron API interface
 interface ElectronAPI {
   // File operations
-  openFileDialog: () => void;
+  openFileDialog: () => Promise<unknown>;
   importPRD: (filePath: string) => Promise<unknown>;
 
   // App operations
@@ -42,7 +42,7 @@ const electronAPI: ElectronAPI = {
   // File operations
   openFileDialog: () => {
     console.log('📂 Opening file dialog from drop zone');
-    ipcRenderer.send('open-file-dialog');
+    return ipcRenderer.invoke('open-file-dialog');
   },
 
   importPRD: (filePath: string) => {

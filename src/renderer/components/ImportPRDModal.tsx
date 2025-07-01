@@ -7,7 +7,7 @@ import React, { useState, useCallback, useRef } from 'react';
 
 interface ImportPRDModalProps {
   onClose: () => void;
-  onImport: (file: File) => Promise<void>;
+  onImport: () => Promise<void>;
   importing: boolean;
   progress: number;
   onError: (message: string) => void;
@@ -131,7 +131,7 @@ export function ImportPRDModal({
     if (!selectedFile) return;
 
     try {
-      await onImport(selectedFile);
+      await onImport();
     } catch (error) {
       console.error('❌ Import failed:', error);
       // Error handling is done in the parent component

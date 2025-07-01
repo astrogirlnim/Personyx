@@ -5,7 +5,7 @@
 
 interface ElectronAPI {
   // File operations
-  openFileDialog: () => void;
+  openFileDialog: () => Promise<unknown>;
   importPRD: (filePath: string) => Promise<unknown>;
 
   // App operations

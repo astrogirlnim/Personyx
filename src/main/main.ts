@@ -235,72 +235,51 @@ class PersonyxApp {
    * Set up IPC event handlers
    */
   private setupIpcHandlers(): void {
-    // Import PRD
-    ipcMain.handle(
-      IPC_CHANNELS.IMPORT_PRD,
-      async (_, data: IPCEvents['import-prd']) => {
-        this.logger.info(`📄 Import PRD request: ${data.filePath}`);
-        return await this.handleImportPRD(data.filePath);
-      }
-    );
-
-    // Get personas
-    ipcMain.handle(IPC_CHANNELS.GET_PERSONAS, async () => {
-      this.logger.info('👥 Get personas request');
+    // Set up IPC handlers
+    ipcMain.handle('get-personas', async () => {
       return await this.handleGetPersonas();
     });
 
-    // Chat with persona
+    ipcMain.handle('import-prd', async (_, data: IPCEvents['import-prd']) => {
+      this.logger.info(`📄 Import PRD request: ${data.filePath}`);
+      return await this.handleImportPRD(data.filePath);
+    });
+
     ipcMain.handle(
-      IPC_CHANNELS.CHAT_WITH_PERSONA,
+      'chat-with-persona',
       async (_, data: IPCEvents['chat-with-persona']) => {
         this.logger.info(`💬 Chat with persona: ${data.personaId}`);
         return await this.handleChatWithPersona(data);
       }
     );
 
-    // Get evidence scores
     ipcMain.handle(
-      IPC_CHANNELS.GET_EVIDENCE_SCORES,
+      'get-evidence-scores',
       async (_, data: IPCEvents['get-evidence-scores']) => {
         this.logger.info(`📊 Get evidence scores: ${data.documentId}`);
         return await this.handleGetEvidenceScores(data.documentId);
       }
     );
 
-    // Similarity search
     ipcMain.handle(
       'similarity-search',
       async (_, data: IPCEvents['similarity-search']) => {
-        this.logger.info(
-          `🔍 Similarity search: ${data.query.substring(0, 50)}...`
-        );
+        this.logger.info(`🔍 Similarity search: ${data.query}`);
         return await this.handleSimilaritySearch(data);
       }
     );
 
-    // App quit
-    ipcMain.on(IPC_CHANNELS.APP_QUIT, () => {
-      this.logger.info('🛑 Quit request from renderer');
+    // Handle file dialog for PRD import
+    ipcMain.handle('open-file-dialog', async () => {
+      return await this.handleOpenFileDialog();
+    });
+
+    ipcMain.on('app-quit', () => {
+      this.logger.info('🚪 App quit requested');
       this.quit();
     });
 
-    // Handle file dialog requests from drop zone
-    ipcMain.on('open-file-dialog', async _event => {
-      this.logger.info('📁 File dialog requested from drop zone');
-      if (this.trayManager) {
-        // This will be handled by the tray manager
-      }
-    });
-
-    // Check for updates
-    ipcMain.handle('check-for-updates', async () => {
-      this.logger.info('🔄 Manual update check requested');
-      if (this.autoUpdater) {
-        return await this.autoUpdater.checkForUpdates();
-      }
-      return null;
-    });
+    this.logger.info('✅ IPC handlers registered');
   }
 
   /**
@@ -473,18 +452,50 @@ class PersonyxApp {
         `💬 Processing chat: ${data.personaId} - ${data.message}`
       );
 
+      // Get the persona details for a more personalized response
+      const personaRepo = new (
+        await import('./db/repositories/PersonaRepo')
+      ).PersonaRepo();
+
+      let persona;
+      try {
+        persona = await personaRepo.findById(data.personaId);
+      } catch (error) {
+        this.logger.warn(`⚠️ Could not find persona ${data.personaId}`, error);
+      }
+
       // TODO: Implement LangGraph RAG chat (Phase 4.1)
-      // For now, return a placeholder response
+      // For now, return a development placeholder response that's more helpful
+
+      const personaName = persona?.name || 'Unknown Persona';
+      const responses = [
+        `Hi! I'm ${personaName}. While my full AI capabilities are still being developed, I'm here and ready to help with evidence-based product insights.`,
+        `As ${personaName}, I'd love to analyze your PRD and provide evidence-based feedback. The full chat feature is coming soon in Phase 4!`,
+        `Great question! As ${personaName}, I can see you're thinking strategically. My advanced analysis capabilities will be available soon.`,
+        `That's an interesting point about your PRD. As ${personaName}, I'm still learning but will have full evidence analysis capabilities in Phase 4.`,
+      ];
+
+      // Return a random but contextual response
+      const randomResponse =
+        responses[Math.floor(Math.random() * responses.length)];
 
       return {
-        message: `Hello! This is a placeholder response for persona ${data.personaId}`,
+        response: randomResponse,
         sources: [],
-        persona: null,
-        timestamp: new Date(),
+        persona: persona?.name || null,
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       this.logger.error('❌ Chat failed', error);
-      throw error;
+
+      // Return a user-friendly error response
+      return {
+        response:
+          "I apologize, but I couldn't generate a response at this time. Please try again later.",
+        sources: [],
+        persona: null,
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
@@ -538,6 +549,59 @@ class PersonyxApp {
       return [];
     } catch (error) {
       this.logger.error('❌ Failed to get evidence scores', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle file dialog for PRD selection
+   */
+  private async handleOpenFileDialog() {
+    try {
+      this.logger.info('📂 Opening file dialog for PRD selection');
+
+      if (!this.mainWindow) {
+        throw new Error('Main window not available');
+      }
+
+      const { dialog } = await import('electron');
+      const result = await dialog.showOpenDialog(this.mainWindow, {
+        title: 'Select PRD Document',
+        filters: [
+          {
+            name: 'Documents',
+            extensions: ['md', 'txt', 'markdown'],
+          },
+          {
+            name: 'Markdown',
+            extensions: ['md', 'markdown'],
+          },
+          {
+            name: 'Text',
+            extensions: ['txt'],
+          },
+        ],
+        properties: ['openFile'],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        this.logger.info('📂 File dialog canceled');
+        return { canceled: true };
+      }
+
+      const filePath = result.filePaths[0];
+      this.logger.info(`📂 File selected: ${filePath}`);
+
+      // Automatically trigger import
+      const importResult = await this.handleImportPRD(filePath);
+
+      return {
+        canceled: false,
+        filePath,
+        importResult,
+      };
+    } catch (error) {
+      this.logger.error('❌ File dialog failed', error);
       throw error;
     }
   }

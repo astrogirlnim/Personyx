@@ -124,8 +124,8 @@ export function App(): JSX.Element {
   }, []);
 
   // Handle PRD file import (Feature 1.2)
-  const handleImportPRD = useCallback(async (file: File) => {
-    console.log('📄 Starting PRD import:', file.name);
+  const handleImportPRD = useCallback(async () => {
+    console.log('📄 Starting PRD import via file dialog...');
     setImporting(true);
     setImportProgress(0);
     setError(null);
@@ -142,22 +142,30 @@ export function App(): JSX.Element {
         });
       }, 200);
 
-      // Create temporary file path (in real implementation, this would be handled differently)
-      const tempPath = `/tmp/${file.name}`;
+      // Use the native file dialog to select and import a file
+      console.log('📂 Opening native file dialog...');
 
-      // Call the backend import service
-      const result = (await window.electronAPI.importPRD(
-        tempPath
-      )) as ImportResult;
+      const result = (await window.electronAPI.openFileDialog()) as {
+        canceled: boolean;
+        filePath?: string;
+        importResult?: ImportResult;
+      };
 
       clearInterval(progressInterval);
 
-      if (result.success) {
-        console.log('✅ PRD import successful:', result);
+      if (result.canceled) {
+        console.log('📂 File dialog was canceled');
+        setImporting(false);
+        setImportProgress(0);
+        return;
+      }
+
+      if (result.importResult?.success) {
+        console.log('✅ PRD import successful:', result.importResult);
         setImportProgress(100);
         // PRD imported event will be triggered automatically by backend
       } else {
-        throw new Error(result.error || 'Import failed');
+        throw new Error(result.importResult?.error || 'Import failed');
       }
     } catch (error) {
       console.error('❌ PRD import failed:', error);
