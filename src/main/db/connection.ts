@@ -84,14 +84,15 @@ function applyMigrationSQL(): void {
 
   try {
     // Check which tables currently exist
-    const existingTables = dbInstance
-      .prepare(
-        `
-      SELECT name FROM sqlite_master WHERE type='table'
-    `
-      )
-      .all()
-      .map((row: any) => row.name);
+    const existingTables = (
+      dbInstance
+        .prepare(
+          `
+        SELECT name FROM sqlite_master WHERE type='table'
+      `
+        )
+        .all() as { name: string }[]
+    ).map(row => row.name);
 
     logger.debug('🔍 Existing tables found', { tables: existingTables });
 
