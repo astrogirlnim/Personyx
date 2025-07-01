@@ -19,6 +19,7 @@ import { AutoUpdater } from './utils/auto-updater';
 import { initDatabase, closeDatabase } from './db/connection';
 import { testTokenVault } from './security/tokenVault';
 import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
+import { PersonaLoader } from './services/PersonaLoader';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type { IPCEvents, ImportResult } from '@shared/types';
 
@@ -31,6 +32,7 @@ class PersonyxApp {
   private trayManager: TrayManager | null = null;
   private autoUpdater: AutoUpdater | null = null;
   private workflowOrchestrator: WorkflowOrchestrator | null = null;
+  private personaLoader: PersonaLoader | null = null;
   private logger: Logger;
   private isAppReady = false;
 
@@ -316,6 +318,12 @@ class PersonyxApp {
       await this.workflowOrchestrator.initialize();
       this.logger.info('✅ Workflow orchestrator initialized');
 
+      // Load personas configuration (Phase 1.4)
+      this.logger.info('🎭 Loading personas from YAML configuration...');
+      this.personaLoader = new PersonaLoader();
+      const personaCount = await this.personaLoader.loadPersonas();
+      this.logger.info(`✅ Loaded ${personaCount} personas from configuration`);
+
       this.logger.info('✅ Core services initialized');
     } catch (error) {
       this.logger.error('❌ Failed to initialize core services', error);
@@ -374,10 +382,24 @@ class PersonyxApp {
     try {
       this.logger.info('👥 Fetching personas');
 
-      // TODO: Load from personas.yml and database (Phase 1.4)
-      // For now, return placeholder data
+      if (!this.personaLoader) {
+        this.logger.warn(
+          '⚠️ PersonaLoader not initialized, creating new instance'
+        );
+        this.personaLoader = new PersonaLoader();
+        await this.personaLoader.loadPersonas();
+      }
 
-      return [];
+      // Get personas from database via PersonaRepo
+      const personaRepo = new (
+        await import('./db/repositories/PersonaRepo')
+      ).PersonaRepo();
+      const personas = await personaRepo.list();
+
+      this.logger.info(
+        `✅ Retrieved ${personas.length} personas from database`
+      );
+      return personas;
     } catch (error) {
       this.logger.error('❌ Failed to get personas', error);
       throw error;
@@ -459,6 +481,10 @@ class PersonyxApp {
     if (this.autoUpdater) {
       this.autoUpdater.destroy();
       this.autoUpdater = null;
+    }
+
+    if (this.personaLoader) {
+      this.personaLoader = null;
     }
 
     // Close database connections (Phase 1.2)
