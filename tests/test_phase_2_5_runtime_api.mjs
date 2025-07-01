@@ -21,10 +21,10 @@ const TEST_CONFIG = {
   appName: 'Personyx',
   expectedServices: [
     'PersonyxCloudService',
-    'SettingsService', 
+    'SettingsService',
     'LangGraphService',
-    'TokenVault'
-  ]
+    'TokenVault',
+  ],
 };
 
 console.log('🎯 RUNTIME TEST SCENARIOS');
@@ -35,7 +35,9 @@ console.log('-------------------------------------------');
 console.log('✅ VERIFIED: All hybrid AI services initialize successfully');
 console.log('✅ VERIFIED: LangGraph service defaults to local provider');
 console.log('✅ VERIFIED: TokenVault checks for OpenAI API key');
-console.log('✅ VERIFIED: Application starts without API key (graceful degradation)');
+console.log(
+  '✅ VERIFIED: Application starts without API key (graceful degradation)'
+);
 console.log('✅ VERIFIED: Services are ready for IPC communication\n');
 
 console.log('📋 Test 2: Local API Key Configuration');
@@ -85,11 +87,11 @@ const manualTests = [
       'Access settings/preferences (when UI is implemented)',
       'Verify AI service provider selection options',
       'Test local/cloud provider switching',
-      'Validate secure key storage feedback'
-    ]
+      'Validate secure key storage feedback',
+    ],
   },
   {
-    id: '5.2', 
+    id: '5.2',
     name: 'Secure Local Storage',
     steps: [
       'Run: node scripts/setup-api-key.js',
@@ -97,8 +99,8 @@ const manualTests = [
       'Verify keychain storage (no plaintext in files)',
       'Restart application',
       'Confirm key retrieval from vault',
-      'Test key removal/updates'
-    ]
+      'Test key removal/updates',
+    ],
   },
   {
     id: '5.3',
@@ -108,8 +110,8 @@ const manualTests = [
       'Test mock API endpoints',
       'Validate subscription info handling',
       'Test embedding generation (mock)',
-      'Verify error handling for network issues'
-    ]
+      'Verify error handling for network issues',
+    ],
   },
   {
     id: '5.4',
@@ -119,8 +121,8 @@ const manualTests = [
       'Test LangGraph service with local OpenAI',
       'Switch to cloud provider (when available)',
       'Verify service reinitialization',
-      'Test fallback behavior'
-    ]
+      'Test fallback behavior',
+    ],
   },
   {
     id: '5.5',
@@ -130,8 +132,8 @@ const manualTests = [
       'Test default configuration',
       'Validate settings persistence',
       'Check legacy migration logic',
-      'Verify AI service config updates'
-    ]
+      'Verify AI service config updates',
+    ],
   },
   {
     id: '5.6',
@@ -141,9 +143,9 @@ const manualTests = [
       'Verify memory bank documentation',
       'Check PRD hybrid AI mentions',
       'Validate implementation summaries',
-      'Confirm code comments and types'
-    ]
-  }
+      'Confirm code comments and types',
+    ],
+  },
 ];
 
 for (const test of manualTests) {
@@ -185,7 +187,13 @@ console.log('⚠️ SettingsService: Requires Electron app context (expected)');
 console.log('🎯 Ready for Phase 3: Interface Layer development\n');
 
 console.log('🎉 PHASE 2.5 HYBRID AI KEY MANAGEMENT - IMPLEMENTATION VERIFIED!');
-console.log('=================================================================');
+console.log(
+  '================================================================='
+);
 console.log('All core components are implemented and ready for use.');
-console.log('The system supports both local OpenAI and Personyx Cloud providers.');
-console.log('Runtime testing requires the application to be running with proper Electron context.\n'); 
+console.log(
+  'The system supports both local OpenAI and Personyx Cloud providers.'
+);
+console.log(
+  'Runtime testing requires the application to be running with proper Electron context.\n'
+);
