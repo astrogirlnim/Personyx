@@ -1,0 +1,12 @@
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  schema: './src/main/db/schema.ts',
+  out: './src/main/db/migrations',
+  dialect: 'sqlite',
+  dbCredentials: {
+    url: './personyx.db',
+  },
+  verbose: true,
+  strict: true,
+});

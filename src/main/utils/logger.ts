@@ -5,9 +5,18 @@
 
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { app } from 'electron';
 import { PATHS } from '@shared/constants';
 import type { LogLevel, LogEntry } from '@shared/types';
+
+// Conditionally import Electron app (may not be available in CI/test environments)
+let electronApp: { getPath: (path: string) => string } | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  electronApp = require('electron').app;
+} catch {
+  // Electron not available - running in Node.js environment (CI/tests)
+  electronApp = null;
+}
 
 export class Logger {
   private source: string;
@@ -22,7 +31,16 @@ export class Logger {
    * Set up log file path and ensure directory exists
    */
   private setupLogFile(): void {
-    const userDataPath = app.getPath('userData');
+    let userDataPath: string;
+
+    if (electronApp) {
+      // Running in Electron environment
+      userDataPath = electronApp.getPath('userData');
+    } else {
+      // Running in Node.js environment (CI/tests) - use current working directory
+      userDataPath = join(process.cwd(), 'test-logs');
+    }
+
     const logsDir = join(userDataPath, PATHS.LOGS);
 
     if (!existsSync(logsDir)) {

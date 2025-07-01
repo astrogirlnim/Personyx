@@ -340,3 +340,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Built with ❤️ for product teams who ship features users actually want.**
 
 For questions, issues, or feature requests, please [open an issue](https://github.com/astrogirlnim/Personyx/issues) or reach out to the team.
+
+## Native Modules & Electron
+
+After installing dependencies, native modules are automatically rebuilt for Electron's Node version via the postinstall script. If you encounter native module errors, run:
+
+    pnpm exec electron-builder install-app-deps
+
+Always use the Node version in .nvmrc for local development and CI. This ensures compatibility between Electron and native modules.

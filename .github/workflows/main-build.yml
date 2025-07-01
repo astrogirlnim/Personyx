@@ -34,9 +34,26 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # ---------- Install System Dependencies ----------
+      - name: 🔧 Install system dependencies for native modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev libsecret-1-dev
+
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # ---------- Native Module Rebuild (Phase 1.2 Addition) ----------
+      - name: 🔧 Rebuild native modules for production environment
+        run: |
+          # Clear any cached native modules that might cause issues
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
+          # Rebuild for current Node.js version
+          pnpm rebuild better-sqlite3 keytar
+        env:
+          npm_config_build_from_source: true
 
       # ---------- Security & Quality ----------
       - name: 🕵️ Gitleaks Secret Scan
@@ -51,11 +68,23 @@ jobs:
         run: pnpm lint
 
       - name: 🧪 Run Test Suite
-        run: pnpm test --passWithNoTests
+        run: pnpm test --passWithNoTests --reporter=verbose
+        env:
+          # Use in-memory database for tests to avoid native module issues
+          NODE_ENV: test
+          VITEST_DATABASE_URL: ':memory:'
 
       # ---------- Build Application ----------
       - name: 🏗️ Build Application
         run: pnpm build
+
+      # ---------- Database Validation (Phase 1.2 Addition) ----------
+      - name: 🗄️ Validate Database Schema & Migrations
+        run: |
+          # Use npm script which includes build step and proper dependencies
+          npm run db:validate
+        env:
+          npm_config_build_from_source: true
 
       # ---------- Upload Build for Next Job ----------
       - name: 📤 Upload Build Artifacts
@@ -101,9 +130,27 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # ---------- Install System Dependencies (Linux Only) ----------
+      - name: 🔧 Install system dependencies for native modules
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev libsecret-1-dev
+
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # ---------- Platform-Specific Native Module Rebuild ----------
+      - name: 🔧 Rebuild native modules for target platform
+        run: |
+          # Clear any existing builds that might cause conflicts
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
+          # Rebuild specifically for Electron and target platform
+          npx @electron/rebuild --force --only better-sqlite3,keytar
+        env:
+          npm_config_build_from_source: true
 
       # ---------- Download Build ----------
       - name: 📥 Download Build Artifacts
