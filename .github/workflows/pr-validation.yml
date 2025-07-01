@@ -29,7 +29,7 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc # Ensures Node version matches .nvmrc for local/CI consistency
           cache: pnpm
 
       # ---------- Install System Dependencies ----------
@@ -52,6 +52,10 @@ jobs:
           pnpm rebuild better-sqlite3 keytar
         env:
           npm_config_build_from_source: true
+
+      # ---------- Explicit Electron Native Module Rebuild ----------
+      - name: 🔧 Rebuild native modules for Electron
+        run: pnpm exec electron-builder install-app-deps # Ensures native modules are rebuilt for Electron's Node version
 
       # ---------- Security Scan ----------
       - name: 🕵️ Gitleaks Secret Scan
