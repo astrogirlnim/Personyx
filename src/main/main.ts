@@ -86,13 +86,25 @@ class PersonyxApp {
       return;
     }
 
+    // Create window icon with debug logging
+    const iconPath = join(__dirname, '../icon.png');
+    this.logger.debug(`🖼️ Attempting to load window icon from: ${iconPath}`);
+
+    const windowIcon = nativeImage.createFromPath(iconPath);
+    this.logger.debug(
+      `🖼️ Window icon created - isEmpty: ${windowIcon.isEmpty()}, size: ${JSON.stringify(windowIcon.getSize())}`
+    );
+
+    // Set dock icon on macOS and app icon on other platforms
+    this.setAppIcon(windowIcon, iconPath);
+
     this.mainWindow = new BrowserWindow({
       width: UI.MAIN_WINDOW_WIDTH,
       height: UI.MAIN_WINDOW_HEIGHT,
       minWidth: UI.MIN_WINDOW_WIDTH,
       minHeight: UI.MIN_WINDOW_HEIGHT,
       show: false,
-      icon: nativeImage.createFromPath(join(__dirname, '../../build/icon.png')),
+      icon: windowIcon,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -140,6 +152,29 @@ class PersonyxApp {
 
     this.logger.debug(`📥 Loading renderer from: ${rendererUrl}`);
     this.mainWindow.loadURL(rendererUrl);
+  }
+
+  /**
+   * Set app icon for dock (macOS) and taskbar (Windows/Linux)
+   */
+  private setAppIcon(icon: Electron.NativeImage, iconPath: string): void {
+    try {
+      if (IS_MAC && app.dock) {
+        // Set dock icon on macOS
+        app.dock.setIcon(icon);
+        this.logger.debug(`🖼️ Dock icon set from: ${iconPath}`);
+      } else {
+        // For Windows/Linux, the window icon should be sufficient
+        // but we can also try to set it at the app level
+        this.logger.debug(
+          `🖼️ App icon set for non-macOS platform from: ${iconPath}`
+        );
+      }
+
+      this.logger.info('✅ App icon set successfully');
+    } catch (error) {
+      this.logger.error('❌ Failed to set app icon', error);
+    }
   }
 
   /**
