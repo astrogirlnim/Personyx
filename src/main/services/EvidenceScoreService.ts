@@ -196,7 +196,7 @@ export class EvidenceScoreService {
       const breakdown = await this.calculateScoreBreakdown(
         relevantEvidence,
         persona,
-        document
+        convertedDocument
       );
 
       // Calculate final weighted score
@@ -478,10 +478,11 @@ export class EvidenceScoreService {
 
   /**
    * Calculate coverage score (0-100) based on how well evidence covers persona needs
+   * Note: Currently uses evidence quantity/diversity metrics, persona-specific logic can be added later
    */
   private calculateCoverageScore(
     evidence: Evidence[],
-    persona: Persona
+    _persona: Persona // eslint-disable-line @typescript-eslint/no-unused-vars
   ): number {
     if (evidence.length === 0) return 0;
 
@@ -535,7 +536,7 @@ export class EvidenceScoreService {
       score += Math.min(40, keywordMatches * 10); // Up to 40 points for keywords
 
       // Score based on PRD content relevance
-      if (this.checkContentRelevance(item.content, document.content)) {
+      if (this.checkContentRelevance(item.content, _document.content)) {
         score += 30; // 30 points for content relevance
       }
 
