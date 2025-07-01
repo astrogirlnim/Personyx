@@ -20,7 +20,7 @@
     "build:main": "tsc -p src/main/tsconfig.json && tsc-alias -p src/main/tsconfig.json",
     "build:renderer": "vite build src/renderer",
     "electron": "electron .",
-    "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:dev": "cross-env NODE_ENV=development electron . --inspect=9229 --verbose --enable-logging",
     "package": "electron-builder",
     "package:mac": "electron-builder --mac",
     "package:win": "electron-builder --win",

@@ -8,6 +8,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { TrayManager } from './tray';
 import { Logger } from './utils/logger';
+import { AutoUpdater } from './utils/auto-updater';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type { IPCEvents, ImportResult } from '@shared/types';
 
@@ -18,6 +19,7 @@ const IS_MAC = process.platform === 'darwin';
 class PersonaPulseApp {
   private mainWindow: BrowserWindow | null = null;
   private trayManager: TrayManager | null = null;
+  private autoUpdater: AutoUpdater | null = null;
   private logger: Logger;
   private isAppReady = false;
 
@@ -40,6 +42,10 @@ class PersonaPulseApp {
       // Initialize tray (primary UI for this app)
       this.trayManager = new TrayManager(this.logger);
       await this.trayManager.initialize();
+
+      // Initialize auto-updater
+      this.autoUpdater = new AutoUpdater(this.logger);
+      await this.autoUpdater.initialize();
 
       // Set up protocol handlers if needed
       this.setupProtocols();
@@ -202,6 +208,23 @@ class PersonaPulseApp {
       this.logger.info('🛑 Quit request from renderer');
       this.quit();
     });
+
+    // Handle file dialog requests from drop zone
+    ipcMain.on('open-file-dialog', async _event => {
+      this.logger.info('📁 File dialog requested from drop zone');
+      if (this.trayManager) {
+        // This will be handled by the tray manager
+      }
+    });
+
+    // Check for updates
+    ipcMain.handle('check-for-updates', async () => {
+      this.logger.info('🔄 Manual update check requested');
+      if (this.autoUpdater) {
+        return await this.autoUpdater.checkForUpdates();
+      }
+      return null;
+    });
   }
 
   /**
@@ -359,6 +382,11 @@ class PersonaPulseApp {
       this.trayManager = null;
     }
 
+    if (this.autoUpdater) {
+      this.autoUpdater.destroy();
+      this.autoUpdater = null;
+    }
+
     // TODO: Close database connections
     // TODO: Stop background services
   }
@@ -383,6 +411,13 @@ class PersonaPulseApp {
    */
   public isReady(): boolean {
     return this.isAppReady;
+  }
+
+  /**
+   * Get the auto-updater instance
+   */
+  public getAutoUpdater(): AutoUpdater | null {
+    return this.autoUpdater;
   }
 }
 

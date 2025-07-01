@@ -150,6 +150,7 @@ export type TrayAction =
   | 'import-prd'
   | 'view-scores'
   | 'open-settings'
+  | 'check-updates'
   | 'quit-app';
 
 export interface TrayMenuItem {

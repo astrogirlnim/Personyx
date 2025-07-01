@@ -1,38 +1,136 @@
 /**
- * PersonaPulse Renderer Styles
+ * PersonaPulse Renderer Styles - DeskResearcher Design System
  */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles for PersonaPulse */
+/* Design System Component Tokens */
+:root {
+  /* Component tokens as CSS custom properties */
+  --dr-radius-md: 0.5rem; /* 8px - Card & button radius */
+  --dr-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05); /* Default shadow */
+  --dr-gap-panel: 1.5rem; /* 24px - Inner padding for tray panels */
+  --dr-duration-fast: 120ms; /* Small transitions */
+
+  /* Focus ring for accessibility */
+  --dr-focus-ring: 0 0 0 2px theme('colors.evidence-blue.dark'); /* #5C9EFF outline */
+}
+
+/* Custom styles for PersonaPulse with Design System */
 @layer base {
   html {
     @apply antialiased;
   }
 
   body {
-    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    @apply bg-mist-grey dark:bg-mist-grey-dark text-slate dark:text-slate-dark;
     font-family: 'Inter', 'Roboto', system-ui, sans-serif;
+  }
+
+  /* Focus states for accessibility */
+  *:focus-visible {
+    outline: 2px solid theme('colors.evidence-blue.dark');
+    outline-offset: 2px;
   }
 }
 
 @layer components {
+  /* Design System Card Component */
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6;
+    @apply bg-paper-white dark:bg-paper-white-dark rounded-dr-md shadow-dr-sm border border-graphite dark:border-graphite-dark;
+    padding: var(--dr-gap-panel);
   }
 
+  /* Design System Button Components */
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-evidence-blue hover:bg-evidence-blue/90 dark:bg-evidence-blue-dark dark:hover:bg-evidence-blue-dark/90 
+           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
+           transition-colors duration-dr-fast shadow-dr-sm
+           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-graphite hover:bg-graphite/80 dark:bg-graphite-dark dark:hover:bg-graphite-dark/80 
+           text-slate dark:text-slate-dark font-medium py-2 px-4 rounded-dr-md 
+           transition-colors duration-dr-fast shadow-dr-sm
+           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
+  }
+
+  .btn-success {
+    @apply bg-persona-green hover:bg-persona-green/90 dark:bg-persona-green-dark dark:hover:bg-persona-green-dark/90 
+           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
+           transition-colors duration-dr-fast shadow-dr-sm
+           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
+  }
+
+  .btn-warning {
+    @apply bg-caution-amber hover:bg-caution-amber/90 dark:bg-caution-amber-dark dark:hover:bg-caution-amber-dark/90 
+           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
+           transition-colors duration-dr-fast shadow-dr-sm
+           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
+  }
+
+  .btn-danger {
+    @apply bg-risk-red hover:bg-risk-red/90 dark:bg-risk-red-dark dark:hover:bg-risk-red-dark/90 
+           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
+           transition-colors duration-dr-fast shadow-dr-sm
+           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
+  }
+
+  /* Design System Typography Classes - Remove circular dependencies */
+  .text-display {
+    font-size: 2rem;
+    line-height: 2.5rem;
+    font-weight: 800;
+    @apply text-slate dark:text-slate-dark;
+  }
+
+  .text-h1 {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    @apply text-slate dark:text-slate-dark;
+  }
+
+  .text-h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    @apply text-slate dark:text-slate-dark;
+  }
+
+  .text-body-lg {
+    font-size: 1.125rem;
+    line-height: 1.625rem;
+    font-weight: 500;
+    @apply text-slate dark:text-slate-dark;
+  }
+
+  .text-body {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 400;
+    @apply text-slate dark:text-slate-dark;
+  }
+
+  .text-code {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    @apply font-mono text-steel dark:text-steel-dark;
+  }
+
+  .text-caption {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    @apply text-steel dark:text-steel-dark;
   }
 }
 
-/* Loading animations */
+/* Design System Loading Animations */
 @keyframes pulse-score {
   0%,
   100% {
@@ -49,24 +147,111 @@
   animation: pulse-score 400ms ease-in-out;
 }
 
-/* Drag and drop styles */
+@keyframes sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Design System Drag and Drop Styles */
 .drop-zone {
-  @apply border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center transition-colors duration-200;
+  @apply border-2 border-dashed border-graphite dark:border-graphite-dark rounded-dr-md p-lg text-center 
+         transition-colors duration-dr-fast bg-paper-white dark:bg-paper-white-dark;
 }
 
 .drop-zone.drag-over {
-  @apply border-blue-500 bg-blue-50 dark:bg-blue-900/20;
+  @apply border-evidence-blue dark:border-evidence-blue-dark bg-evidence-blue/5 dark:bg-evidence-blue-dark/10;
 }
 
-/* Evidence score colors */
+.drop-zone.drag-over .drop-zone-icon {
+  @apply text-evidence-blue dark:text-evidence-blue-dark;
+}
+
+.drop-zone.drag-over .drop-zone-text {
+  @apply text-evidence-blue dark:text-evidence-blue-dark;
+}
+
+/* Design System Evidence Score Colors */
 .score-high {
-  @apply text-green-600 dark:text-green-400;
+  @apply text-persona-green dark:text-persona-green-dark;
 }
 
 .score-medium {
-  @apply text-yellow-600 dark:text-yellow-400;
+  @apply text-caution-amber dark:text-caution-amber-dark;
 }
 
 .score-low {
-  @apply text-red-600 dark:text-red-400;
+  @apply text-risk-red dark:text-risk-red-dark;
+}
+
+/* Evidence Score Badge Components */
+.score-badge {
+  @apply inline-flex items-center px-2 py-1 rounded-dr-md text-caption font-medium;
+}
+
+.score-badge.high {
+  @apply bg-persona-green/10 text-persona-green dark:bg-persona-green-dark/10 dark:text-persona-green-dark;
+}
+
+.score-badge.medium {
+  @apply bg-caution-amber/10 text-caution-amber dark:bg-caution-amber-dark/10 dark:text-caution-amber-dark;
+}
+
+.score-badge.low {
+  @apply bg-risk-red/10 text-risk-red dark:bg-risk-red-dark/10 dark:text-risk-red-dark;
+}
+
+/* Progress Bar for Ingest */
+.progress-bar {
+  @apply relative overflow-hidden rounded-dr-md bg-graphite/20 dark:bg-graphite-dark/20;
+}
+
+.progress-fill {
+  @apply h-full bg-evidence-blue dark:bg-evidence-blue-dark transition-all duration-300;
+}
+
+.progress-sweep {
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-paper-white/20 to-transparent;
+  animation: sweep 200ms linear infinite;
+}
+
+/* Notification Styles */
+.notification {
+  @apply bg-paper-white dark:bg-paper-white-dark border border-graphite dark:border-graphite-dark 
+         rounded-dr-md shadow-dr-sm p-4 animate-slide-in;
+}
+
+.notification.success {
+  @apply border-persona-green dark:border-persona-green-dark;
+}
+
+.notification.warning {
+  @apply border-caution-amber dark:border-caution-amber-dark;
+}
+
+.notification.error {
+  @apply border-risk-red dark:border-risk-red-dark;
+}
+
+/* Design System Focus and Interactive States */
+.interactive {
+  @apply transition-all duration-dr-fast cursor-pointer;
+}
+
+.interactive:hover {
+  @apply shadow-dr-depth;
+}
+
+.interactive:active {
+  @apply scale-[0.98];
+}
+
+/* Dark mode preservation for shadow depth */
+.dark .shadow-dr-depth {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
