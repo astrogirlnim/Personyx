@@ -394,51 +394,143 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      # ---------- Download All Packages ----------
+      # ---------- Download All Packages (Resilient to Missing Artifacts) ----------
       - name: 📥 Download macOS Packages
         uses: actions/download-artifact@v4
+        continue-on-error: true
+        id: download-mac
         with:
           name: packages-mac-${{ github.sha }}
           path: release-assets/
 
       - name: 📥 Download Linux Packages
         uses: actions/download-artifact@v4
+        continue-on-error: true
+        id: download-linux
         with:
           name: packages-linux-${{ github.sha }}
           path: release-assets/
 
       - name: 📥 Download Windows Packages
         uses: actions/download-artifact@v4
+        continue-on-error: true
+        id: download-windows
         with:
           name: packages-win-${{ github.sha }}
           path: release-assets/
 
+      # ---------- Check Available Packages ----------
+      - name: 📋 Check Available Packages
+        id: check-packages
+        run: |
+          echo "🔍 Checking which packages were successfully built..."
+
+          # Initialize counters and lists
+          AVAILABLE_PLATFORMS=""
+          FAILED_PLATFORMS=""
+          PACKAGE_COUNT=0
+
+          # Check each platform
+          if [ "${{ steps.download-mac.outcome }}" = "success" ] && [ -d "release-assets" ] && find release-assets -name "*.dmg" -o -name "*mac*" | grep -q .; then
+            echo "✅ macOS packages available"
+            AVAILABLE_PLATFORMS="$AVAILABLE_PLATFORMS\n- 🍎 macOS Universal"
+            PACKAGE_COUNT=$((PACKAGE_COUNT + 1))
+          else
+            echo "❌ macOS packages missing"
+            FAILED_PLATFORMS="$FAILED_PLATFORMS\n- 🍎 macOS Universal (build failed)"
+          fi
+
+          if [ "${{ steps.download-linux.outcome }}" = "success" ] && [ -d "release-assets" ] && find release-assets -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*linux*" | grep -q .; then
+            echo "✅ Linux packages available"
+            AVAILABLE_PLATFORMS="$AVAILABLE_PLATFORMS\n- 🐧 Linux x64"
+            PACKAGE_COUNT=$((PACKAGE_COUNT + 1))
+          else
+            echo "❌ Linux packages missing"
+            FAILED_PLATFORMS="$FAILED_PLATFORMS\n- 🐧 Linux x64 (build failed)"
+          fi
+
+          if [ "${{ steps.download-windows.outcome }}" = "success" ] && [ -d "release-assets" ] && find release-assets -name "*.exe" -o -name "*win*" | grep -q .; then
+            echo "✅ Windows packages available"
+            AVAILABLE_PLATFORMS="$AVAILABLE_PLATFORMS\n- 🪟 Windows x64"
+            PACKAGE_COUNT=$((PACKAGE_COUNT + 1))
+          else
+            echo "❌ Windows packages missing"
+            FAILED_PLATFORMS="$FAILED_PLATFORMS\n- 🪟 Windows x64 (build failed)"
+          fi
+
+          # Set outputs for later steps
+          echo "available_platforms<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$AVAILABLE_PLATFORMS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "failed_platforms<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$FAILED_PLATFORMS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "package_count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
+
+          # Determine if we should proceed with release
+          if [ $PACKAGE_COUNT -eq 0 ]; then
+            echo "❌ No packages were successfully built - cannot create release"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ $PACKAGE_COUNT platform(s) built successfully - proceeding with release"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
       # ---------- Generate Release Notes ----------
       - name: 📝 Generate Release Notes
         id: release_notes
+        if: steps.check-packages.outputs.should_release == 'true'
         run: |
           echo "## 🎉 Personyx Build ${{ github.sha }}" > release_notes.md
           echo "" >> release_notes.md
+
+          # Show build status summary
+          echo "### 🏗️ Build Status" >> release_notes.md
+          echo "Built ${{ steps.check-packages.outputs.package_count }} of 3 target platforms successfully." >> release_notes.md
+          echo "" >> release_notes.md
+
+          # Show available platforms
+          if [ -n "${{ steps.check-packages.outputs.available_platforms }}" ]; then
+            echo "#### ✅ Successfully Built Platforms" >> release_notes.md
+            echo "${{ steps.check-packages.outputs.available_platforms }}" >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+
+          # Show failed platforms if any
+          if [ -n "${{ steps.check-packages.outputs.failed_platforms }}" ]; then
+            echo "#### ❌ Failed Platform Builds" >> release_notes.md
+            echo "${{ steps.check-packages.outputs.failed_platforms }}" >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+
           echo "### 📦 Available Downloads" >> release_notes.md
           echo "" >> release_notes.md
-          echo "| Platform | File | Size |" >> release_notes.md
-          echo "|----------|------|------|" >> release_notes.md
 
-          # List only distributable files with sizes
-          find release-assets -maxdepth 1 -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" | while read file; do
-            if [ -f "$file" ]; then
-              size=$(du -h "$file" | cut -f1)
-              basename=$(basename "$file")
-              platform=$(echo $basename | grep -o -E "(dmg|AppImage|exe)" | head -1)
-              case $platform in
-                dmg) platform_name="macOS" ;;
-                AppImage) platform_name="Linux" ;;
-                exe) platform_name="Windows" ;;
-                *) platform_name="Unknown" ;;
-              esac
-              echo "| $platform_name | $basename | $size |" >> release_notes.md
-            fi
-          done
+          # Check if we have any files to list
+          if [ -d "release-assets" ] && [ "$(find release-assets -maxdepth 1 -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" | wc -l)" -gt 0 ]; then
+            echo "| Platform | File | Size |" >> release_notes.md
+            echo "|----------|------|------|" >> release_notes.md
+
+            # List only distributable files with sizes
+            find release-assets -maxdepth 1 -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" | while read file; do
+              if [ -f "$file" ]; then
+                size=$(du -h "$file" | cut -f1)
+                basename=$(basename "$file")
+                platform=$(echo $basename | grep -o -E "(dmg|AppImage|exe)" | head -1)
+                case $platform in
+                  dmg) platform_name="macOS" ;;
+                  AppImage) platform_name="Linux" ;;
+                  exe) platform_name="Windows" ;;
+                  *) platform_name="Unknown" ;;
+                esac
+                echo "| $platform_name | $basename | $size |" >> release_notes.md
+              fi
+            done
+          else
+            echo "_No downloadable packages available._" >> release_notes.md
+          fi
 
           echo "" >> release_notes.md
           echo "### 🔍 Validation Results" >> release_notes.md
@@ -446,7 +538,12 @@ jobs:
           echo "- ✅ ESLint validation passed" >> release_notes.md
           echo "- ✅ Security scan passed" >> release_notes.md
           echo "- ✅ All tests passed" >> release_notes.md
-          echo "- ✅ Cross-platform builds completed" >> release_notes.md
+
+          if [ "${{ steps.check-packages.outputs.package_count }}" -eq "3" ]; then
+            echo "- ✅ All platform builds completed successfully" >> release_notes.md
+          else
+            echo "- ⚠️ Partial platform build success (${{ steps.check-packages.outputs.package_count }}/3 platforms)" >> release_notes.md
+          fi
 
           echo "release_notes<<EOF" >> $GITHUB_OUTPUT
           cat release_notes.md >> $GITHUB_OUTPUT
@@ -454,10 +551,11 @@ jobs:
 
       # ---------- Create Development Release ----------
       - name: 🏷️ Create Development Release
+        if: steps.check-packages.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: dev-${{ github.sha }}
-          name: 'Development Build - ${{ github.sha }}'
+          name: 'Development Build - ${{ github.sha }} (${{ steps.check-packages.outputs.package_count }}/3 platforms)'
           body: ${{ steps.release_notes.outputs.release_notes }}
           files: |
             release-assets/*.dmg
@@ -470,19 +568,53 @@ jobs:
             release-assets/*.blockmap
           prerelease: true
           generate_release_notes: true
+          fail_on_unmatched_files: false
+
+      # ---------- Handle No Packages Case ----------
+      - name: ⚠️ No Packages Available
+        if: steps.check-packages.outputs.should_release == 'false'
+        run: |
+          echo "❌ No packages were successfully built for this commit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚫 Build Failures" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.check-packages.outputs.failed_platforms }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check the individual package job logs for specific error details" >> $GITHUB_STEP_SUMMARY
+          echo "2. Common issues include:" >> $GITHUB_STEP_SUMMARY
+          echo "   - Native module compilation failures (better-sqlite3, keytar)" >> $GITHUB_STEP_SUMMARY
+          echo "   - Electron packaging configuration issues" >> $GITHUB_STEP_SUMMARY
+          echo "   - Platform-specific build tool problems" >> $GITHUB_STEP_SUMMARY
+          echo "3. Consider re-running the workflow once issues are addressed" >> $GITHUB_STEP_SUMMARY
+
+          # Mark as failed but not exit 1 since this is a handled case
+          echo "::warning title=No Packages Built::All platform builds failed - no release created"
 
       # ---------- Deployment Summary ----------
       - name: 📊 Deployment Summary
+        if: always() # Run regardless of previous step outcomes
         run: |
-          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Packages Built" >> $GITHUB_STEP_SUMMARY
-          echo "- 🍎 macOS Universal" >> $GITHUB_STEP_SUMMARY
-          echo "- 🐧 Linux x64" >> $GITHUB_STEP_SUMMARY
-          echo "- 🪟 Windows x64" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Release" >> $GITHUB_STEP_SUMMARY
-          echo "[📥 Download Development Build](https://github.com/${{ github.repository }}/releases/tag/dev-${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-packages.outputs.should_release }}" = "true" ]; then
+            echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📦 Packages Built (${{ steps.check-packages.outputs.package_count }}/3)" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.check-packages.outputs.available_platforms }}" >> $GITHUB_STEP_SUMMARY
+            
+            if [ -n "${{ steps.check-packages.outputs.failed_platforms }}" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### ❌ Failed Builds" >> $GITHUB_STEP_SUMMARY
+              echo "${{ steps.check-packages.outputs.failed_platforms }}" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔗 Release" >> $GITHUB_STEP_SUMMARY
+            echo "[📥 Download Development Build](https://github.com/${{ github.repository }}/releases/tag/dev-${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No packages were successfully built. Check the package job logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### ⏱️ Build Time" >> $GITHUB_STEP_SUMMARY
           echo "Started: ${{ github.event.head_commit.timestamp }}" >> $GITHUB_STEP_SUMMARY
