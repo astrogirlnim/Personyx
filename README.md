@@ -343,8 +343,37 @@ For questions, issues, or feature requests, please [open an issue](https://githu
 
 ## Native Modules & Electron
 
-After installing dependencies, native modules are automatically rebuilt for Electron's Node version via the postinstall script. If you encounter native module errors, run:
+PersonaPulse uses native modules (better-sqlite3, keytar) that must be compiled for Electron's specific Node.js version.
 
-    pnpm exec electron-builder install-app-deps
+### Automatic Handling
 
-Always use the Node version in .nvmrc for local development and CI. This ensures compatibility between Electron and native modules.
+Native modules are automatically rebuilt during `pnpm install` via the postinstall script. If this fails (common with Python 3.12+ due to missing distutils), the script automatically falls back to `@electron/rebuild`.
+
+### Manual Fix for Native Module Issues
+
+If you encounter `NODE_MODULE_VERSION` mismatch errors, run:
+
+```bash
+# Use our automated fix script
+pnpm run fix-native-modules
+
+# Or manually rebuild
+npx @electron/rebuild
+
+# Or clean install if needed
+rm -rf node_modules pnpm-lock.yaml
+pnpm install --ignore-scripts
+npx @electron/rebuild
+```
+
+### Node.js Version Requirements
+
+- Always use the Node.js version specified in `.nvmrc` (20.19.2)
+- Electron 28 requires NODE_MODULE_VERSION 119
+- Native modules must be compiled specifically for Electron's Node.js version
+
+### Common Issues
+
+- **Python 3.12+ distutils error**: Fixed automatically by fallback to `@electron/rebuild`
+- **Module version mismatch**: Run `pnpm run fix-native-modules`
+- **Missing native modules**: Ensure you're using the correct Node.js version from `.nvmrc`

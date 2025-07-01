@@ -7,9 +7,18 @@ settings:
 importers:
   .:
     dependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      axios:
+        specifier: ^1.10.0
+        version: 1.10.0
       better-sqlite3:
         specifier: ^12.2.0
         version: 12.2.0
+      chokidar:
+        specifier: ^4.0.3
+        version: 4.0.3
       drizzle-kit:
         specifier: ^0.31.4
         version: 0.31.4
@@ -19,9 +28,15 @@ importers:
       electron-store:
         specifier: ^8.1.0
         version: 8.2.0
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       keytar:
         specifier: ^7.9.0
         version: 7.9.0
+      openai:
+        specifier: ^5.8.2
+        version: 5.8.2
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.13
@@ -1743,6 +1758,12 @@ packages:
         integrity: sha512-ZN+4sdnLUbo8EVvVc2ao0GFW6oVrQRPn4K2lglySj7APvSrgzxHiNNK99us4WDMi57xxA2yggblIAMNhXOotLQ==,
       }
 
+  '@types/js-yaml@4.0.9':
+    resolution:
+      {
+        integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==,
+      }
+
   '@types/json-schema@7.0.15':
     resolution:
       {
@@ -2555,6 +2576,13 @@ packages:
         integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==,
       }
     engines: { node: '>= 8.10.0' }
+
+  chokidar@4.0.3:
+    resolution:
+      {
+        integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==,
+      }
+    engines: { node: '>= 14.16.0' }
 
   chownr@1.1.4:
     resolution:
@@ -5264,6 +5292,21 @@ packages:
       }
     engines: { node: '>=18' }
 
+  openai@5.8.2:
+    resolution:
+      {
+        integrity: sha512-8C+nzoHYgyYOXhHGN6r0fcb4SznuEn1R7YZMvlqDbnCuE0FM2mm3T1HiYW6WIcMS/F1Of2up/cSPjLPaWt0X9Q==,
+      }
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.23.8
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   optionator@0.9.4:
     resolution:
       {
@@ -5746,6 +5789,13 @@ packages:
         integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==,
       }
     engines: { node: '>=8.10.0' }
+
+  readdirp@4.1.2:
+    resolution:
+      {
+        integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==,
+      }
+    engines: { node: '>= 14.18.0' }
 
   require-directory@2.1.1:
     resolution:
@@ -7745,6 +7795,8 @@ snapshots:
       expect: 29.7.0
       pretty-format: 29.7.0
 
+  '@types/js-yaml@4.0.9': {}
+
   '@types/json-schema@7.0.15': {}
 
   '@types/keyv@3.1.4':
@@ -8371,6 +8423,10 @@ snapshots:
       readdirp: 3.6.0
     optionalDependencies:
       fsevents: 2.3.3
+
+  chokidar@4.0.3:
+    dependencies:
+      readdirp: 4.1.2
 
   chownr@1.1.4: {}
 
@@ -10176,6 +10232,8 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
+  openai@5.8.2: {}
+
   optionator@0.9.4:
     dependencies:
       deep-is: 0.1.4
@@ -10447,6 +10505,8 @@ snapshots:
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.1
+
+  readdirp@4.1.2: {}
 
   require-directory@2.1.1: {}
 

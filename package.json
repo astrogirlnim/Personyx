@@ -35,9 +35,11 @@
     "test": "vitest run",
     "db:migrate": "drizzle-kit generate && drizzle-kit push",
     "db:validate": "npm run build:main && pnpm rebuild better-sqlite3 && node scripts/validate-database.js",
+    "fix-native-modules": "bash scripts/fix-native-modules.sh",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
+    "postinstall": "electron-builder install-app-deps || (echo 'Falling back to @electron/rebuild due to Python distutils issue' && npx @electron/rebuild)",
     "prepare": "husky"
   },
   "dependencies": {
