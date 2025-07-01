@@ -83,74 +83,121 @@ function applyMigrationSQL(): void {
   }
 
   try {
-    // Define all migration files to run in order
-    const migrationFiles = [
-      '0000_common_satana.sql',
-      '0001_narrow_virginia_dare.sql',
+    // Check which tables currently exist
+    const existingTables = dbInstance
+      .prepare(
+        `
+      SELECT name FROM sqlite_master WHERE type='table'
+    `
+      )
+      .all()
+      .map((row: any) => row.name);
+
+    logger.debug('🔍 Existing tables found', { tables: existingTables });
+
+    // Define required tables for each migration
+    const migration0000Tables = [
+      'api_tokens',
+      'evidence',
+      'evidence_scores',
+      'personas',
+      'product_documents',
     ];
+    const migration0001Tables = ['embeddings'];
+
+    // Check if we need to run migration 0000
+    const needsMigration0000 = migration0000Tables.some(
+      table => !existingTables.includes(table)
+    );
+
+    // Check if we need to run migration 0001
+    const needsMigration0001 = migration0001Tables.some(
+      table => !existingTables.includes(table)
+    );
 
     let totalStatements = 0;
 
-    for (const migrationFile of migrationFiles) {
-      const migrationPaths = [
-        join(__dirname, `../../src/main/db/migrations/${migrationFile}`),
-        join(process.cwd(), `src/main/db/migrations/${migrationFile}`),
-        join(__dirname, `migrations/${migrationFile}`),
-      ];
-
-      let migrationSQL: string | null = null;
-      let usedPath = '';
-
-      for (const path of migrationPaths) {
-        if (existsSync(path)) {
-          migrationSQL = readFileSync(path, 'utf-8');
-          usedPath = path;
-          break;
-        }
-      }
-
-      if (!migrationSQL) {
-        logger.warn(`⚠️ Migration file ${migrationFile} not found, skipping`);
-        continue;
-      }
-
-      logger.info('🔄 Applying migration SQL', { source: usedPath });
-
-      // Split SQL by statement breakpoints and execute each statement
-      const statements = migrationSQL
-        .split('--> statement-breakpoint')
-        .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0);
-
-      for (const statement of statements) {
-        if (statement.trim()) {
-          logger.debug('📝 Executing SQL statement', {
-            preview: statement.substring(0, 50) + '...',
-          });
-          dbInstance.exec(statement);
-        }
-      }
-
-      totalStatements += statements.length;
-      logger.info(`✅ Migration ${migrationFile} applied successfully`, {
-        statementsExecuted: statements.length,
-      });
+    // Run migration 0000 if needed
+    if (needsMigration0000) {
+      totalStatements += runSingleMigration('0000_common_satana.sql');
+    } else {
+      logger.info('⏭️ Migration 0000 skipped - tables already exist');
     }
 
-    if (totalStatements === 0) {
-      // If no migration files found, create tables manually from known schema
-      logger.info('📝 No migration files found, creating tables manually');
+    // Run migration 0001 if needed
+    if (needsMigration0001) {
+      totalStatements += runSingleMigration('0001_narrow_virginia_dare.sql');
+    } else {
+      logger.info(
+        '⏭️ Migration 0001 skipped - embeddings table already exists'
+      );
+    }
+
+    if (totalStatements === 0 && existingTables.length === 0) {
+      // If no tables exist at all and no migrations ran, create manually
+      logger.info(
+        '📝 No tables found and no migrations available, creating manually'
+      );
       createTablesManually();
     } else {
-      logger.info('🎉 All migrations applied successfully', {
+      logger.info('🎉 Migration process completed', {
         totalStatements,
-        migrationsApplied: migrationFiles.length,
+        existingTables: existingTables.length,
+        needsMigration0000,
+        needsMigration0001,
       });
     }
   } catch (error) {
     logger.error('❌ Failed to apply migration SQL', error);
     throw error;
   }
+}
+
+function runSingleMigration(migrationFile: string): number {
+  const migrationPaths = [
+    join(__dirname, `../../src/main/db/migrations/${migrationFile}`),
+    join(process.cwd(), `src/main/db/migrations/${migrationFile}`),
+    join(__dirname, `migrations/${migrationFile}`),
+  ];
+
+  let migrationSQL: string | null = null;
+  let usedPath = '';
+
+  for (const path of migrationPaths) {
+    if (existsSync(path)) {
+      migrationSQL = readFileSync(path, 'utf-8');
+      usedPath = path;
+      break;
+    }
+  }
+
+  if (!migrationSQL) {
+    logger.warn(`⚠️ Migration file ${migrationFile} not found, skipping`);
+    return 0;
+  }
+
+  logger.info('🔄 Applying migration SQL', { source: usedPath });
+
+  // Split SQL by statement breakpoints and execute each statement
+  const statements = migrationSQL
+    .split('--> statement-breakpoint')
+    .map(stmt => stmt.trim())
+    .filter(stmt => stmt.length > 0);
+
+  for (const statement of statements) {
+    if (statement.trim()) {
+      logger.debug('📝 Executing SQL statement', {
+        preview: statement.substring(0, 50) + '...',
+      });
+      dbInstance!.exec(statement);
+    }
+  }
+
+  logger.info(`✅ Migration ${migrationFile} applied successfully`, {
+    statementsExecuted: statements.length,
+  });
+
+  return statements.length;
 }
 
 /**
