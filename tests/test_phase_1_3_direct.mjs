@@ -20,21 +20,41 @@ function test(name, condition, details = '') {
   }
 }
 
-console.log('🚀 Testing Phase 1.3 LangGraph + n8n Workflow Implementation...\n');
+console.log(
+  '🚀 Testing Phase 1.3 LangGraph + n8n Workflow Implementation...\n'
+);
 
 // Test 1: Source files exist
 console.log('📁 Testing source file implementation...');
-test('InterviewFolderWatcher exists', existsSync('src/main/services/InterviewFolderWatcher.ts'));
-test('LangGraphService exists', existsSync('src/main/services/LangGraphService.ts'));
-test('PersonaConfigLoader exists', existsSync('src/main/services/PersonaConfigLoader.ts'));
-test('WorkflowOrchestrator exists', existsSync('src/main/services/WorkflowOrchestrator.ts'));
-test('EmbeddingRepo exists', existsSync('src/main/db/repositories/EmbeddingRepo.ts'));
+test(
+  'InterviewFolderWatcher exists',
+  existsSync('src/main/services/InterviewFolderWatcher.ts')
+);
+test(
+  'LangGraphService exists',
+  existsSync('src/main/services/LangGraphService.ts')
+);
+test(
+  'PersonaConfigLoader exists',
+  existsSync('src/main/services/PersonaConfigLoader.ts')
+);
+test(
+  'WorkflowOrchestrator exists',
+  existsSync('src/main/services/WorkflowOrchestrator.ts')
+);
+test(
+  'EmbeddingRepo exists',
+  existsSync('src/main/db/repositories/EmbeddingRepo.ts')
+);
 test('Personas config exists', existsSync('personas.yml'));
 
 // Test 2: WorkflowOrchestrator implementation
 console.log('\n🔄 Testing WorkflowOrchestrator...');
 try {
-  const content = readFileSync('src/main/services/WorkflowOrchestrator.ts', 'utf8');
+  const content = readFileSync(
+    'src/main/services/WorkflowOrchestrator.ts',
+    'utf8'
+  );
   test('Extends EventEmitter', content.includes('extends EventEmitter'));
   test('Has initialize method', content.includes('async initialize()'));
   test('Processes transcripts', content.includes('processTranscript'));
@@ -44,7 +64,7 @@ try {
   test('WorkflowOrchestrator analysis', false, error.message);
 }
 
-// Test 3: LangGraphService implementation  
+// Test 3: LangGraphService implementation
 console.log('\n🧠 Testing LangGraphService...');
 try {
   const content = readFileSync('src/main/services/LangGraphService.ts', 'utf8');
@@ -61,7 +81,10 @@ try {
 // Test 4: InterviewFolderWatcher implementation
 console.log('\n👀 Testing InterviewFolderWatcher...');
 try {
-  const content = readFileSync('src/main/services/InterviewFolderWatcher.ts', 'utf8');
+  const content = readFileSync(
+    'src/main/services/InterviewFolderWatcher.ts',
+    'utf8'
+  );
   test('Chokidar import', content.includes('import { watch'));
   test('File events', content.includes('transcript-added'));
   test('File validation', content.includes('isValidTranscriptFile'));
@@ -73,13 +96,28 @@ try {
 
 // Test 5: Feature completeness
 console.log('\n🎯 Testing Phase 1.3 feature completeness...');
-test('Feature 3.1: File watching', existsSync('src/main/services/InterviewFolderWatcher.ts'));
-test('Feature 3.2: LangGraph pipeline', existsSync('src/main/services/LangGraphService.ts')); 
-test('Feature 3.3: Database persistence', existsSync('src/main/db/repositories/EmbeddingRepo.ts'));
+test(
+  'Feature 3.1: File watching',
+  existsSync('src/main/services/InterviewFolderWatcher.ts')
+);
+test(
+  'Feature 3.2: LangGraph pipeline',
+  existsSync('src/main/services/LangGraphService.ts')
+);
+test(
+  'Feature 3.3: Database persistence',
+  existsSync('src/main/db/repositories/EmbeddingRepo.ts')
+);
 
 try {
-  const orchestratorContent = readFileSync('src/main/services/WorkflowOrchestrator.ts', 'utf8');
-  test('Feature 3.4: IPC events', orchestratorContent.includes('transcript-ingested'));
+  const orchestratorContent = readFileSync(
+    'src/main/services/WorkflowOrchestrator.ts',
+    'utf8'
+  );
+  test(
+    'Feature 3.4: IPC events',
+    orchestratorContent.includes('transcript-ingested')
+  );
 } catch (error) {
   test('Feature 3.4: IPC events', false);
 }
@@ -93,4 +131,4 @@ if (failed === 0) {
   console.log(`⚠️ ${failed} issues found in implementation.`);
 }
 
-process.exit(failed === 0 ? 0 : 1); 
+process.exit(failed === 0 ? 0 : 1);
