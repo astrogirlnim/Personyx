@@ -83,10 +83,9 @@ jobs:
           # Use npm script which includes build step and proper dependencies
           npm run db:validate
         env:
-          npm_config_build_from_source:
-            true
+          npm_config_build_from_source: true
 
-            # ---------- Electron Packaging Test (CI-Optimized) ----------
+      # ---------- Electron Packaging Test (CI-Optimized) ----------
       - name: 🔧 Prepare native modules for Electron packaging
         run: |
           # Clear any existing builds that might cause conflicts in CI
@@ -96,20 +95,12 @@ jobs:
           npm_config_build_from_source: true
 
       - name: 📦 Test Electron Packaging (Directory Only)
-        run: |
-          # Use npm for packaging to avoid pnpm module resolution issues in CI
-          npm config set target_platform linux
-          npm config set target_arch x64  
-          npm config set runtime electron
-          npx electron-builder --dir --config.directories.output=dist-test
+        run: npx electron-builder --dir --linux --x64 --config.directories.output=dist-test
         env:
           # Skip notarization and signing for PR builds
           CSC_IDENTITY_AUTO_DISCOVERY: false
           # Force compilation from source in CI
           npm_config_build_from_source: true
-          # Set Electron target explicitly
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
 
       # ---------- Upload Build Artifacts ----------
       - name: 📤 Upload Build Artifacts
