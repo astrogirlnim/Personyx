@@ -1,0 +1,37 @@
+# PersonaPulse Personas Configuration
+# Defines user personas for evidence analysis and classification
+
+personas:
+  - id: solo_founder
+    name: 'Solo Founder'
+    description: 'Independent entrepreneurs building MVPs with limited resources'
+    primaryGoal: 'Ship MVP fast with minimal overhead'
+    mainPainPoint: 'Uncertain which features users actually value'
+    keywords:
+      - 'mvp'
+      - 'validation'
+      - 'speed'
+      - 'lean'
+      - 'solo'
+      - 'founder'
+      - 'startup'
+      - 'minimal'
+      - 'overhead'
+      - 'uncertainty'
+
+  - id: agency_marketer
+    name: 'Agency Marketer'
+    description: 'Marketing professionals optimizing multiple client funnels'
+    primaryGoal: 'Optimize funnels and demonstrate clear ROI to clients'
+    mainPainPoint: 'Need rapid copy iteration speed and concrete proof of ROI'
+    keywords:
+      - 'funnel'
+      - 'optimization'
+      - 'roi'
+      - 'client'
+      - 'agency'
+      - 'marketing'
+      - 'copy'
+      - 'iteration'
+      - 'conversion'
+      - 'performance'
