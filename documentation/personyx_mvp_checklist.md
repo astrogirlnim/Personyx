@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[ ] **Phase 2:** Data Layer  
+[X] **Phase 2:** Data Layer ✅ COMPLETE (4/4 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -73,19 +73,19 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **2.3** Cache repeat queries in memory for 5 min sliding window. ✅ COMPLETE
 - [x] **2.4** Document API in OpenAPI 3 format. ✅ COMPLETE
 
-[ ] **Feature 3 – Secure File Ingest**
+[X] **Feature 3 – Secure File Ingest** ✅ COMPLETE
 
-- [ ] **3.1** Accept PRD markdown uploads via Tray drop or REST `/import` route.
-- [ ] **3.2** Validate file type & size; reject on failure with JSON error.
-- [ ] **3.3** Extract sections, chunk, embed, and store atoms + embeddings.
-- [ ] **3.4** Emit "PRDImported" event with new evidence scores.
+- [x] **3.1** Accept PRD markdown uploads via Tray drop or REST `/import` route. ✅ COMPLETE
+- [x] **3.2** Validate file type & size; reject on failure with JSON error. ✅ COMPLETE
+- [x] **3.3** Extract sections, chunk, embed, and store atoms + embeddings. ✅ COMPLETE
+- [x] **3.4** Emit "PRDImported" event with new evidence scores. ✅ COMPLETE
 
-[ ] **Feature 4 – Data Access Layer Utilities**
+[X] **Feature 4 – Data Access Layer Utilities** ✅ COMPLETE
 
-- [ ] **4.1** Implement a repository pattern for pagination & filtering.
-- [ ] **4.2** Add row-level encryption tests for sensitive tables.
-- [ ] **4.3** Provide CLI `db:seed --mock` for local demos.
-- [ ] **4.4** Generate ER-diagram in `/docs`.
+- [x] **4.1** Implement a repository pattern for pagination & filtering. ✅ COMPLETE
+- [x] **4.2** Add row-level encryption tests for sensitive tables. ✅ COMPLETE
+- [x] **4.3** Provide CLI `db:seed --mock` for local demos. ✅ COMPLETE
+- [x] **4.4** Generate ER-diagram in `/docs`. ✅ COMPLETE
 
 [ ] **Feature 5 – Hybrid AI Key Management & Cloud Option**
 

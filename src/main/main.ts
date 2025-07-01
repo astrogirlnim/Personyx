@@ -21,6 +21,7 @@ import { testTokenVault } from './security/tokenVault';
 import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
 import { PersonaLoader } from './services/PersonaLoader';
 import { EmbeddingRetrievalService } from './services/EmbeddingRetrievalService';
+import { SecureFileIngestService } from './services/SecureFileIngestService';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type { IPCEvents, ImportResult } from '@shared/types';
 
@@ -35,6 +36,7 @@ class PersonyxApp {
   private workflowOrchestrator: WorkflowOrchestrator | null = null;
   private personaLoader: PersonaLoader | null = null;
   private embeddingRetrievalService: EmbeddingRetrievalService | null = null;
+  private secureFileIngestService: SecureFileIngestService | null = null;
   private logger: Logger;
   private isAppReady = false;
 
@@ -137,6 +139,11 @@ class PersonyxApp {
         // Set main window for workflow orchestrator IPC communication
         if (this.workflowOrchestrator) {
           this.workflowOrchestrator.setMainWindow(this.mainWindow);
+        }
+
+        // Set main window for secure file ingest service event emission
+        if (this.secureFileIngestService) {
+          this.secureFileIngestService.setMainWindow(this.mainWindow);
         }
       }
     });
@@ -342,6 +349,11 @@ class PersonyxApp {
       this.embeddingRetrievalService = new EmbeddingRetrievalService();
       this.logger.info('✅ Embedding retrieval service initialized');
 
+      // Initialize secure file ingest service (Phase 2.3)
+      this.logger.info('📄 Initializing secure file ingest service...');
+      this.secureFileIngestService = new SecureFileIngestService();
+      this.logger.info('✅ Secure file ingest service initialized');
+
       this.logger.info('✅ Core services initialized');
     } catch (error) {
       this.logger.error('❌ Failed to initialize core services', error);
@@ -370,20 +382,48 @@ class PersonyxApp {
   }
 
   /**
-   * Handle PRD import
+   * Handle PRD import (Phase 2.3 - Secure File Ingest)
    */
   private async handleImportPRD(filePath: string): Promise<ImportResult> {
     try {
       this.logger.info(`📥 Processing PRD import: ${filePath}`);
 
-      // TODO: Implement PRD parsing and processing (Phase 2.3)
-      // For now, return a placeholder response
+      if (!this.secureFileIngestService) {
+        this.logger.warn('⚠️ SecureFileIngestService not initialized');
+        throw new Error('Secure file ingest service not available');
+      }
 
-      return {
-        success: true,
-        documentId: `doc_${Date.now()}`,
-        evidenceScores: [],
-      };
+      // Use the new secure file ingest service (Phase 2.3)
+      const ingestResult =
+        await this.secureFileIngestService.ingestPRDFile(filePath);
+
+      if (ingestResult.success) {
+        this.logger.info('✅ PRD import completed successfully', {
+          documentId: ingestResult.documentId,
+          fileName: ingestResult.fileName,
+          processingTimeMs: ingestResult.processingTimeMs,
+          sectionsExtracted: ingestResult.sectionsExtracted,
+          chunksCreated: ingestResult.chunksCreated,
+          embeddingsGenerated: ingestResult.embeddingsGenerated,
+          evidenceScoresCount: ingestResult.evidenceScores?.length || 0,
+        });
+
+        return {
+          success: true,
+          documentId: ingestResult.documentId,
+          evidenceScores: ingestResult.evidenceScores || [],
+        };
+      } else {
+        this.logger.warn('⚠️ PRD import failed', {
+          error: ingestResult.error,
+          validationErrors: ingestResult.validationErrors,
+        });
+
+        return {
+          success: false,
+          error: ingestResult.error || 'File ingest failed',
+        };
+      }
     } catch (error) {
       this.logger.error('❌ PRD import failed', error);
       return {

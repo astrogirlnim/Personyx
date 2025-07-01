@@ -194,6 +194,12 @@ $RECYCLE.BIN/
 logs
 *.log
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+test.db*
+
 # Local development files
 .env.local
 .env.development.local

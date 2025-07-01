@@ -57,17 +57,17 @@ function tablesExist(): boolean {
   if (!dbInstance) return false;
 
   try {
-    // Check if the main tables exist
+    // Check if all required tables exist (including embeddings)
     const tableCheck = dbInstance.prepare(`
       SELECT COUNT(*) as count 
       FROM sqlite_master 
-      WHERE type='table' AND name IN ('personas', 'evidence', 'product_documents', 'evidence_scores', 'api_tokens')
+      WHERE type='table' AND name IN ('personas', 'evidence', 'product_documents', 'evidence_scores', 'api_tokens', 'embeddings')
     `);
 
     const result = tableCheck.get() as { count: number };
     logger.debug('🔍 Table check result', { tablesFound: result.count });
 
-    return result.count >= 5; // All 5 main tables should exist
+    return result.count >= 6; // All 6 main tables should exist (including embeddings)
   } catch (error) {
     logger.error('❌ Error checking tables', error);
     return false;
@@ -83,55 +83,122 @@ function applyMigrationSQL(): void {
   }
 
   try {
-    // Try to find the migration file in development
-    const migrationPaths = [
-      join(__dirname, '../../src/main/db/migrations/0000_common_satana.sql'),
-      join(process.cwd(), 'src/main/db/migrations/0000_common_satana.sql'),
-      join(__dirname, 'migrations/0000_common_satana.sql'),
+    // Check which tables currently exist
+    const existingTables = (
+      dbInstance
+        .prepare(
+          `
+        SELECT name FROM sqlite_master WHERE type='table'
+      `
+        )
+        .all() as { name: string }[]
+    ).map(row => row.name);
+
+    logger.debug('🔍 Existing tables found', { tables: existingTables });
+
+    // Define required tables for each migration
+    const migration0000Tables = [
+      'api_tokens',
+      'evidence',
+      'evidence_scores',
+      'personas',
+      'product_documents',
     ];
+    const migration0001Tables = ['embeddings'];
 
-    let migrationSQL: string | null = null;
-    let usedPath = '';
+    // Check if we need to run migration 0000
+    const needsMigration0000 = migration0000Tables.some(
+      table => !existingTables.includes(table)
+    );
 
-    for (const path of migrationPaths) {
-      if (existsSync(path)) {
-        migrationSQL = readFileSync(path, 'utf-8');
-        usedPath = path;
-        break;
-      }
+    // Check if we need to run migration 0001
+    const needsMigration0001 = migration0001Tables.some(
+      table => !existingTables.includes(table)
+    );
+
+    let totalStatements = 0;
+
+    // Run migration 0000 if needed
+    if (needsMigration0000) {
+      totalStatements += runSingleMigration('0000_common_satana.sql');
+    } else {
+      logger.info('⏭️ Migration 0000 skipped - tables already exist');
     }
 
-    if (!migrationSQL) {
-      // If no migration file found, create tables manually from known schema
-      logger.info('📝 No migration file found, creating tables manually');
+    // Run migration 0001 if needed
+    if (needsMigration0001) {
+      totalStatements += runSingleMigration('0001_narrow_virginia_dare.sql');
+    } else {
+      logger.info(
+        '⏭️ Migration 0001 skipped - embeddings table already exists'
+      );
+    }
+
+    if (totalStatements === 0 && existingTables.length === 0) {
+      // If no tables exist at all and no migrations ran, create manually
+      logger.info(
+        '📝 No tables found and no migrations available, creating manually'
+      );
       createTablesManually();
-      return;
+    } else {
+      logger.info('🎉 Migration process completed', {
+        totalStatements,
+        existingTables: existingTables.length,
+        needsMigration0000,
+        needsMigration0001,
+      });
     }
-
-    logger.info('🔄 Applying migration SQL', { source: usedPath });
-
-    // Split SQL by statement breakpoints and execute each statement
-    const statements = migrationSQL
-      .split('--> statement-breakpoint')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0);
-
-    for (const statement of statements) {
-      if (statement.trim()) {
-        logger.debug('📝 Executing SQL statement', {
-          preview: statement.substring(0, 50) + '...',
-        });
-        dbInstance.exec(statement);
-      }
-    }
-
-    logger.info('✅ Migration SQL applied successfully', {
-      statementsExecuted: statements.length,
-    });
   } catch (error) {
     logger.error('❌ Failed to apply migration SQL', error);
     throw error;
   }
+}
+
+function runSingleMigration(migrationFile: string): number {
+  const migrationPaths = [
+    join(__dirname, `../../src/main/db/migrations/${migrationFile}`),
+    join(process.cwd(), `src/main/db/migrations/${migrationFile}`),
+    join(__dirname, `migrations/${migrationFile}`),
+  ];
+
+  let migrationSQL: string | null = null;
+  let usedPath = '';
+
+  for (const path of migrationPaths) {
+    if (existsSync(path)) {
+      migrationSQL = readFileSync(path, 'utf-8');
+      usedPath = path;
+      break;
+    }
+  }
+
+  if (!migrationSQL) {
+    logger.warn(`⚠️ Migration file ${migrationFile} not found, skipping`);
+    return 0;
+  }
+
+  logger.info('🔄 Applying migration SQL', { source: usedPath });
+
+  // Split SQL by statement breakpoints and execute each statement
+  const statements = migrationSQL
+    .split('--> statement-breakpoint')
+    .map(stmt => stmt.trim())
+    .filter(stmt => stmt.length > 0);
+
+  for (const statement of statements) {
+    if (statement.trim()) {
+      logger.debug('📝 Executing SQL statement', {
+        preview: statement.substring(0, 50) + '...',
+      });
+      dbInstance!.exec(statement);
+    }
+  }
+
+  logger.info(`✅ Migration ${migrationFile} applied successfully`, {
+    statementsExecuted: statements.length,
+  });
+
+  return statements.length;
 }
 
 /**
@@ -202,6 +269,18 @@ function createTablesManually(): void {
         auth_tag text NOT NULL,
         created_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS embeddings (
+        id text PRIMARY KEY NOT NULL,
+        evidence_id text NOT NULL,
+        embedding text NOT NULL,
+        model text NOT NULL,
+        dimensions integer NOT NULL,
+        chunk_index integer NOT NULL,
+        chunk_count integer NOT NULL,
+        created_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON UPDATE no action ON DELETE no action
       );
     `;
 
