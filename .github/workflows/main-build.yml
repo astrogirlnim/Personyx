@@ -74,10 +74,8 @@ jobs:
       # ---------- Database Validation (Phase 1.2 Addition) ----------
       - name: 🗄️ Validate Database Schema & Migrations
         run: |
-          # Rebuild better-sqlite3 for current Node.js version
-          pnpm rebuild better-sqlite3
-          # Use dedicated validation script for production build verification
-          node scripts/validate-database.js
+          # Use npm script which includes build step and proper dependencies
+          npm run db:validate
         env:
           npm_config_build_from_source: true
 
