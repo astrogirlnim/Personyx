@@ -315,28 +315,113 @@ jobs:
       # ---------- Platform-Specific Packaging ----------
       - name: 📦 Package for macOS
         if: matrix.platform == 'mac'
-        run: npx electron-builder --mac --universal --publish never
+        run: |
+          echo "🏗️ Building macOS packages..."
+          echo "📂 Current directory structure:"
+          ls -la
+          echo "📂 Dist directory contents:"
+          ls -la dist/ || echo "❌ dist/ directory not found"
+          echo "🔧 Running electron-builder for macOS..."
+          if ! npx electron-builder --mac --universal --publish never; then
+            echo "❌ ERROR: electron-builder failed for macOS!"
+            echo "📂 Post-failure directory contents:"
+            ls -la
+            echo "📂 Post-failure dist contents:"
+            ls -la dist/ || echo "dist/ not found"
+            echo "📂 Post-failure release contents:"
+            ls -la release/ || echo "release/ not found"
+            exit 1
+          fi
+          echo "✅ macOS packaging completed"
+          echo "📦 Release directory contents:"
+          ls -la release/ || echo "❌ release/ directory not found"
         env:
-          # Add macOS signing secrets when available
-          # CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
-          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-          # NOTARIZE: true
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          DEBUG: electron-builder
 
       - name: 📦 Package for Linux
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --x64 --publish never
+        run: |
+          echo "🏗️ Building Linux packages..."
+          echo "📂 Current directory structure:"
+          ls -la
+          echo "📂 Dist directory contents:"
+          ls -la dist/ || echo "❌ dist/ directory not found"
+          echo "🔧 Running electron-builder for Linux..."
+          if ! npx electron-builder --linux --x64 --publish never; then
+            echo "❌ ERROR: electron-builder failed for Linux!"
+            echo "📂 Post-failure directory contents:"
+            ls -la
+            echo "📂 Post-failure dist contents:"
+            ls -la dist/ || echo "dist/ not found"
+            echo "📂 Post-failure release contents:"
+            ls -la release/ || echo "release/ not found"
+            exit 1
+          fi
+          echo "✅ Linux packaging completed"
+          echo "📦 Release directory contents:"
+          ls -la release/ || echo "❌ release/ directory not found"
+        env:
+          DEBUG: electron-builder
 
       - name: 📦 Package for Windows
         if: matrix.platform == 'win'
-        run: npx electron-builder --win --x64 --publish never
+        run: |
+          echo "🏗️ Building Windows packages..."
+          echo "📂 Current directory structure:"
+          Get-ChildItem -Force
+          echo "📂 Dist directory contents:"
+          if (Test-Path dist) { Get-ChildItem dist -Force } else { echo "❌ dist/ directory not found" }
+          echo "🔧 Running electron-builder for Windows..."
+          if (!(npx electron-builder --win --x64 --publish never)) {
+            echo "❌ ERROR: electron-builder failed for Windows!"
+            echo "📂 Post-failure directory contents:"
+            Get-ChildItem -Force
+            echo "📂 Post-failure dist contents:"
+            if (Test-Path dist) { Get-ChildItem dist -Force } else { echo "dist/ not found" }
+            echo "📂 Post-failure release contents:"
+            if (Test-Path release) { Get-ChildItem release -Force } else { echo "release/ not found" }
+            exit 1
+          }
+          echo "✅ Windows packaging completed"
+          echo "📦 Release directory contents:"
+          if (Test-Path release) { Get-ChildItem release -Force } else { echo "❌ release/ directory not found" }
         env:
-          # Add Windows signing secrets when available
-          # CSC_LINK: ${{ secrets.WIN_CERTIFICATE }}
-          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          DEBUG: electron-builder
+
+      # ---------- Verify Package Creation ----------
+      - name: 🔍 Verify Package Creation
+        id: verify-packages
+        run: |
+          echo "🔍 Verifying packages were created successfully..."
+
+          if [ ! -d "release" ]; then
+            echo "❌ ERROR: release/ directory does not exist!"
+            echo "📂 Current directory contents:"
+            ls -la
+            exit 1
+          fi
+
+          echo "📦 Release directory contents:"
+          ls -la release/
+
+          # Count files matching our expected patterns
+          PACKAGE_FILES=$(find release -maxdepth 1 \( -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" \) | wc -l)
+          METADATA_FILES=$(find release -maxdepth 1 \( -name "latest*.yml" -o -name "*.blockmap" \) | wc -l)
+
+          echo "📊 Package files found: $PACKAGE_FILES"
+          echo "📊 Metadata files found: $METADATA_FILES"
+
+          if [ $PACKAGE_FILES -eq 0 ]; then
+            echo "❌ ERROR: No package files (.dmg, .AppImage, .exe, .deb, .rpm, .zip) found!"
+            exit 1
+          fi
+
+          echo "✅ Package verification successful"
+          echo "package_count=$PACKAGE_FILES" >> $GITHUB_OUTPUT
+          echo "metadata_count=$METADATA_FILES" >> $GITHUB_OUTPUT
+        shell: bash
 
       # ---------- Upload Platform Packages ----------
       - name: 📤 Upload Packages
