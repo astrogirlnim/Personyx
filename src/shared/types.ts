@@ -95,6 +95,7 @@ export interface IPCEvents {
     topN?: number;
     minSimilarity?: number;
   };
+  'check-api-key-status': Record<string, never>;
   'app-quit': Record<string, never>;
 }
 

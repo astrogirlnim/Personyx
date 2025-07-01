@@ -261,6 +261,11 @@ class PersonyxApp {
       }
     );
 
+    ipcMain.handle('check-api-key-status', async () => {
+      this.logger.info('🔑 Checking API key status');
+      return await this.handleCheckAPIKeyStatus();
+    });
+
     ipcMain.handle(
       'similarity-search',
       async (_, data: IPCEvents['similarity-search']) => {
@@ -543,13 +548,55 @@ class PersonyxApp {
     try {
       this.logger.info(`📊 Fetching evidence scores for: ${documentId}`);
 
-      // TODO: Implement evidence scoring (Phase 2.1)
-      // For now, return placeholder data
+      if (!this.secureFileIngestService) {
+        this.logger.warn('⚠️ SecureFileIngestService not initialized');
+        return [];
+      }
 
-      return [];
+      // Check if we have evidence scores for this document
+      const evidenceScoreRepo = new (
+        await import('./db/repositories/EvidenceScoreRepo')
+      ).EvidenceScoreRepo();
+
+      const scores = await evidenceScoreRepo.findByDocumentId(documentId);
+
+      this.logger.info(
+        `📊 Found ${scores.length} evidence scores for document ${documentId}`
+      );
+      return scores;
     } catch (error) {
       this.logger.error('❌ Failed to get evidence scores', error);
-      throw error;
+      return [];
+    }
+  }
+
+  /**
+   * Handle API key status check
+   */
+  private async handleCheckAPIKeyStatus() {
+    try {
+      this.logger.info('🔑 Checking OpenAI API key status');
+
+      const { getToken } = await import('./security/tokenVault');
+      const apiKey = await getToken('openai');
+
+      const hasKey = !!apiKey;
+      this.logger.info(
+        `🔑 API key status: ${hasKey ? 'configured' : 'missing'}`
+      );
+
+      return {
+        hasOpenAIKey: hasKey,
+        isLangGraphReady:
+          this.workflowOrchestrator?.getStatus().langGraphReady || false,
+      };
+    } catch (error) {
+      this.logger.error('❌ Failed to check API key status', error);
+      return {
+        hasOpenAIKey: false,
+        isLangGraphReady: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 

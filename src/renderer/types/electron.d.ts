@@ -22,6 +22,7 @@ interface ElectronAPI {
     topN?: number,
     minSimilarity?: number
   ) => Promise<unknown>;
+  checkAPIKeyStatus: () => Promise<unknown>;
 
   // Event listeners
   onEvidenceScoreUpdated: (callback: (data: unknown) => void) => void;

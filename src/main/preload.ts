@@ -25,6 +25,7 @@ interface ElectronAPI {
     topN?: number,
     minSimilarity?: number
   ) => Promise<unknown>;
+  checkAPIKeyStatus: () => Promise<unknown>;
 
   // Event listeners
   onEvidenceScoreUpdated: (callback: (data: unknown) => void) => void;
@@ -86,6 +87,11 @@ const electronAPI: ElectronAPI = {
       topN,
       minSimilarity,
     });
+  },
+
+  checkAPIKeyStatus: () => {
+    console.log('🔍 Checking API key status');
+    return ipcRenderer.invoke('check-api-key-status');
   },
 
   // Event listeners

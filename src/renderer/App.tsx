@@ -37,6 +37,11 @@ export function App(): JSX.Element {
   const [latestEvidenceScores, setLatestEvidenceScores] = useState<
     EvidenceScore[]
   >([]);
+  const [apiKeyStatus, setApiKeyStatus] = useState<{
+    hasOpenAIKey: boolean;
+    isLangGraphReady: boolean;
+    error?: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
@@ -46,25 +51,30 @@ export function App(): JSX.Element {
     console.log('🚀 Personyx App component mounted');
 
     const initializeApp = async () => {
+      console.log('👥 Loading personas...');
+
       try {
-        // Load personas from backend
-        console.log('👥 Loading personas...');
+        // Load personas
         const personas = (await window.electronAPI.getPersonas()) as Persona[];
         console.log('✅ Personas loaded:', personas.length);
+        setAppState(prev => ({ ...prev, personas, isReady: true }));
 
-        setAppState(prev => ({
-          ...prev,
-          personas,
-          isReady: true,
-        }));
+        // Check API key status
+        console.log('🔑 Checking API key status...');
+        const keyStatus = (await window.electronAPI.checkAPIKeyStatus()) as {
+          hasOpenAIKey: boolean;
+          isLangGraphReady: boolean;
+          error?: string;
+        };
+        console.log('🔑 API key status:', keyStatus);
+        setApiKeyStatus(keyStatus);
 
-        // Set up IPC event listeners for real-time updates
+        // Set up IPC listeners
         setupIPCListeners();
-
         console.log('✅ App initialization complete');
       } catch (error) {
         console.error('❌ Failed to initialize app:', error);
-        setError('Failed to initialize application. Please restart Personyx.');
+        setError('Failed to initialize application');
       }
     };
 
@@ -373,7 +383,7 @@ export function App(): JSX.Element {
                     </div>
                   </div>
                 ) : (
-                  // Empty state
+                  // Empty state or missing API key state
                   <div className="w-40 h-40 mx-auto mb-4 relative">
                     <svg className="w-40 h-40 transform -rotate-90">
                       <circle
@@ -391,22 +401,50 @@ export function App(): JSX.Element {
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
-                        <div className="text-caption text-slate dark:text-slate-dark">
-                          No PRDs analysed yet
-                        </div>
+                        {apiKeyStatus?.hasOpenAIKey === false ? (
+                          <>
+                            <div className="text-caption text-slate dark:text-slate-dark mb-2">
+                              🔑 API Key Required
+                            </div>
+                            <div className="text-caption text-steel dark:text-steel-dark">
+                              Configure OpenAI API key to enable evidence
+                              scoring
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-caption text-slate dark:text-slate-dark">
+                            No PRDs analysed yet
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
 
-                <button
-                  className="btn-primary mb-4"
-                  onClick={() => setShowImportModal(true)}
-                >
-                  {averageScore !== null
-                    ? 'Import Another PRD'
-                    : 'Import First PRD'}
-                </button>
+                {/* Action button for API key setup */}
+                {apiKeyStatus?.hasOpenAIKey === false && (
+                  <button
+                    onClick={() =>
+                      setError(
+                        'Please run: node scripts/setup-api-key.js to configure your OpenAI API key'
+                      )
+                    }
+                    className="px-4 py-2 bg-evidence text-white rounded-lg hover:bg-evidence-dark transition-colors text-body"
+                  >
+                    Setup API Key
+                  </button>
+                )}
+
+                {averageScore !== null && (
+                  <button
+                    className="btn-primary mb-4"
+                    onClick={() => setShowImportModal(true)}
+                  >
+                    {averageScore !== null
+                      ? 'Import Another PRD'
+                      : 'Import First PRD'}
+                  </button>
+                )}
 
                 {/* Chat with Persona button - Feature 1.1 */}
                 <button
