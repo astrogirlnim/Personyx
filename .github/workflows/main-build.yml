@@ -31,29 +31,49 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc # Consistent with PR validation
           cache: pnpm
 
-      # ---------- Install System Dependencies ----------
+      # ---------- Install System Dependencies with Python 3.11 ----------
       - name: 🔧 Install system dependencies for native modules
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential python3-dev libsecret-1-dev
+          # Install Python 3.11 specifically (has distutils, unlike 3.12+)
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y python3.11 python3.11-dev python3.11-distutils
+          # Install other build dependencies
+          sudo apt-get install -y build-essential libsecret-1-dev
+          # Configure Python for node-gyp
+          sudo ln -sf /usr/bin/python3.11 /usr/bin/python3
+          python3 --version
+          echo "✅ System dependencies installed with Python 3.11"
 
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ---------- Native Module Rebuild (Phase 1.2 Addition) ----------
-      - name: 🔧 Rebuild native modules for production environment
+      # ---------- Comprehensive Native Module Setup ----------
+      - name: 🔧 Rebuild native modules for Electron
         run: |
-          # Clear any cached native modules that might cause issues
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
-          # Rebuild for current Node.js version
-          pnpm rebuild better-sqlite3 keytar
+          echo "🔧 Rebuilding native modules for Electron compatibility..."
+
+          # Clear any potentially problematic build artifacts
+          echo "🧹 Cleaning build artifacts..."
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
+          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
+
+          # Rebuild native modules specifically for Electron's Node version
+          echo "🏗️ Rebuilding with electron-builder..."
+          pnpm exec electron-builder install-app-deps
+
+          echo "✅ Native module rebuild completed successfully"
         env:
           npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
+          PYTHON: /usr/bin/python3.11
 
       # ---------- Security & Quality ----------
       - name: 🕵️ Gitleaks Secret Scan
@@ -78,11 +98,12 @@ jobs:
       - name: 🏗️ Build Application
         run: pnpm build
 
-      # ---------- Database Validation (Phase 1.2 Addition) ----------
+      # ---------- Database Validation ----------
       - name: 🗄️ Validate Database Schema & Migrations
         run: |
-          # Use npm script which includes build step and proper dependencies
+          echo "🗄️ Validating database schema and migrations..."
           npm run db:validate
+          echo "✅ Database validation completed"
         env:
           npm_config_build_from_source: true
 
@@ -99,7 +120,7 @@ jobs:
     name: 📦 Package (${{ matrix.os }})
     needs: validate
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45 # Increased timeout for native module compilation
 
     strategy:
       matrix:
@@ -127,30 +148,120 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc # Consistent with PR validation
           cache: pnpm
 
-      # ---------- Install System Dependencies (Linux Only) ----------
-      - name: 🔧 Install system dependencies for native modules
+      # ---------- Platform-Specific System Dependencies ----------
+      - name: 🔧 Install system dependencies for native modules (Linux)
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential python3-dev libsecret-1-dev
+          # Install Python 3.11 specifically (has distutils, unlike 3.12+)
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y python3.11 python3.11-dev python3.11-distutils
+          # Install other build dependencies
+          sudo apt-get install -y build-essential libsecret-1-dev
+          # Configure Python for node-gyp
+          sudo ln -sf /usr/bin/python3.11 /usr/bin/python3
+          python3 --version
+          echo "✅ Linux system dependencies installed with Python 3.11"
+
+      - name: 🔧 Setup Python for native modules (macOS)
+        if: matrix.platform == 'mac'
+        run: |
+          # Install Python 3.11 via Homebrew to avoid distutils issues
+          echo "🔧 Setting up Python 3.11 for macOS native module compilation..."
+          brew install python@3.11
+          # Link Python 3.11 as the default python3
+          echo "/opt/homebrew/opt/python@3.11/bin" >> $GITHUB_PATH
+          export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
+          python3.11 --version
+          # Verify distutils is available
+          python3.11 -c "import distutils; print('✅ distutils available')"
+          echo "✅ macOS Python 3.11 setup completed successfully"
+
+      - name: 🔧 Setup Python for native modules (Windows)
+        if: matrix.platform == 'win'
+        run: |
+          # Install Python 3.11 specifically for Windows
+          echo "🔧 Setting up Python 3.11 for Windows native module compilation..."
+          choco install python --version=3.11.9 --force --yes
+          # Refresh PATH
+          refreshenv
+          python --version
+          echo "✅ Windows Python 3.11 setup completed successfully"
 
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ---------- Platform-Specific Native Module Rebuild ----------
-      - name: 🔧 Rebuild native modules for target platform
+      # ---------- Comprehensive Platform-Specific Native Module Rebuild ----------
+      - name: 🔧 Rebuild native modules for target platform (Linux)
+        if: matrix.platform == 'linux'
         run: |
+          echo "🔧 Rebuilding native modules for Linux x64..."
+
           # Clear any existing builds that might cause conflicts
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
-          # Rebuild specifically for Electron and target platform
-          npx @electron/rebuild --force --only better-sqlite3,keytar
+          echo "🧹 Cleaning build artifacts..."
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
+          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
+
+          # Rebuild native modules specifically for Electron's Node version
+          echo "🏗️ Rebuilding with electron-builder..."
+          pnpm exec electron-builder install-app-deps
+
+          echo "✅ Linux native module rebuild completed successfully"
         env:
           npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
+          PYTHON: /usr/bin/python3.11
+
+      - name: 🔧 Rebuild native modules for target platform (macOS)
+        if: matrix.platform == 'mac'
+        run: |
+          echo "🔧 Rebuilding native modules for macOS Universal..."
+
+          # Clear any existing builds that might cause conflicts
+          echo "🧹 Cleaning build artifacts..."
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
+          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
+
+          # Set up Python path for native module compilation
+          export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
+          export PYTHON="/opt/homebrew/opt/python@3.11/bin/python3.11"
+
+          # Rebuild native modules specifically for Electron's Node version
+          echo "🏗️ Rebuilding with electron-builder..."
+          pnpm exec electron-builder install-app-deps
+
+          echo "✅ macOS native module rebuild completed successfully"
+        env:
+          npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
+          PYTHON: /opt/homebrew/opt/python@3.11/bin/python3.11
+
+      - name: 🔧 Rebuild native modules for target platform (Windows)
+        if: matrix.platform == 'win'
+        run: |
+          echo "🔧 Rebuilding native modules for Windows x64..."
+
+          # Clear any existing builds that might cause conflicts
+          echo "🧹 Cleaning build artifacts..."
+          if (Test-Path "node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build") { Remove-Item -Recurse -Force "node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build" }
+          if (Test-Path "node_modules/.pnpm/keytar*/node_modules/keytar/build") { Remove-Item -Recurse -Force "node_modules/.pnpm/keytar*/node_modules/keytar/build" }
+
+          # Rebuild native modules specifically for Electron's Node version
+          echo "🏗️ Rebuilding with electron-builder..."
+          pnpm exec electron-builder install-app-deps
+
+          echo "✅ Windows native module rebuild completed successfully"
+        env:
+          npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
 
       # ---------- Download Build ----------
       - name: 📥 Download Build Artifacts
