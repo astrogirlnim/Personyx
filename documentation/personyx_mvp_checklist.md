@@ -59,12 +59,12 @@ _Criteria: essential build & tooling; no cross-dependencies._
 
 _Criteria: storage & computation services, depends only on Phase 1._
 
-[ ] **Feature 1 – Evidence Score Engine**
+[X] **Feature 1 – Evidence Score Engine** ✅ COMPLETE
 
-- [ ] **1.1** Implement a scoring algorithm (0-100) per persona using evidence coverage heuristics.
-- [ ] **1.2** Expose `calculateEvidenceScore(prdId, personaId)` as a service.
-- [ ] **1.3** Persist score snapshots with timestamp to SQLite.
-- [ ] **1.4** Add unit tests covering min, max, and median score paths.
+- [X] **1.1** Implement a scoring algorithm (0-100) per persona using evidence coverage heuristics. ✅ COMPLETE
+- [X] **1.2** Expose `calculateEvidenceScore(prdId, personaId)` as a service. ✅ COMPLETE
+- [X] **1.3** Persist score snapshots with timestamp to SQLite. ✅ COMPLETE
+- [X] **1.4** Add unit tests covering min, max, and median score paths. ✅ COMPLETE
 
 [ ] **Feature 2 – Embedding Retrieval API**
 
