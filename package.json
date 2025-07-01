@@ -37,7 +37,7 @@
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
-    "postinstall": "npx @electron/rebuild",
+    "postinstall": "electron-builder install-app-deps",
     "prepare": "husky"
   },
   "dependencies": {
@@ -48,10 +48,9 @@
     "keytar": "^7.9.0"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^29.5.0",
-    "@types/keytar": "^4.4.2",
+    "prebuild-install": "^7.1.1",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
@@ -96,6 +95,8 @@
       "dist/**/*",
       "package.json"
     ],
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": true,
     "icon": "build/icon.png",
     "mac": {
       "category": "public.app-category.productivity",
