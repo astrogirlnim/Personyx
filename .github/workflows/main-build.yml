@@ -210,7 +210,17 @@ jobs:
           # Verify Python setup
           python --version
           python -c "import sys; print('Python executable:', sys.executable)"
-          python -c "import distutils; print('✅ distutils available')" 2>$null || echo "⚠️ distutils not available but setuptools should work"
+
+          # Check distutils availability (Python 3.11 should have it)
+          $ErrorActionPreference = 'SilentlyContinue'
+          python -c "import distutils; print('✅ distutils available')" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            echo "✅ distutils available"
+          } else {
+            echo "⚠️ distutils not available but setuptools should work"
+          }
+          $ErrorActionPreference = 'Stop'
+
           echo "✅ Windows Python 3.11 setup completed successfully"
 
       # ---------- Install Dependencies (Python 3.11 now available) ----------
