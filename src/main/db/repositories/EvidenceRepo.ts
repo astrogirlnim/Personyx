@@ -100,10 +100,12 @@ export class EvidenceRepo {
         .where(eq(evidence.personaId, personaId));
 
       // Parse JSON fields for all evidence
-      const parsedEvidence: Evidence[] = result.map(item => ({
-        ...item,
-        tags: JSON.parse(item.tags),
-      }));
+      const parsedEvidence: Evidence[] = result.map(
+        (item: typeof evidence.$inferSelect) => ({
+          ...item,
+          tags: JSON.parse(item.tags),
+        })
+      );
 
       logger.debug(
         `✅ Found ${parsedEvidence.length} evidence items for persona`,
@@ -127,10 +129,12 @@ export class EvidenceRepo {
       const result = await db.select().from(evidence);
 
       // Parse JSON fields for all evidence
-      const parsedEvidence: Evidence[] = result.map(item => ({
-        ...item,
-        tags: JSON.parse(item.tags),
-      }));
+      const parsedEvidence: Evidence[] = result.map(
+        (item: typeof evidence.$inferSelect) => ({
+          ...item,
+          tags: JSON.parse(item.tags),
+        })
+      );
 
       logger.debug(`✅ Found ${parsedEvidence.length} evidence items`);
       return parsedEvidence;

@@ -96,10 +96,12 @@ export class PersonaRepo {
       const result = await db.select().from(personas);
 
       // Parse JSON fields for all personas
-      const parsedPersonas: Persona[] = result.map(persona => ({
-        ...persona,
-        keywords: JSON.parse(persona.keywords),
-      }));
+      const parsedPersonas: Persona[] = result.map(
+        (persona: typeof personas.$inferSelect) => ({
+          ...persona,
+          keywords: JSON.parse(persona.keywords),
+        })
+      );
 
       logger.debug(`✅ Found ${parsedPersonas.length} personas`);
       return parsedPersonas;

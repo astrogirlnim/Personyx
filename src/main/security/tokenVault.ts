@@ -230,7 +230,9 @@ export async function listTokenServices(): Promise<ApiService[]> {
       .select({ service: apiTokens.service })
       .from(apiTokens);
 
-    const services = result.map(row => row.service as ApiService);
+    const services = result.map(
+      (row: { service: string }) => row.service as ApiService
+    );
     logger.debug(`✅ Found tokens for ${services.length} services`, {
       services,
     });
