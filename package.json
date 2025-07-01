@@ -39,7 +39,7 @@
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
-    "postinstall": "electron-builder install-app-deps || (echo 'Falling back to @electron/rebuild due to Python distutils issue' && npx @electron/rebuild)",
+    "postinstall": "electron-builder install-app-deps",
     "prepare": "husky"
   },
   "dependencies": {
@@ -68,7 +68,6 @@
     "cross-env": "^7.0.3",
     "electron": "28.3.3",
     "electron-builder": "24.13.3",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
@@ -104,7 +103,7 @@
       "assets/**/*",
       "package.json"
     ],
-    "nodeGypRebuild": true,
+    "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
     "icon": "build/icon.png",
     "mac": {

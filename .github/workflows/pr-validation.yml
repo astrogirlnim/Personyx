@@ -65,7 +65,7 @@ jobs:
 
           # Rebuild native modules specifically for Electron's Node version
           echo "🏗️ Rebuilding with electron-builder..."
-          pnpm exec electron-builder install-app-deps
+          npx electron-builder install-app-deps --force
 
           echo "✅ Native module rebuild completed successfully"
         env:
@@ -115,8 +115,8 @@ jobs:
         env:
           # Skip notarization and signing for PR builds
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          # Force compilation from source in CI
-          npm_config_build_from_source: true
+          # Skip native module rebuild since we already did it
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
       # ---------- Upload Build Artifacts ----------
       - name: 📤 Upload Build Artifacts
