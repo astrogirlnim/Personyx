@@ -10,10 +10,10 @@
 :root {
   /* Component tokens as CSS custom properties */
   --dr-radius-md: 0.5rem; /* 8px - Card & button radius */
-  --dr-shadow-sm: 0 1px 2px rgba(0,0,0,0.05); /* Default shadow */
+  --dr-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05); /* Default shadow */
   --dr-gap-panel: 1.5rem; /* 24px - Inner padding for tray panels */
   --dr-duration-fast: 120ms; /* Small transitions */
-  
+
   /* Focus ring for accessibility */
   --dr-focus-ring: 0 0 0 2px theme('colors.evidence-blue.dark'); /* #5C9EFF outline */
 }
@@ -251,5 +251,7 @@
 
 /* Dark mode preservation for shadow depth */
 .dark .shadow-dr-depth {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
