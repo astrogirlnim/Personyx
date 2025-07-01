@@ -42,20 +42,21 @@ jobs:
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ---------- Native Module Rebuild (Phase 1.2 Addition) ----------
-      - name: 🔧 Rebuild native modules for CI environment
+      # ---------- Comprehensive Native Module Setup ----------
+      - name: 🔧 Rebuild native modules for Electron
         run: |
-          # Clear any cached native modules that might cause issues
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build
-          # Rebuild for current Node.js version (for testing and validation)
-          pnpm rebuild better-sqlite3 keytar
+          echo "🔧 Rebuilding native modules for Electron compatibility..."
+          # Clear any potentially problematic build artifacts
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
+          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
+
+          # Rebuild native modules specifically for Electron's Node version
+          pnpm exec electron-builder install-app-deps
+
+          echo "✅ Native modules rebuilt successfully"
         env:
           npm_config_build_from_source: true
-
-      # ---------- Explicit Electron Native Module Rebuild ----------
-      - name: 🔧 Rebuild native modules for Electron
-        run: pnpm exec electron-builder install-app-deps # Ensures native modules are rebuilt for Electron's Node version
 
       # ---------- Security Scan ----------
       - name: 🕵️ Gitleaks Secret Scan
@@ -63,7 +64,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---------- Code Quality Checks (Parallel) ----------
+      # ---------- Code Quality Checks ----------
       - name: 🔍 TypeScript Type Check
         run: pnpm typecheck
 
@@ -81,45 +82,21 @@ jobs:
       - name: 🏗️ Build Application
         run: pnpm build
 
-      # ---------- Database Validation (Phase 1.2 Addition) ----------
+      # ---------- Database Validation ----------
       - name: 🗄️ Validate Database Schema & Migrations
         run: |
-          # Use npm script which includes build step and proper dependencies
+          echo "🗄️ Validating database schema and migrations..."
           npm run db:validate
+          echo "✅ Database validation completed"
         env:
           npm_config_build_from_source: true
 
-      # ---------- Electron Packaging Test (CI-Optimized) ----------
-      - name: 🔧 Prepare native modules for Electron packaging
+      # ---------- Electron Packaging Test ----------
+      - name: 📦 Test Electron Packaging (Linux x64)
         run: |
-          # Clear only specific native module builds that might cause conflicts in CI
-          # Only target known native modules, not all packages
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
-          rm -rf node_modules/.pnpm/node-gyp*/node_modules/node-gyp/build || true
-          # Clean up any node-gyp build artifacts specifically
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-        env:
-          npm_config_build_from_source: true
-
-      - name: 🔍 Verify package integrity before Electron build
-        run: |
-          # Verify critical packages are properly installed
-          echo "Checking drizzle-orm query-builders..."
-          ls -la node_modules/.pnpm/drizzle-orm*/node_modules/drizzle-orm/sqlite-core/query-builders/ || echo "Query-builders not found, checking if reinstall needed"
-
-          # Verify yargs build files exist
-          echo "Checking yargs build files..."
-          find node_modules -path "*yargs*" -name "index.cjs" | head -5
-
-          # If any core packages are missing essential files, reinstall
-          if [ ! -d "$(find node_modules -path "*drizzle-orm*/node_modules/drizzle-orm/sqlite-core/query-builders" | head -1)" ]; then
-            echo "Core packages missing files, running targeted reinstall..."
-            pnpm install --force drizzle-orm
-          fi
-
-      - name: 📦 Test Electron Packaging (Directory Only)
-        run: npx electron-builder --dir --linux --x64 --config.directories.output=dist-test
+          echo "📦 Testing Electron packaging for Linux x64..."
+          npx electron-builder --dir --linux --x64 --config.directories.output=dist-test
+          echo "✅ Electron packaging test completed successfully"
         env:
           # Skip notarization and signing for PR builds
           CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -180,6 +157,7 @@ jobs:
           echo "| Security Scan | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Database Schema | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Electron Packaging | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then
