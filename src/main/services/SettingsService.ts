@@ -5,7 +5,6 @@
  * Phase 2.5, Feature 5.5 - Update onboarding and settings UI to guide user through both options
  */
 
-import { app } from 'electron';
 import { join } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { Logger } from '@main/utils/logger';
@@ -16,6 +15,16 @@ import type {
   AIServiceConfig,
   AIServiceProvider,
 } from '@shared/types';
+
+// Conditionally import Electron app (may not be available in CI/test environments)
+let electronApp: { getPath: (path: string) => string } | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  electronApp = require('electron').app;
+} catch {
+  // Electron not available - running in Node.js environment (CI/tests)
+  electronApp = null;
+}
 
 const logger = new Logger('settings-service');
 
@@ -37,7 +46,14 @@ export class SettingsService {
     };
 
     // Set up settings file path
-    const userDataPath = app.getPath('userData');
+    let userDataPath: string;
+    if (electronApp) {
+      // Running in Electron environment
+      userDataPath = electronApp.getPath('userData');
+    } else {
+      // Running in Node.js environment (CI/tests) - use current working directory
+      userDataPath = join(process.cwd(), 'test-settings');
+    }
     this.settingsPath = join(userDataPath, PATHS.SETTINGS);
   }
 
@@ -49,7 +65,13 @@ export class SettingsService {
 
     try {
       // Ensure user data directory exists
-      const userDataPath = app.getPath('userData');
+      let userDataPath: string;
+      if (electronApp) {
+        userDataPath = electronApp.getPath('userData');
+      } else {
+        userDataPath = join(process.cwd(), 'test-settings');
+      }
+
       if (!existsSync(userDataPath)) {
         mkdirSync(userDataPath, { recursive: true });
         logger.debug('📁 Created user data directory');
