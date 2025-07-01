@@ -22,8 +22,17 @@ import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
 import { PersonaLoader } from './services/PersonaLoader';
 import { EmbeddingRetrievalService } from './services/EmbeddingRetrievalService';
 import { SecureFileIngestService } from './services/SecureFileIngestService';
+import { SettingsService } from './services/SettingsService';
+import { PersonyxCloudService } from './services/PersonyxCloudService';
+import { LangGraphService } from './services/LangGraphService';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
-import type { IPCEvents, ImportResult } from '@shared/types';
+import type {
+  IPCEvents,
+  ImportResult,
+  AIServiceProvider,
+  AppSettings,
+  AIServiceConfig,
+} from '@shared/types';
 
 // Environment detection for main process
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -37,6 +46,9 @@ class PersonyxApp {
   private personaLoader: PersonaLoader | null = null;
   private embeddingRetrievalService: EmbeddingRetrievalService | null = null;
   private secureFileIngestService: SecureFileIngestService | null = null;
+  private settingsService: SettingsService | null = null;
+  private cloudService: PersonyxCloudService | null = null;
+  private langGraphService: LangGraphService | null = null;
   private logger: Logger;
   private isAppReady = false;
 
@@ -301,6 +313,47 @@ class PersonyxApp {
       }
       return null;
     });
+
+    // Phase 2.5 - Feature 5 - Hybrid AI Key Management IPC Handlers
+
+    // Get current settings
+    ipcMain.handle(IPC_CHANNELS.GET_SETTINGS, async () => {
+      this.logger.info('⚙️ Get settings request');
+      return await this.handleGetSettings();
+    });
+
+    // Update settings
+    ipcMain.handle(
+      IPC_CHANNELS.UPDATE_SETTINGS,
+      async (_, data: IPCEvents['update-settings']) => {
+        this.logger.info('⚙️ Update settings request');
+        return await this.handleUpdateSettings(data.settings);
+      }
+    );
+
+    // Configure AI service
+    ipcMain.handle(
+      IPC_CHANNELS.CONFIGURE_AI_SERVICE,
+      async (_, data: IPCEvents['configure-ai-service']) => {
+        this.logger.info('🔧 Configure AI service request');
+        return await this.handleConfigureAIService(data.config);
+      }
+    );
+
+    // Test API key
+    ipcMain.handle(
+      IPC_CHANNELS.TEST_API_KEY,
+      async (_, data: IPCEvents['test-api-key']) => {
+        this.logger.info(`🔍 Test API key request: ${data.provider}`);
+        return await this.handleTestAPIKey(data.provider, data.apiKey);
+      }
+    );
+
+    // Get cloud subscription info
+    ipcMain.handle(IPC_CHANNELS.GET_CLOUD_SUBSCRIPTION_INFO, async () => {
+      this.logger.info('📊 Get cloud subscription info request');
+      return await this.handleGetCloudSubscriptionInfo();
+    });
   }
 
   /**
@@ -332,6 +385,39 @@ class PersonyxApp {
         this.logger.warn('⚠️ Token vault test failed - continuing anyway');
       }
 
+      // Initialize settings service (Phase 2.5 - Feature 5.2)
+      this.logger.info('⚙️ Initializing settings service...');
+      this.settingsService = new SettingsService();
+      await this.settingsService.initialize();
+      this.logger.info('✅ Settings service initialized');
+
+      // Initialize Personyx Cloud service (Phase 2.5 - Feature 5.3)
+      this.logger.info('☁️ Initializing Personyx Cloud service...');
+      this.cloudService = new PersonyxCloudService();
+      this.logger.info('✅ Personyx Cloud service initialized');
+
+      // Initialize LangGraph service with hybrid AI support (Phase 2.5 - Feature 5.4)
+      this.logger.info(
+        '🧠 Initializing LangGraph service with hybrid AI support...'
+      );
+      this.langGraphService = new LangGraphService();
+      await this.langGraphService.initialize();
+      this.logger.info('✅ LangGraph service initialized');
+
+      // Configure AI service based on current settings
+      const currentSettings = this.settingsService.getSettings();
+      if (
+        currentSettings.aiService.provider === 'cloud' &&
+        currentSettings.aiService.cloudSubscription?.apiKey
+      ) {
+        await this.cloudService.initialize(
+          currentSettings.aiService.cloudSubscription.apiKey
+        );
+        this.logger.info('✅ Cloud AI service configured');
+      } else {
+        this.logger.info('ℹ️ Using local AI service configuration');
+      }
+
       // Initialize workflow orchestrator (Phase 1.3)
       this.logger.info('🔄 Initializing workflow orchestrator...');
       this.workflowOrchestrator = new WorkflowOrchestrator();
@@ -354,7 +440,7 @@ class PersonyxApp {
       this.secureFileIngestService = new SecureFileIngestService();
       this.logger.info('✅ Secure file ingest service initialized');
 
-      this.logger.info('✅ Core services initialized');
+      this.logger.info('✅ Core services initialized with hybrid AI support');
     } catch (error) {
       this.logger.error('❌ Failed to initialize core services', error);
       throw error;
@@ -538,6 +624,171 @@ class PersonyxApp {
       return [];
     } catch (error) {
       this.logger.error('❌ Failed to get evidence scores', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle get settings request (Phase 2.5 - Feature 5.2)
+   */
+  private async handleGetSettings() {
+    try {
+      this.logger.info('⚙️ Fetching application settings');
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      const settings = this.settingsService.getSettings();
+      this.logger.debug('✅ Settings retrieved successfully');
+      return settings;
+    } catch (error) {
+      this.logger.error('❌ Failed to get settings', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle update settings request (Phase 2.5 - Feature 5.2)
+   */
+  private async handleUpdateSettings(updates: Partial<AppSettings>) {
+    try {
+      this.logger.info('⚙️ Updating application settings', { updates });
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      const updatedSettings =
+        await this.settingsService.updateSettings(updates);
+
+      // Emit settings updated event to renderer
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(IPC_CHANNELS.SETTINGS_UPDATED, {
+          settings: updatedSettings,
+        });
+      }
+
+      this.logger.info('✅ Settings updated successfully');
+      return updatedSettings;
+    } catch (error) {
+      this.logger.error('❌ Failed to update settings', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle configure AI service request (Phase 2.5 - Feature 5.3 & 5.4)
+   */
+  private async handleConfigureAIService(config: AIServiceConfig) {
+    try {
+      this.logger.info('🔧 Configuring AI service', {
+        provider: config.provider,
+      });
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      // Update AI service configuration through settings service
+      await this.settingsService.configureAIService(config);
+
+      // If switching to cloud provider, initialize cloud service
+      if (config.provider === 'cloud' && config.cloudSubscription?.apiKey) {
+        if (!this.cloudService) {
+          this.logger.warn('⚠️ PersonyxCloudService not initialized');
+          throw new Error('Cloud service not available');
+        }
+        await this.cloudService.initialize(config.cloudSubscription.apiKey);
+        this.logger.info('✅ Cloud service configured with new API key');
+      }
+
+      // Update LangGraph service to use new provider
+      if (this.langGraphService) {
+        await this.langGraphService.switchProvider(config.provider);
+        this.logger.info(
+          `✅ LangGraph service switched to ${config.provider} provider`
+        );
+      }
+
+      this.logger.info('✅ AI service configuration completed');
+      return { success: true };
+    } catch (error) {
+      this.logger.error('❌ Failed to configure AI service', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle test API key request (Phase 2.5 - Feature 5.2 & 5.3)
+   */
+  private async handleTestAPIKey(provider: AIServiceProvider, apiKey?: string) {
+    try {
+      this.logger.info(`🔍 Testing API key for provider: ${provider}`);
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      const result = await this.settingsService.testAPIKey(provider, apiKey);
+
+      // Emit test result to renderer
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(IPC_CHANNELS.API_KEY_TEST_RESULT, {
+          provider,
+          success: result.success,
+          error: result.error,
+          usage: result.usage,
+        });
+      }
+
+      this.logger.info(`✅ API key test completed for ${provider}`, {
+        success: result.success,
+      });
+      return result;
+    } catch (error) {
+      this.logger.error(`❌ API key test failed for ${provider}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle get cloud subscription info request (Phase 2.5 - Feature 5.3)
+   */
+  private async handleGetCloudSubscriptionInfo() {
+    try {
+      this.logger.info('📊 Fetching cloud subscription information');
+
+      if (!this.cloudService) {
+        this.logger.warn('⚠️ PersonyxCloudService not initialized');
+        throw new Error('Cloud service not available');
+      }
+
+      const subscriptionInfo = await this.cloudService.getSubscriptionInfo();
+
+      // Emit subscription info to renderer
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(IPC_CHANNELS.CLOUD_SUBSCRIPTION_INFO, {
+          subscription: subscriptionInfo,
+        });
+      }
+
+      this.logger.debug('✅ Cloud subscription info retrieved');
+      return subscriptionInfo;
+    } catch (error) {
+      this.logger.error('❌ Failed to get cloud subscription info', error);
+
+      // Emit error to renderer
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(IPC_CHANNELS.CLOUD_SUBSCRIPTION_INFO, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+
       throw error;
     }
   }

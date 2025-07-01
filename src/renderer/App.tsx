@@ -16,6 +16,11 @@ export function App(): JSX.Element {
       autoUpdate: true,
       notifications: true,
       evidenceRetentionDays: 30,
+      aiService: {
+        provider: 'local',
+        localApiKey: undefined,
+        cloudSubscription: undefined,
+      },
     },
   });
 

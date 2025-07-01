@@ -1,9 +1,9 @@
 /**
  * Runtime Test for Phase 2.2 - Embedding Retrieval API
- * 
+ *
  * This test verifies the actual runtime functionality of the embedding retrieval API
  * by interacting with the running Electron application.
- * 
+ *
  * Usage: Start the Personyx app with `./dev.sh`, then run this test
  */
 
@@ -17,7 +17,7 @@ console.log('='.repeat(60));
 const testResults = {
   passed: 0,
   failed: 0,
-  tests: []
+  tests: [],
 };
 
 function logTest(name, success, details = '') {
@@ -25,7 +25,7 @@ function logTest(name, success, details = '') {
   const message = `${status} - ${name}`;
   console.log(message);
   if (details) console.log(`   ${details}`);
-  
+
   testResults.tests.push({ name, success, details });
   if (success) {
     testResults.passed++;
@@ -37,7 +37,9 @@ function logTest(name, success, details = '') {
 function checkAppRunning() {
   try {
     // Check if Electron process is running
-    const result = execSync('ps aux | grep -i electron | grep -v grep', { encoding: 'utf8' });
+    const result = execSync('ps aux | grep -i electron | grep -v grep', {
+      encoding: 'utf8',
+    });
     return result.includes('electron') || result.includes('Personyx');
   } catch (error) {
     return false;
@@ -49,14 +51,17 @@ function checkDatabaseHasData() {
     // Check if we have mock data from Phase 1.4
     const interviewsDir = 'interviews';
     const personasFile = 'personas.yml';
-    
+
     const hasInterviews = existsSync(interviewsDir);
     const hasPersonas = existsSync(personasFile);
-    
+
     if (hasInterviews && hasPersonas) {
       // Check for actual content
       const personasContent = readFileSync(personasFile, 'utf8');
-      return personasContent.includes('solo_founder') && personasContent.includes('agency_marketer');
+      return (
+        personasContent.includes('solo_founder') &&
+        personasContent.includes('agency_marketer')
+      );
     }
     return false;
   } catch (error) {
@@ -72,10 +77,11 @@ function testDevelopmentSetup() {
   try {
     const hasDevScript = existsSync('./dev.sh');
     logTest('Development script exists', hasDevScript);
-    
+
     if (hasDevScript) {
       const devScriptContent = readFileSync('./dev.sh', 'utf8');
-      const hasProperSetup = devScriptContent.includes('npm') || devScriptContent.includes('pnpm');
+      const hasProperSetup =
+        devScriptContent.includes('npm') || devScriptContent.includes('pnpm');
       logTest('Development script properly configured', hasProperSetup);
     }
   } catch (error) {
@@ -84,20 +90,32 @@ function testDevelopmentSetup() {
 
   // Test 2: Check if mock data is available
   const hasMockData = checkDatabaseHasData();
-  logTest('Mock data available for testing', hasMockData, 
-    hasMockData ? 'personas.yml and interviews/ found' : 'Run Phase 1.4 first to create mock data');
+  logTest(
+    'Mock data available for testing',
+    hasMockData,
+    hasMockData
+      ? 'personas.yml and interviews/ found'
+      : 'Run Phase 1.4 first to create mock data'
+  );
 
   // Test 3: Check if database can be accessed
   try {
     const hasDbScript = existsSync('scripts/validate-database.js');
     logTest('Database validation script exists', hasDbScript);
-    
+
     if (hasDbScript) {
       try {
-        execSync('node scripts/validate-database.js', { encoding: 'utf8', stdio: 'pipe' });
+        execSync('node scripts/validate-database.js', {
+          encoding: 'utf8',
+          stdio: 'pipe',
+        });
         logTest('Database validation passes', true);
       } catch (error) {
-        logTest('Database validation passes', false, 'Database validation failed');
+        logTest(
+          'Database validation passes',
+          false,
+          'Database validation failed'
+        );
       }
     }
   } catch (error) {
@@ -115,7 +133,7 @@ function testServiceDependencies() {
     'src/main/services/LangGraphService.ts',
     'src/main/db/repositories/EmbeddingRepo.ts',
     'src/main/db/repositories/EvidenceRepo.ts',
-    'src/main/db/repositories/PersonaRepo.ts'
+    'src/main/db/repositories/PersonaRepo.ts',
   ];
 
   for (const file of serviceFiles) {
@@ -131,7 +149,7 @@ function testServiceDependencies() {
     const schemaContent = readFileSync('src/main/db/schema.ts', 'utf8');
     const hasEmbeddingsTable = schemaContent.includes('embeddings');
     const hasEvidenceTable = schemaContent.includes('evidence');
-    
+
     logTest('Embeddings table schema', hasEmbeddingsTable);
     logTest('Evidence table schema', hasEvidenceTable);
   }
@@ -150,7 +168,8 @@ function testAPIConfiguration() {
     const readmeExists = existsSync('README.md');
     if (readmeExists) {
       const readmeContent = readFileSync('README.md', 'utf8');
-      const hasApiKeyInstructions = readmeContent.includes('API') || readmeContent.includes('OPENAI');
+      const hasApiKeyInstructions =
+        readmeContent.includes('API') || readmeContent.includes('OPENAI');
       logTest('API key configuration documented', hasApiKeyInstructions);
     }
   } catch (error) {
@@ -161,7 +180,7 @@ function testAPIConfiguration() {
 function generateTestPlan() {
   console.log('\n📋 Manual Testing Plan for Embedding Retrieval API');
   console.log('-'.repeat(50));
-  
+
   console.log('\n1. 🚀 Start the Application:');
   console.log('   • Run: ./dev.sh');
   console.log('   • Wait for "✅ All services ready" message');
@@ -213,8 +232,13 @@ async function runTests() {
 
   // Check if app is currently running
   const appRunning = checkAppRunning();
-  logTest('Electron app currently running', appRunning, 
-    appRunning ? 'App is running - ready for live testing' : 'Start app with ./dev.sh to test live functionality');
+  logTest(
+    'Electron app currently running',
+    appRunning,
+    appRunning
+      ? 'App is running - ready for live testing'
+      : 'Start app with ./dev.sh to test live functionality'
+  );
 
   generateTestPlan();
 
@@ -224,11 +248,13 @@ async function runTests() {
   console.log('='.repeat(60));
   console.log(`✅ Passed: ${testResults.passed}`);
   console.log(`❌ Failed: ${testResults.failed}`);
-  
+
   if (testResults.failed === 0) {
     console.log('\n🎉 All runtime prerequisites passed!');
     console.log('💡 The Embedding Retrieval API is ready for testing.');
-    console.log('📝 Follow the manual testing plan above to verify functionality.');
+    console.log(
+      '📝 Follow the manual testing plan above to verify functionality.'
+    );
   } else {
     console.log('\n⚠️  Some prerequisites failed. Fix these before testing:');
     testResults.tests
@@ -237,14 +263,16 @@ async function runTests() {
   }
 
   console.log('\n🚀 Ready to test Phase 2.2 implementation!');
-  
+
   return testResults.failed;
 }
 
 // Run the tests
-runTests().then(failures => {
-  process.exit(failures > 0 ? 1 : 0);
-}).catch(error => {
-  console.error('❌ Runtime test failed:', error);
-  process.exit(1);
-}); 
+runTests()
+  .then(failures => {
+    process.exit(failures > 0 ? 1 : 0);
+  })
+  .catch(error => {
+    console.error('❌ Runtime test failed:', error);
+    process.exit(1);
+  });

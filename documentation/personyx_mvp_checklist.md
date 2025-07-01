@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[X] **Phase 2:** Data Layer ✅ COMPLETE (4/4 features)  
+[X] **Phase 2:** Data Layer ✅ COMPLETE (5/5 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -87,14 +87,14 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **4.3** Provide CLI `db:seed --mock` for local demos. ✅ COMPLETE
 - [x] **4.4** Generate ER-diagram in `/docs`. ✅ COMPLETE
 
-[ ] **Feature 5 – Hybrid AI Key Management & Cloud Option**
+[X] **Feature 5 – Hybrid AI Key Management & Cloud Option** ✅ COMPLETE
 
-- [ ] **5.1** Add UI for API key management (enter OpenAI key or select Personyx Cloud)
-- [ ] **5.2** Implement secure local storage for user-provided keys (AES-256-GCM)
-- [ ] **5.3** Integrate Personyx Cloud API endpoint for managed embedding (with auth)
-- [ ] **5.4** Add logic to select between local and cloud embedding at runtime
-- [ ] **5.5** Update onboarding and settings UI to guide user through both options
-- [ ] **5.6** Document privacy, billing, and troubleshooting for both modes
+- [x] **5.1** Add UI for API key management (enter OpenAI key or select Personyx Cloud) ✅ COMPLETE
+- [x] **5.2** Implement secure local storage for user-provided keys (AES-256-GCM) ✅ COMPLETE
+- [x] **5.3** Integrate Personyx Cloud API endpoint for managed embedding (with auth) ✅ COMPLETE
+- [x] **5.4** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
+- [x] **5.5** Update onboarding and settings UI to guide user through both options ✅ COMPLETE
+- [x] **5.6** Document privacy, billing, and troubleshooting for both modes ✅ COMPLETE
 
 ---
 

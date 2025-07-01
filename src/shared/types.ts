@@ -71,6 +71,23 @@ export interface IPCEvents {
     evidenceScores: EvidenceScore[];
   };
   'app-ready': Record<string, never>;
+  // Settings Management Events
+  'settings-updated': {
+    settings: AppSettings;
+  };
+  'api-key-test-result': {
+    provider: AIServiceProvider;
+    success: boolean;
+    error?: string;
+    usage?: {
+      remaining: number;
+      limit: number;
+    };
+  };
+  'cloud-subscription-info': {
+    subscription?: AIServiceConfig['cloudSubscription'];
+    error?: string;
+  };
   error: {
     message: string;
     details?: unknown;
@@ -95,7 +112,36 @@ export interface IPCEvents {
     topN?: number;
     minSimilarity?: number;
   };
+  // Settings and API Key Management
+  'get-settings': Record<string, never>;
+  'update-settings': {
+    settings: Partial<AppSettings>;
+  };
+  'configure-ai-service': {
+    config: AIServiceConfig;
+  };
+  'test-api-key': {
+    provider: AIServiceProvider;
+    apiKey?: string;
+  };
+  'get-cloud-subscription-info': Record<string, never>;
   'app-quit': Record<string, never>;
+}
+
+// AI Service Provider Configuration
+export type AIServiceProvider = 'local' | 'cloud';
+
+export interface AIServiceConfig {
+  provider: AIServiceProvider;
+  localApiKey?: string; // Encrypted and stored locally
+  cloudSubscription?: {
+    userId: string;
+    apiKey: string; // Personyx Cloud API key
+    tier: 'free' | 'pro' | 'enterprise';
+    usageLimit: number;
+    usageRemaining: number;
+    expiresAt: Date;
+  };
 }
 
 // Configuration and settings
@@ -104,10 +150,13 @@ export interface AppSettings {
   autoUpdate: boolean;
   notifications: boolean;
   evidenceRetentionDays: number;
+  // Legacy fields for backward compatibility
   openAIApiKey?: string;
   notionToken?: string;
   slackBotToken?: string;
   linearApiKey?: string;
+  // New hybrid AI configuration
+  aiService: AIServiceConfig;
 }
 
 // API Response types

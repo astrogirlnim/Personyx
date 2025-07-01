@@ -4,8 +4,8 @@
  */
 
 import readline from 'readline';
-import { storeToken } from '../dist/main/security/tokenVault.js';
-import { initDatabase } from '../dist/main/db/connection.js';
+import { storeToken } from '../dist/main/main/security/tokenVault.js';
+import { initDatabase } from '../dist/main/main/db/connection.js';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -52,9 +52,5 @@ async function setupOpenAIKey() {
   });
 }
 
-// Run if called directly
-if (require.main === module) {
-  setupOpenAIKey().catch(console.error);
-}
-
-module.exports = { setupOpenAIKey };
+// Run the function directly (ES module)
+setupOpenAIKey().catch(console.error);
