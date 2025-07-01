@@ -16,7 +16,8 @@
     "dev:app": "npm run start",
     "dev:main": "concurrently \"tsc -p src/main/tsconfig.json --watch\" \"tsc-alias -p src/main/tsconfig.json --watch\"",
     "dev:renderer": "vite src/renderer --port 3000",
-    "build": "npm run build:main && npm run build:renderer",
+    "build": "npm run build:assets && npm run build:main && npm run build:renderer",
+    "build:assets": "mkdir -p dist/assets && cp assets/*.png dist/assets/ && mkdir -p build && cp assets/tray-icon.png build/icon.png",
     "build:main": "tsc -p src/main/tsconfig.json && tsc-alias -p src/main/tsconfig.json",
     "build:renderer": "vite build src/renderer",
     "electron": "electron .",
@@ -93,6 +94,7 @@
     },
     "files": [
       "dist/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "nodeGypRebuild": false,

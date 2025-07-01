@@ -88,11 +88,31 @@ jobs:
       # ---------- Electron Packaging Test (CI-Optimized) ----------
       - name: 🔧 Prepare native modules for Electron packaging
         run: |
-          # Clear any existing builds that might cause conflicts in CI
-          rm -rf node_modules/.pnpm/*/node_modules/*/build || true
-          rm -rf node_modules/.pnpm/*/node_modules/*/node_gyp_bins || true
+          # Clear only specific native module builds that might cause conflicts in CI
+          # Only target known native modules, not all packages
+          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
+          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
+          rm -rf node_modules/.pnpm/node-gyp*/node_modules/node-gyp/build || true
+          # Clean up any node-gyp build artifacts specifically
+          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
         env:
           npm_config_build_from_source: true
+
+      - name: 🔍 Verify package integrity before Electron build
+        run: |
+          # Verify critical packages are properly installed
+          echo "Checking drizzle-orm query-builders..."
+          ls -la node_modules/.pnpm/drizzle-orm*/node_modules/drizzle-orm/sqlite-core/query-builders/ || echo "Query-builders not found, checking if reinstall needed"
+
+          # Verify yargs build files exist
+          echo "Checking yargs build files..."
+          find node_modules -path "*yargs*" -name "index.cjs" | head -5
+
+          # If any core packages are missing essential files, reinstall
+          if [ ! -d "$(find node_modules -path "*drizzle-orm*/node_modules/drizzle-orm/sqlite-core/query-builders" | head -1)" ]; then
+            echo "Core packages missing files, running targeted reinstall..."
+            pnpm install --force drizzle-orm
+          fi
 
       - name: 📦 Test Electron Packaging (Directory Only)
         run: npx electron-builder --dir --linux --x64 --config.directories.output=dist-test
