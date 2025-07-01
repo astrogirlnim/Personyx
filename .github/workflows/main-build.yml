@@ -379,6 +379,9 @@ jobs:
     needs: [validate, package, security]
     runs-on: ubuntu-latest
     if: success()
+    permissions:
+      contents: write # Required to create releases
+      discussions: write # Optional: to create release discussions
 
     steps:
       - name: 📥 Checkout code
