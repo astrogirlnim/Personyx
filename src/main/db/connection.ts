@@ -5,14 +5,13 @@
 
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { app } from 'electron';
 import { join } from 'path';
-import { existsSync, mkdirSync, statSync } from 'fs';
+import { existsSync, mkdirSync, statSync, readFileSync } from 'fs';
 import { Logger } from '@main/utils/logger';
 import * as schema from './schema';
 
-const logger = new Logger('database');
+const logger = new Logger('DATABASE');
 
 let dbInstance: Database.Database | null = null;
 let drizzleInstance: ReturnType<typeof drizzle> | null = null;
@@ -31,6 +30,170 @@ function getDatabasePath(): string {
   }
 
   return join(dbDir, 'personyx.db');
+}
+
+/**
+ * Check if database tables exist
+ */
+function tablesExist(): boolean {
+  if (!dbInstance) return false;
+
+  try {
+    // Check if the main tables exist
+    const tableCheck = dbInstance.prepare(`
+      SELECT COUNT(*) as count 
+      FROM sqlite_master 
+      WHERE type='table' AND name IN ('personas', 'evidence', 'product_documents', 'evidence_scores', 'api_tokens')
+    `);
+
+    const result = tableCheck.get() as { count: number };
+    logger.debug('🔍 Table check result', { tablesFound: result.count });
+
+    return result.count >= 5; // All 5 main tables should exist
+  } catch (error) {
+    logger.error('❌ Error checking tables', error);
+    return false;
+  }
+}
+
+/**
+ * Apply migration SQL directly
+ */
+function applyMigrationSQL(): void {
+  if (!dbInstance) {
+    throw new Error('Database instance not available');
+  }
+
+  try {
+    // Try to find the migration file in development
+    const migrationPaths = [
+      join(__dirname, '../../src/main/db/migrations/0000_common_satana.sql'),
+      join(process.cwd(), 'src/main/db/migrations/0000_common_satana.sql'),
+      join(__dirname, 'migrations/0000_common_satana.sql'),
+    ];
+
+    let migrationSQL: string | null = null;
+    let usedPath = '';
+
+    for (const path of migrationPaths) {
+      if (existsSync(path)) {
+        migrationSQL = readFileSync(path, 'utf-8');
+        usedPath = path;
+        break;
+      }
+    }
+
+    if (!migrationSQL) {
+      // If no migration file found, create tables manually from known schema
+      logger.info('📝 No migration file found, creating tables manually');
+      createTablesManually();
+      return;
+    }
+
+    logger.info('🔄 Applying migration SQL', { source: usedPath });
+
+    // Split SQL by statement breakpoints and execute each statement
+    const statements = migrationSQL
+      .split('--> statement-breakpoint')
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0);
+
+    for (const statement of statements) {
+      if (statement.trim()) {
+        logger.debug('📝 Executing SQL statement', {
+          preview: statement.substring(0, 50) + '...',
+        });
+        dbInstance.exec(statement);
+      }
+    }
+
+    logger.info('✅ Migration SQL applied successfully', {
+      statementsExecuted: statements.length,
+    });
+  } catch (error) {
+    logger.error('❌ Failed to apply migration SQL', error);
+    throw error;
+  }
+}
+
+/**
+ * Create tables manually if migration file is not available
+ */
+function createTablesManually(): void {
+  if (!dbInstance) {
+    throw new Error('Database instance not available');
+  }
+
+  try {
+    const createSQL = `
+      CREATE TABLE IF NOT EXISTS personas (
+        id text PRIMARY KEY NOT NULL,
+        name text NOT NULL,
+        description text NOT NULL,
+        primary_goal text NOT NULL,
+        main_pain_point text NOT NULL,
+        keywords text NOT NULL,
+        created_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS product_documents (
+        id text PRIMARY KEY NOT NULL,
+        title text NOT NULL,
+        content text NOT NULL,
+        file_path text,
+        type text NOT NULL,
+        uploaded_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        last_modified integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        evidence_score real
+      );
+
+      CREATE TABLE IF NOT EXISTS evidence (
+        id text PRIMARY KEY NOT NULL,
+        persona_id text NOT NULL,
+        content text NOT NULL,
+        source text NOT NULL,
+        source_type text NOT NULL,
+        timestamp integer NOT NULL,
+        tags text NOT NULL,
+        sentiment text,
+        importance integer NOT NULL,
+        FOREIGN KEY (persona_id) REFERENCES personas(id) ON UPDATE no action ON DELETE no action
+      );
+
+      CREATE TABLE IF NOT EXISTS evidence_scores (
+        id text PRIMARY KEY NOT NULL,
+        document_id text NOT NULL,
+        persona_id text NOT NULL,
+        score real NOT NULL,
+        evidence_count integer NOT NULL,
+        last_calculated integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        top_quotes text NOT NULL,
+        breakdown_recency real NOT NULL,
+        breakdown_coverage real NOT NULL,
+        breakdown_relevance real NOT NULL,
+        FOREIGN KEY (document_id) REFERENCES product_documents(id) ON UPDATE no action ON DELETE no action,
+        FOREIGN KEY (persona_id) REFERENCES personas(id) ON UPDATE no action ON DELETE no action
+      );
+
+      CREATE TABLE IF NOT EXISTS api_tokens (
+        id text PRIMARY KEY NOT NULL,
+        service text NOT NULL,
+        token_encrypted text NOT NULL,
+        iv text NOT NULL,
+        auth_tag text NOT NULL,
+        created_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+      );
+    `;
+
+    logger.info('🔧 Creating tables manually');
+    dbInstance.exec(createSQL);
+    logger.info('✅ Tables created successfully');
+  } catch (error) {
+    logger.error('❌ Failed to create tables manually', error);
+    throw error;
+  }
 }
 
 /**
@@ -60,7 +223,7 @@ export function initDatabase(): ReturnType<typeof drizzle> {
     // Create Drizzle client
     drizzleInstance = drizzle(dbInstance, { schema });
 
-    // Run migrations
+    // Apply migrations/create tables
     runMigrations();
 
     logger.info('🚀 Database initialized successfully');
@@ -75,20 +238,25 @@ export function initDatabase(): ReturnType<typeof drizzle> {
  * Run database migrations
  */
 function runMigrations(): void {
-  if (!drizzleInstance) {
+  if (!drizzleInstance || !dbInstance) {
     throw new Error('Database not initialized');
   }
 
   try {
-    const migrationsPath = join(__dirname, 'migrations');
+    // Check if tables already exist
+    if (tablesExist()) {
+      logger.info('✅ Database tables already exist, skipping migration');
+      return;
+    }
 
-    // Only run migrations if migrations folder exists
-    if (existsSync(migrationsPath)) {
-      logger.info('🔄 Running database migrations', { path: migrationsPath });
-      migrate(drizzleInstance, { migrationsFolder: migrationsPath });
-      logger.info('✅ Database migrations completed');
+    logger.info('🔄 Tables not found, applying migration');
+    applyMigrationSQL();
+
+    // Verify tables were created
+    if (tablesExist()) {
+      logger.info('✅ Database migration completed successfully');
     } else {
-      logger.info('📝 No migrations folder found, skipping migrations');
+      throw new Error('Tables were not created successfully');
     }
   } catch (error) {
     logger.error('❌ Migration failed', error);
