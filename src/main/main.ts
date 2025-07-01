@@ -209,10 +209,12 @@ class PersonaPulseApp {
       this.quit();
     });
 
-    // Handle file drops from drop zone
-    ipcMain.on('file-dropped', async (event, filePath: string) => {
-      this.logger.info(`📂 File dropped from drop zone: ${filePath}`);
-      await this.handleImportPRD(filePath);
+    // Handle file dialog requests from drop zone
+    ipcMain.on('open-file-dialog', async _event => {
+      this.logger.info('📁 File dialog requested from drop zone');
+      if (this.trayManager) {
+        // This will be handled by the tray manager
+      }
     });
 
     // Check for updates

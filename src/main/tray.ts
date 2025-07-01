@@ -26,20 +26,31 @@ export class TrayManager {
     try {
       this.logger.info('🎯 Initializing system tray');
 
-      // Create tray icon
+      // Create tray icon with enhanced logging
       const icon = this.createTrayIcon();
-      this.tray = new Tray(icon);
+      this.logger.debug(
+        `📱 Tray icon created - Size: ${icon.getSize()}, isEmpty: ${icon.isEmpty()}`
+      );
 
-      // Set tray tooltip
+      this.tray = new Tray(icon);
+      this.logger.debug('📱 Tray object created successfully');
+
+      // Set tray tooltip and title for visual confirmation
       this.tray.setToolTip('PersonaPulse - Evidence-based PRD analysis');
+      this.tray.setTitle('PP'); // Visual confirmation - shows text in macOS menu bar
+      this.logger.debug('📱 Tray tooltip and title set');
 
       // Create context menu
       this.updateContextMenu();
+      this.logger.debug('📱 Context menu updated');
 
-      // Handle click events
+      // Handle click events with enhanced debugging
       this.setupEventHandlers();
+      this.logger.debug('📱 Event handlers attached');
 
-      this.logger.info('✅ System tray initialized');
+      this.logger.info('✅ System tray initialized successfully');
+      this.logger.info(`📱 Tray available: ${this.tray !== null}`);
+      this.logger.info(`📱 Platform: ${process.platform}`);
     } catch (error) {
       this.logger.error('❌ Failed to initialize tray', error);
       throw error;
@@ -53,13 +64,55 @@ export class TrayManager {
     // Try to load icon from assets, fall back to generated icon
     const iconPath = join(__dirname, '../../assets/tray-icon.png');
 
+    this.logger.debug(`📱 Attempting to load tray icon from: ${iconPath}`);
+
     try {
-      return nativeImage.createFromPath(iconPath);
-    } catch {
-      // Fallback: create a simple icon programmatically
-      const canvas = nativeImage.createEmpty();
-      return canvas.resize({ width: 16, height: 16 });
+      const icon = nativeImage.createFromPath(iconPath);
+      if (!icon.isEmpty()) {
+        this.logger.info('✅ Loaded tray icon from assets');
+        return icon;
+      }
+      this.logger.warn(
+        '⚠️ Asset icon file exists but is empty, using fallback'
+      );
+    } catch (error) {
+      this.logger.warn(
+        `⚠️ Failed to load asset icon: ${error}, using fallback`
+      );
     }
+
+    // Fallback: create a visible icon programmatically
+    this.logger.info('🎨 Creating fallback tray icon');
+    return this.createFallbackIcon();
+  }
+
+  /**
+   * Create a visible fallback tray icon
+   */
+  private createFallbackIcon(): Electron.NativeImage {
+    // Create a simple colored square icon (better than empty)
+    const size = process.platform === 'darwin' ? 22 : 16; // macOS prefers 22px
+
+    // Create a simple bitmap - red circle with white "P"
+    const canvas = Buffer.alloc(size * size * 4); // RGBA
+
+    // Fill with a visible pattern (simple red background)
+    for (let i = 0; i < canvas.length; i += 4) {
+      canvas[i] = 255; // Red
+      canvas[i + 1] = 100; // Green
+      canvas[i + 2] = 100; // Blue
+      canvas[i + 3] = 255; // Alpha (fully opaque)
+    }
+
+    const image = nativeImage.createFromBuffer(canvas, {
+      width: size,
+      height: size,
+    });
+    this.logger.debug(
+      `🎨 Fallback icon created - Size: ${size}x${size}, isEmpty: ${image.isEmpty()}`
+    );
+
+    return image;
   }
 
   /**
@@ -75,7 +128,7 @@ export class TrayManager {
       },
       { type: 'separator' },
       {
-        label: 'Drop PRD Zone',
+        label: 'Select PRD File...',
         accelerator: 'CmdOrCtrl+D',
         click: () => this.handleAction('show-drop-zone'),
       },
@@ -114,14 +167,71 @@ export class TrayManager {
    * Set up event handlers
    */
   private setupEventHandlers(): void {
-    if (!this.tray) return;
+    if (!this.tray) {
+      this.logger.error('❌ Cannot setup event handlers - tray is null!');
+      return;
+    }
+
+    this.logger.debug('📱 Setting up tray event handlers...');
 
     // Handle left click (show drop zone)
-    this.tray.on('click', () => {
+    this.tray.on('click', (event, bounds) => {
+      this.logger.info('👆 Tray LEFT CLICK detected!');
+      this.logger.debug(`👆 Click event details:`, {
+        bounds,
+        platform: process.platform,
+        timestamp: new Date().toISOString(),
+      });
       this.handleAction('show-drop-zone');
     });
 
-    // Handle right click (show context menu) - handled automatically by Electron
+    // Handle right click - add explicit handler for debugging
+    this.tray.on('right-click', (event, bounds) => {
+      this.logger.info('👆 Tray RIGHT CLICK detected!');
+      this.logger.debug(`👆 Right-click event details:`, {
+        bounds,
+        platform: process.platform,
+        timestamp: new Date().toISOString(),
+      });
+      // Context menu will still show automatically
+    });
+
+    // Handle double click
+    this.tray.on('double-click', (event, bounds) => {
+      this.logger.info('👆 Tray DOUBLE CLICK detected!');
+      this.logger.debug(`👆 Double-click event details:`, {
+        bounds,
+        platform: process.platform,
+        timestamp: new Date().toISOString(),
+      });
+      this.handleAction('show-window');
+    });
+
+    // Handle drag enter (for drag-and-drop debugging)
+    this.tray.on('drag-enter', () => {
+      this.logger.info('🗂 Tray DRAG ENTER detected!');
+    });
+
+    // Handle drag leave
+    this.tray.on('drag-leave', () => {
+      this.logger.info('🗂 Tray DRAG LEAVE detected!');
+    });
+
+    // Handle drop (this might not work on all platforms)
+    this.tray.on('drop', () => {
+      this.logger.info('🗂 Tray DROP detected!');
+    });
+
+    // Handle drop files
+    this.tray.on('drop-files', (event, files) => {
+      this.logger.info('🗂 Tray DROP FILES detected!');
+      this.logger.debug(`🗂 Dropped files:`, files);
+      if (files.length > 0) {
+        this.processDroppedFile(files[0]);
+      }
+    });
+
+    this.logger.info('✅ All tray event handlers attached successfully');
   }
 
   /**
@@ -130,41 +240,61 @@ export class TrayManager {
   private async handleAction(
     action: TrayAction | 'show-drop-zone'
   ): Promise<void> {
-    this.logger.debug(`🔧 Tray action: ${action}`);
+    this.logger.info(`🔧 Tray action START: ${action}`);
+    this.logger.debug(`🔧 Action timestamp: ${new Date().toISOString()}`);
 
-    switch (action) {
-      case 'show-window':
-        personaPulseApp.createMainWindow();
-        break;
+    try {
+      switch (action) {
+        case 'show-window':
+          this.logger.debug('🔧 Executing: show-window');
+          personaPulseApp.createMainWindow();
+          this.logger.info('✅ show-window completed');
+          break;
 
-      case 'show-drop-zone':
-        await this.showDropZone();
-        break;
+        case 'show-drop-zone':
+          this.logger.debug('🔧 Executing: show-drop-zone');
+          await this.showDropZone();
+          this.logger.info('✅ show-drop-zone completed');
+          break;
 
-      case 'import-prd':
-        await this.handleImportPRD();
-        break;
+        case 'import-prd':
+          this.logger.debug('🔧 Executing: import-prd');
+          await this.handleImportPRD();
+          this.logger.info('✅ import-prd completed');
+          break;
 
-      case 'view-scores':
-        // TODO: Implement evidence scores view
-        this.logger.info('📊 View scores - not implemented yet');
-        break;
+        case 'view-scores':
+          this.logger.debug('🔧 Executing: view-scores');
+          // TODO: Implement evidence scores view
+          this.logger.info('📊 View scores - not implemented yet');
+          break;
 
-      case 'open-settings':
-        // TODO: Implement settings window
-        this.logger.info('⚙️ Open settings - not implemented yet');
-        break;
+        case 'open-settings':
+          this.logger.debug('🔧 Executing: open-settings');
+          // TODO: Implement settings window
+          this.logger.info('⚙️ Open settings - not implemented yet');
+          break;
 
-      case 'check-updates':
-        await this.handleCheckForUpdates();
-        break;
+        case 'check-updates':
+          this.logger.debug('🔧 Executing: check-updates');
+          await this.handleCheckForUpdates();
+          this.logger.info('✅ check-updates completed');
+          break;
 
-      case 'quit-app':
-        personaPulseApp.quit();
-        break;
+        case 'quit-app':
+          this.logger.debug('🔧 Executing: quit-app');
+          personaPulseApp.quit();
+          this.logger.info('✅ quit-app completed');
+          break;
 
-      default:
-        this.logger.warn(`Unknown tray action: ${action}`);
+        default:
+          this.logger.error(`❌ Unknown tray action: ${action}`);
+      }
+
+      this.logger.info(`🔧 Tray action END: ${action}`);
+    } catch (error) {
+      this.logger.error(`❌ Tray action FAILED: ${action}`, error);
+      throw error;
     }
   }
 
@@ -204,12 +334,13 @@ export class TrayManager {
       // Position window near tray (simplified - you might want to calculate tray position)
       this.dropZoneWindow.center();
 
-      // Set up drag and drop handlers
+      // Set up drag and drop handlers using Electron's native API
       this.setupDropZoneHandlers();
 
       this.dropZoneWindow.once('ready-to-show', () => {
         if (this.dropZoneWindow) {
           this.dropZoneWindow.show();
+          this.logger.info('📂 Drop zone window is now visible');
         }
       });
 
@@ -240,7 +371,7 @@ export class TrayManager {
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>Drop PRD Files</title>
+          <title>Select PRD File</title>
           <style>
             body {
               margin: 0;
@@ -255,8 +386,8 @@ export class TrayManager {
               height: calc(100vh - 40px);
               user-select: none;
             }
-            .drop-zone {
-              border: 2px dashed rgba(255, 255, 255, 0.5);
+            .select-zone {
+              border: 2px solid rgba(255, 255, 255, 0.5);
               border-radius: 12px;
               padding: 40px;
               text-align: center;
@@ -268,8 +399,9 @@ export class TrayManager {
               flex-direction: column;
               align-items: center;
               justify-content: center;
+              cursor: pointer;
             }
-            .drop-zone.drag-over {
+            .select-zone:hover {
               border-color: rgba(255, 255, 255, 0.9);
               background: rgba(255, 255, 255, 0.1);
               transform: scale(1.02);
@@ -296,60 +428,18 @@ export class TrayManager {
           </style>
         </head>
         <body>
-          <div class="drop-zone" id="dropZone">
+          <div class="select-zone" id="selectZone" onclick="openFileDialog()">
             <div class="icon">📄</div>
-            <div class="title">Drop PRD Files Here</div>
-            <div class="subtitle">Drag and drop your Product Requirements Documents</div>
+            <div class="title">Select PRD File</div>
+            <div class="subtitle">Click here to browse for your Product Requirements Document</div>
             <div class="supported-formats">Supports: .md, .txt, .markdown</div>
           </div>
           
           <script>
-            const dropZone = document.getElementById('dropZone');
-            
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-              dropZone.addEventListener(eventName, preventDefaults, false);
-              document.body.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-              dropZone.addEventListener(eventName, highlight, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-              dropZone.addEventListener(eventName, unhighlight, false);
-            });
-            
-            dropZone.addEventListener('drop', handleDrop, false);
-            
-            function preventDefaults(e) {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-            
-            function highlight(e) {
-              dropZone.classList.add('drag-over');
-            }
-            
-            function unhighlight(e) {
-              dropZone.classList.remove('drag-over');
-            }
-            
-            function handleDrop(e) {
-              const dt = e.dataTransfer;
-              const files = dt.files;
-              
-              if (files.length > 0) {
-                const file = files[0];
-                const validExtensions = ['md', 'txt', 'markdown'];
-                const fileExtension = file.name.split('.').pop().toLowerCase();
-                
-                if (validExtensions.includes(fileExtension)) {
-                  // Send file path to main process
-                  window.electronAPI?.handleFileDrop(file.path);
-                } else {
-                  alert('Please drop a valid PRD file (.md, .txt, .markdown)');
-                }
-              }
+            function openFileDialog() {
+              console.log('📂 Opening file dialog...');
+              // Send message to main process to open file dialog
+              window.electronAPI?.openFileDialog();
             }
           </script>
         </body>
@@ -363,18 +453,20 @@ export class TrayManager {
   private setupDropZoneHandlers(): void {
     if (!this.dropZoneWindow) return;
 
-    // Handle file drops from the drop zone window
+    // Handle file dialog requests from the drop zone
     this.dropZoneWindow.webContents.on(
       'ipc-message',
-      async (event, channel, ...args) => {
-        if (channel === 'file-dropped') {
-          const filePath = args[0] as string;
-          await this.processDroppedFile(filePath);
+      async (_event, channel, ..._args) => {
+        if (channel === 'open-file-dialog') {
+          this.logger.info('📁 File dialog requested from drop zone');
 
-          // Close drop zone after successful drop
+          // Close drop zone first
           if (this.dropZoneWindow) {
             this.dropZoneWindow.close();
           }
+
+          // Open file dialog
+          await this.handleImportPRD();
         }
       }
     );
