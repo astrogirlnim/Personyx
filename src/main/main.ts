@@ -1,9 +1,16 @@
 /**
- * PersonaPulse Main Process
+ * Personyx Main Process
  * Entry point for the Electron main process (Core)
  */
 
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  nativeImage,
+} from 'electron';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { TrayManager } from './tray';
@@ -16,7 +23,7 @@ import type { IPCEvents, ImportResult } from '@shared/types';
 const IS_DEV = process.env.NODE_ENV === 'development';
 const IS_MAC = process.platform === 'darwin';
 
-class PersonaPulseApp {
+class PersonyxApp {
   private mainWindow: BrowserWindow | null = null;
   private trayManager: TrayManager | null = null;
   private autoUpdater: AutoUpdater | null = null;
@@ -25,8 +32,10 @@ class PersonaPulseApp {
 
   constructor() {
     this.logger = new Logger('main');
+    this.logger.info('🚀 Personyx starting up...');
     this.setupAppEventHandlers();
     this.setupIpcHandlers();
+    this.logger.info('✅ Personyx ready');
   }
 
   /**
@@ -34,7 +43,7 @@ class PersonaPulseApp {
    */
   public async initialize(): Promise<void> {
     try {
-      this.logger.info('🚀 PersonaPulse starting up...');
+      this.logger.info('🚀 Personyx starting up...');
 
       // Create necessary directories
       await this.createDirectories();
@@ -54,14 +63,14 @@ class PersonaPulseApp {
       await this.initializeCoreServices();
 
       this.isAppReady = true;
-      this.logger.info('✅ PersonaPulse ready');
+      this.logger.info('✅ Personyx ready');
 
       // Notify renderer if window exists
       if (this.mainWindow) {
         this.mainWindow.webContents.send(IPC_CHANNELS.APP_READY, {});
       }
     } catch (error) {
-      this.logger.error('❌ Failed to initialize PersonaPulse', error);
+      this.logger.error('❌ Failed to initialize Personyx', error);
       this.handleError('Failed to initialize application', error);
     }
   }
@@ -77,12 +86,25 @@ class PersonaPulseApp {
       return;
     }
 
+    // Create window icon with debug logging
+    const iconPath = join(__dirname, '../icon.png');
+    this.logger.debug(`🖼️ Attempting to load window icon from: ${iconPath}`);
+
+    const windowIcon = nativeImage.createFromPath(iconPath);
+    this.logger.debug(
+      `🖼️ Window icon created - isEmpty: ${windowIcon.isEmpty()}, size: ${JSON.stringify(windowIcon.getSize())}`
+    );
+
+    // Set dock icon on macOS and app icon on other platforms
+    this.setAppIcon(windowIcon, iconPath);
+
     this.mainWindow = new BrowserWindow({
       width: UI.MAIN_WINDOW_WIDTH,
       height: UI.MAIN_WINDOW_HEIGHT,
       minWidth: UI.MIN_WINDOW_WIDTH,
       minHeight: UI.MIN_WINDOW_HEIGHT,
       show: false,
+      icon: windowIcon,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -130,6 +152,29 @@ class PersonaPulseApp {
 
     this.logger.debug(`📥 Loading renderer from: ${rendererUrl}`);
     this.mainWindow.loadURL(rendererUrl);
+  }
+
+  /**
+   * Set app icon for dock (macOS) and taskbar (Windows/Linux)
+   */
+  private setAppIcon(icon: Electron.NativeImage, iconPath: string): void {
+    try {
+      if (IS_MAC && app.dock) {
+        // Set dock icon on macOS
+        app.dock.setIcon(icon);
+        this.logger.debug(`🖼️ Dock icon set from: ${iconPath}`);
+      } else {
+        // For Windows/Linux, the window icon should be sufficient
+        // but we can also try to set it at the app level
+        this.logger.debug(
+          `🖼️ App icon set for non-macOS platform from: ${iconPath}`
+        );
+      }
+
+      this.logger.info('✅ App icon set successfully');
+    } catch (error) {
+      this.logger.error('❌ Failed to set app icon', error);
+    }
   }
 
   /**
@@ -232,7 +277,7 @@ class PersonaPulseApp {
    */
   private setupProtocols(): void {
     // Handle deep links if needed
-    app.setAsDefaultProtocolClient('personapulse');
+    app.setAsDefaultProtocolClient('personyx');
   }
 
   /**
@@ -360,7 +405,7 @@ class PersonaPulseApp {
     // Show error dialog
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
-    dialog.showErrorBox('PersonaPulse Error', `${message}\n\n${errorMessage}`);
+    dialog.showErrorBox('Personyx Error', `${message}\n\n${errorMessage}`);
 
     // Send error to renderer if available
     if (this.mainWindow) {
@@ -395,7 +440,7 @@ class PersonaPulseApp {
    * Quit the application
    */
   public quit(): void {
-    this.logger.info('🛑 Quitting PersonaPulse');
+    this.logger.info('🛑 Quitting Personyx');
     app.quit();
   }
 
@@ -422,7 +467,7 @@ class PersonaPulseApp {
 }
 
 // Create and start the application
-const personaPulseApp = new PersonaPulseApp();
+const personyxApp = new PersonyxApp();
 
 // Export for other modules
-export { personaPulseApp };
+export { personyxApp };

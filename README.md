@@ -1,8 +1,8 @@
-# PersonaPulse 🎯
+# Personyx 🎯
 
-> **Evidence-based PRD analysis that stops costly feature bets before the first line of code**
+**Persona-based evidence analysis for product requirements**
 
-PersonaPulse is a desktop application that prevents wasted engineering sprints by demanding real-user evidence for every Product Requirements Document (PRD). It ingests customer interview transcripts, classifies insights by persona, and provides go/no-go evidence scores—all while integrating seamlessly into your existing development workflow.
+Personyx is a desktop application that prevents wasted engineering sprints by demanding real-user evidence for every Product Requirements Document (PRD). It ingests customer interview transcripts, analyzes them for persona patterns, and provides actionable insights directly in your development workflow.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue)]()
@@ -11,75 +11,173 @@ PersonaPulse is a desktop application that prevents wasted engineering sprints b
 
 ## 🚀 Quick Start
 
-### Run PersonaPulse Locally
-
-**Option 1: Using npm scripts**
+### Run Personyx Locally
 
 ```bash
-# Start full development environment (recommended)
-npm start
+# Install dependencies
+pnpm install
 
-# Or use the alias
-npm run dev:app
+# Start development mode (hot reload)
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Package for distribution
+pnpm dist
 ```
 
-**Option 2: Using the shell script**
+## Development Workflow
+
+### 1. ✅ Install Dependencies
 
 ```bash
-# Make executable (first time only)
-chmod +x dev.sh
-
-# Run the development environment
-./dev.sh
+# Install all workspace dependencies
+pnpm install
 ```
 
-**Option 3: Manual step-by-step**
+### 2. ✅ Start Development Server
 
 ```bash
-# Start development servers
-npm run dev
+# Concurrent development with hot reload
+pnpm dev
 
-# In another terminal, launch Electron
-npm run electron:dev
+# This runs:
+# - TypeScript compiler for main process (watch mode)
+# - Vite dev server for renderer process
+# - Electron app with live reload
 ```
 
-This will:
+### 3. ✅ Open Personyx in Electron when ready
 
-1. ✅ Start TypeScript compilation in watch mode
-2. ✅ Launch Vite dev server on `http://localhost:3000`
-3. ✅ Open PersonaPulse in Electron when ready
-4. ✅ Enable hot reloading for both main and renderer processes
+The app will automatically open when the build completes. Look for:
 
----
+- 🎯 System tray icon (right-click for menu)
+- 📱 Tray menu with "Import PRD" option
 
-## Overview
+## Architecture
 
-## ✨ Features
+### Core Structure
 
-### 🎯 **Evidence-First Development**
+Personyx uses a **monorepo architecture** with clear separation between processes:
 
-- **PRD Evidence Scoring**: 0-100 score based on real user evidence coverage
-- **Persona Classification**: Auto-categorize feedback by user personas
-- **Risk Prevention**: Block unfounded features before development starts
+```
+Personyx/
+├── src/
+│   ├── main/           # Electron main process (Node.js)
+│   ├── renderer/       # React UI (Chromium)
+│   └── shared/         # Shared types & constants
+├── dist/               # Compiled output
+└── release/            # Distribution packages
+```
 
-### 🖥️ **Desktop-First Experience**
+### Process Communication
 
-- **System Tray Integration**: Always accessible without disrupting workflow
-- **Local-First Architecture**: All data encrypted and stored locally
-- **Cross-Platform**: Native support for macOS, Windows, and Linux
+```mermaid
+graph TB
+    M[Main Process] --> R[Renderer Process]
+    M --> T[System Tray]
+    R --> M
+    T --> M
+    M --> D[Database]
+    M --> F[File System]
+```
 
-### 🔗 **Workflow Integration**
+## Features
 
-- **VS Code Extension**: Chat with personas directly in your editor
-- **Slack Bot**: Get evidence scores with `/evidence-check` command
-- **Notion Export**: Generate evidence scorecards for roadmap reviews
+### ✅ Phase 1 - Foundation (Complete)
 
-## 🏗️ Architecture
+- [x] **Electron 28 + TypeScript** - Cross-platform desktop app
+- [x] **React 18 + Tailwind CSS** - Modern UI with design system
+- [x] **System Tray** - Native desktop integration
+- [x] **File Import** - PRD document processing
+- [x] **Auto-update** - Seamless updates
+- [x] **Development Tools** - Hot reload, type safety, linting
+
+### 🔄 Phase 2 - Data Layer (Planned)
+
+- [ ] **SQLite Database** - Local evidence storage
+- [ ] **Encryption** - Secure API token management
+- [ ] **Persona Classification** - AI-powered analysis
+- [ ] **Evidence Scoring** - Quantified risk assessment
+
+### 🔄 Phase 3 - Interface Layer (Planned)
+
+- [ ] **VS Code Extension** - IDE integration
+- [ ] **Slack Bot** - Team notifications
+- [ ] **Notion Integration** - Documentation sync
+- [ ] **Linear Labeling** - Automated ticket tagging
+
+## Design System
+
+Personyx implements the **Evidence Gate Design System** with:
+
+- **Colors**: Evidence Blue, Persona Green, Insight Violet
+- **Typography**: Inter font family with semantic scales
+- **Components**: Cards, buttons, forms, notifications
+- **Spacing**: 4px grid system with semantic tokens
+- **Motion**: Purposeful animations for feedback
+
+## Development
+
+### Build System
+
+```bash
+# TypeScript compilation
+pnpm build:main      # Main process
+pnpm build:renderer  # Renderer process
+pnpm build          # Both processes
+
+# Development
+pnpm dev            # Hot reload both processes
+pnpm dev:main       # Main process only
+pnpm dev:renderer   # Renderer process only
+
+# Quality
+pnpm lint           # ESLint
+pnpm type-check     # TypeScript validation
+pnpm security       # Security scan
+```
+
+### Code Quality
+
+- **TypeScript**: Strict mode with comprehensive type checking
+- **ESLint**: Consistent code style and error prevention
+- **Prettier**: Automated code formatting
+- **Husky**: Pre-commit hooks for quality gates
+
+## Technology Stack
+
+### Core
+
+- **Electron 28** - Cross-platform desktop framework
+- **TypeScript 5.3** - Type-safe JavaScript
+- **React 18** - Component-based UI
+- **Tailwind CSS 3+** - Utility-first styling
+
+### Tooling
+
+- **Vite 5** - Fast development server
+- **pnpm** - Efficient package management
+- **ESLint + Prettier** - Code quality
+- **Electron Builder** - Application packaging
+
+## Project Goals
+
+Personyx aims to save teams **1.5+ engineering sprints per month** by rejecting low-evidence features and surfacing persona-specific insights directly in development tools.
+
+### Success Metrics
+
+- **25%+ features rejected** before development
+- **80+ evidence score** average for shipped features
+- **1.5+ sprints saved** per month per team
+
+## 🛠️ Architecture
 
 PersonaPulse uses a **monorepo architecture** with clear separation between processes:
 
 ```
-PersonaPulse/
+Personyx/
 ├── src/
 │   ├── main/           # Core Process (Electron Main)
 │   │   ├── main.ts     # App initialization & IPC handlers
@@ -241,4 +339,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for product teams who ship features users actually want.**
 
-For questions, issues, or feature requests, please [open an issue](https://github.com/astrogirlnim/PersonaPulse/issues) or reach out to the team.
+For questions, issues, or feature requests, please [open an issue](https://github.com/astrogirlnim/Personyx/issues) or reach out to the team.

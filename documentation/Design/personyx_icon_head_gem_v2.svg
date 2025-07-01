@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1420"/>
+      <stop offset="100%" stop-color="#081019"/>
+    </linearGradient>
+
+    <!-- Gem main fill -->
+    <linearGradient id="gemFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#102736"/>
+      <stop offset="100%" stop-color="#05202f"/>
+    </linearGradient>
+
+    <!-- Gem highlight -->
+    <linearGradient id="gemHighlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#27cdd4"/>
+      <stop offset="100%" stop-color="#108494"/>
+    </linearGradient>
+
+    <!-- Gem dark facet -->
+    <linearGradient id="gemShadow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#05131c"/>
+      <stop offset="100%" stop-color="#00070b"/>
+    </linearGradient>
+
+    <!-- Clip for rounded app square -->
+    <clipPath id="roundMask">
+      <rect x="0" y="0" width="512" height="512" rx="110" ry="110"/>
+    </clipPath>
+
+    <!-- Mask for head silhouette -->
+    <mask id="cutHead">
+      <rect width="512" height="512" fill="white"/>
+      <!-- Head side profile facing right -->
+      <path d="
+        M256 120
+        C220 120 195 145 195 185
+        C195 210 208 225 208 225
+        C208 225 185 235 185 280
+        C185 335 230 360 230 360
+        L230 410
+        L315 410
+        L315 370
+        C315 370 325 345 340 325
+        C355 305 365 275 365 235
+        C365 165 325 120 256 120
+        Z" fill="black"/>
+    </mask>
+  </defs>
+
+  <!-- App square -->
+  <rect x="0" y="0" width="512" height="512" rx="110" ry="110" fill="url(#bg)" clip-path="url(#roundMask)"/>
+
+  <!-- Gem group -->
+  <g clip-path="url(#roundMask)">
+    <!-- Base gem polygon -->
+    <polygon points="256,70 340,110 410,185 430,260 410,335 340,410 256,450 172,410 102,335 82,260 102,185 172,110"
+             fill="url(#gemFill)" mask="url(#cutHead)"/>
+    <!-- Top highlight facet -->
+    <polygon points="256,70 340,110 302,138" fill="url(#gemHighlight)" opacity="0.95" mask="url(#cutHead)"/>
+    <!-- Right highlight facet -->
+    <polygon points="340,110 410,185 370,205 302,138" fill="url(#gemHighlight)" opacity="0.9" mask="url(#cutHead)"/>
+    <!-- Bottom-left dark facet -->
+    <polygon points="172,410 256,450 256,390 202,360" fill="url(#gemShadow)" opacity="0.8" mask="url(#cutHead)"/>
+    <!-- Left dark facet -->
+    <polygon points="102,185 82,260 102,335 150,260" fill="url(#gemShadow)" opacity="0.85" mask="url(#cutHead)"/>
+    <!-- Micro star highlight -->
+    <polygon points="310,195 314,205 324,205 316,212 319,222 310,216 301,222 304,212 296,205 306,205"
+             fill="#ffffff" opacity="0.75" mask="url(#cutHead)"/>
+  </g>
+</svg>

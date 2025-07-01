@@ -1,5 +1,5 @@
 /**
- * PersonaPulse Renderer Styles - DeskResearcher Design System
+ * Personyx Renderer Styles - Evidence Gate Design System
  */
 
 @tailwind base;
@@ -11,27 +11,30 @@
   /* Component tokens as CSS custom properties */
   --dr-radius-md: 0.5rem; /* 8px - Card & button radius */
   --dr-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05); /* Default shadow */
+  --dr-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1); /* Elevation for top-level tray */
   --dr-gap-panel: 1.5rem; /* 24px - Inner padding for tray panels */
   --dr-duration-fast: 120ms; /* Small transitions */
+  --dr-ring-gauge-size: 160px; /* Evidence Scores gauge diameter */
+  --dr-anim-score-pulse: 400ms cubic-bezier(0.4, 0, 0.2, 1); /* Pulse keyframe spec */
 
   /* Focus ring for accessibility */
-  --dr-focus-ring: 0 0 0 2px theme('colors.evidence-blue.dark'); /* #5C9EFF outline */
+  --dr-focus-ring: 0 0 0 2px theme('colors.evidence.dark'); /* #5C9EFF outline */
 }
 
-/* Custom styles for PersonaPulse with Design System */
+/* Custom styles for Personyx with Evidence Gate Design System */
 @layer base {
   html {
     @apply antialiased;
   }
 
   body {
-    @apply bg-mist-grey dark:bg-mist-grey-dark text-slate dark:text-slate-dark;
+    @apply bg-mist dark:bg-mist-dark text-slate dark:text-slate-dark;
     font-family: 'Inter', 'Roboto', system-ui, sans-serif;
   }
 
   /* Focus states for accessibility */
   *:focus-visible {
-    outline: 2px solid theme('colors.evidence-blue.dark');
+    @apply outline-2 focus-visible:outline-evidence;
     outline-offset: 2px;
   }
 }
@@ -39,47 +42,26 @@
 @layer components {
   /* Design System Card Component */
   .card {
-    @apply bg-paper-white dark:bg-paper-white-dark rounded-dr-md shadow-dr-sm border border-graphite dark:border-graphite-dark;
+    @apply bg-paper dark:bg-paper-dark rounded-dr-md shadow-dr-sm border border-graphite dark:border-graphite-dark;
     padding: var(--dr-gap-panel);
   }
 
   /* Design System Button Components */
   .btn-primary {
-    @apply bg-evidence-blue hover:bg-evidence-blue/90 dark:bg-evidence-blue-dark dark:hover:bg-evidence-blue-dark/90 
-           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
+    @apply bg-evidence hover:bg-evidence/90 dark:bg-evidence-dark dark:hover:bg-evidence-dark/90 
+           text-paper dark:text-paper-dark font-medium py-2 px-4 rounded-dr-md 
            transition-colors duration-dr-fast shadow-dr-sm
-           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-evidence-dark focus:ring-offset-2;
   }
 
   .btn-secondary {
     @apply bg-graphite hover:bg-graphite/80 dark:bg-graphite-dark dark:hover:bg-graphite-dark/80 
            text-slate dark:text-slate-dark font-medium py-2 px-4 rounded-dr-md 
            transition-colors duration-dr-fast shadow-dr-sm
-           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-evidence-dark focus:ring-offset-2;
   }
 
-  .btn-success {
-    @apply bg-persona-green hover:bg-persona-green/90 dark:bg-persona-green-dark dark:hover:bg-persona-green-dark/90 
-           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
-           transition-colors duration-dr-fast shadow-dr-sm
-           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
-  }
-
-  .btn-warning {
-    @apply bg-caution-amber hover:bg-caution-amber/90 dark:bg-caution-amber-dark dark:hover:bg-caution-amber-dark/90 
-           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
-           transition-colors duration-dr-fast shadow-dr-sm
-           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
-  }
-
-  .btn-danger {
-    @apply bg-risk-red hover:bg-risk-red/90 dark:bg-risk-red-dark dark:hover:bg-risk-red-dark/90 
-           text-paper-white dark:text-paper-white-dark font-medium py-2 px-4 rounded-dr-md 
-           transition-colors duration-dr-fast shadow-dr-sm
-           focus:outline-none focus:ring-2 focus:ring-evidence-blue-dark focus:ring-offset-2;
-  }
-
-  /* Design System Typography Classes - Remove circular dependencies */
+  /* Design System Typography Classes */
   .text-display {
     font-size: 2rem;
     line-height: 2.5rem;
@@ -128,6 +110,11 @@
     font-weight: 500;
     @apply text-steel dark:text-steel-dark;
   }
+
+  /* Persona Pills Component */
+  .persona-pill {
+    @apply bg-persona text-paper rounded-full px-3 py-1 text-caption font-bold;
+  }
 }
 
 /* Design System Loading Animations */
@@ -144,7 +131,7 @@
 }
 
 .score-pulse {
-  animation: pulse-score 400ms ease-in-out;
+  animation: pulse-score var(--dr-anim-score-pulse);
 }
 
 @keyframes sweep {
@@ -159,24 +146,24 @@
 /* Design System Drag and Drop Styles */
 .drop-zone {
   @apply border-2 border-dashed border-graphite dark:border-graphite-dark rounded-dr-md p-lg text-center 
-         transition-colors duration-dr-fast bg-paper-white dark:bg-paper-white-dark;
+         transition-colors duration-dr-fast bg-paper dark:bg-paper-dark;
 }
 
 .drop-zone.drag-over {
-  @apply border-evidence-blue dark:border-evidence-blue-dark bg-evidence-blue/5 dark:bg-evidence-blue-dark/10;
+  @apply border-evidence dark:border-evidence-dark bg-evidence/5 dark:bg-evidence-dark/10;
 }
 
 .drop-zone.drag-over .drop-zone-icon {
-  @apply text-evidence-blue dark:text-evidence-blue-dark;
+  @apply text-evidence dark:text-evidence-dark;
 }
 
 .drop-zone.drag-over .drop-zone-text {
-  @apply text-evidence-blue dark:text-evidence-blue-dark;
+  @apply text-evidence dark:text-evidence-dark;
 }
 
 /* Design System Evidence Score Colors */
 .score-high {
-  @apply text-persona-green dark:text-persona-green-dark;
+  @apply text-persona dark:text-persona-dark;
 }
 
 .score-medium {
@@ -193,7 +180,7 @@
 }
 
 .score-badge.high {
-  @apply bg-persona-green/10 text-persona-green dark:bg-persona-green-dark/10 dark:text-persona-green-dark;
+  @apply bg-persona/10 text-persona dark:bg-persona-dark/10 dark:text-persona-dark;
 }
 
 .score-badge.medium {
@@ -204,54 +191,48 @@
   @apply bg-risk-red/10 text-risk-red dark:bg-risk-red-dark/10 dark:text-risk-red-dark;
 }
 
-/* Progress Bar for Ingest */
 .progress-bar {
-  @apply relative overflow-hidden rounded-dr-md bg-graphite/20 dark:bg-graphite-dark/20;
+  @apply w-full bg-graphite dark:bg-graphite-dark rounded-full h-2;
 }
 
 .progress-fill {
-  @apply h-full bg-evidence-blue dark:bg-evidence-blue-dark transition-all duration-300;
+  @apply bg-evidence dark:bg-evidence-dark h-2 rounded-full transition-all duration-300;
 }
 
 .progress-sweep {
-  @apply absolute inset-0 bg-gradient-to-r from-transparent via-paper-white/20 to-transparent;
   animation: sweep 200ms linear infinite;
 }
 
-/* Notification Styles */
 .notification {
-  @apply bg-paper-white dark:bg-paper-white-dark border border-graphite dark:border-graphite-dark 
-         rounded-dr-md shadow-dr-sm p-4 animate-slide-in;
+  @apply p-4 rounded-dr-md shadow-dr-sm border-l-4 mb-4;
 }
 
 .notification.success {
-  @apply border-persona-green dark:border-persona-green-dark;
+  @apply bg-persona/10 border-persona text-persona dark:bg-persona-dark/10 dark:border-persona-dark dark:text-persona-dark;
 }
 
 .notification.warning {
-  @apply border-caution-amber dark:border-caution-amber-dark;
+  @apply bg-caution-amber/10 border-caution-amber text-caution-amber dark:bg-caution-amber-dark/10 dark:border-caution-amber-dark dark:text-caution-amber-dark;
 }
 
 .notification.error {
-  @apply border-risk-red dark:border-risk-red-dark;
+  @apply bg-risk-red/10 border-risk-red text-risk-red dark:bg-risk-red-dark/10 dark:border-risk-red-dark dark:text-risk-red-dark;
 }
 
-/* Design System Focus and Interactive States */
+/* Interactive elements */
 .interactive {
-  @apply transition-all duration-dr-fast cursor-pointer;
+  @apply cursor-pointer transition-all duration-dr-fast;
 }
 
 .interactive:hover {
-  @apply shadow-dr-depth;
+  @apply transform scale-105;
 }
 
 .interactive:active {
-  @apply scale-[0.98];
+  @apply transform scale-95;
 }
 
-/* Dark mode preservation for shadow depth */
+/* Dark mode shadow adjustments */
 .dark .shadow-dr-depth {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.3),
-    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }

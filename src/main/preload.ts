@@ -1,5 +1,5 @@
 /**
- * Preload script for PersonaPulse
+ * Preload script for Personyx
  * Exposes secure APIs to renderer processes
  */
 

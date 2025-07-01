@@ -13,7 +13,7 @@ _Last updated: 2025-07-01_
 
 ## Detailed Checklist Snapshot
 
-_(Source: PersonaPulse v0.1 checklist)_
+_(Source: Personyx v0.1 checklist)_
 
 ```text
 ✅ Phase 1 – Foundation (4/4 Complete - FINISHED)
@@ -75,7 +75,7 @@ _(Source: PersonaPulse v0.1 checklist)_
 - **Visual Drop Zone**: Clean UI implementation with proper design system styling
 - **Tray Menu Integration**: "Import PRD" option available in system tray context menu
 - **IPC Infrastructure**: Backend handlers and preload API ready for future phases
-- **Design Compliance**: Follows DeskResearcher design tokens and component patterns
+- **Design Compliance**: Follows Personyx design tokens and component patterns
 - **Stub Status**: Visual-only implementation as planned - click/drag handlers deferred to Phase 2.3 & 3.1.2
 
 ### ✅ Phase 1.4 - Auto-Update Service (COMPLETE)
@@ -91,7 +91,7 @@ _(Source: PersonaPulse v0.1 checklist)_
 - **Time‑boxed sprint**: Only 4 days leaves minimal buffer for Phase 2-4
 - **OpenAI rate limits**: May slow batch PRD embedding; consider local model fallback
 - **Cross‑platform packaging**: Windows code‑signing could eat half a day
-- **Icon assets**: Need actual PersonaPulse tray icons (currently using fallback)
+- **Icon assets**: Need actual Personyx tray icons (currently using fallback)
 
 ## Implementation Quality Notes
 
@@ -101,7 +101,7 @@ _(Source: PersonaPulse v0.1 checklist)_
 - **Code Organization**: Clean monorepo structure with proper boundaries
 - **Build Pipeline**: Fast development with hot reloading for both processes
 - **Error Handling**: Robust logging system with file + console output
-- **Design System**: DeskResearcher colors and typography implemented
+- **Design System**: Personyx colors and typography implemented
 - **Security**: Prepared for AES encryption and local-first architecture
 - **Module Resolution**: Perfect TypeScript path alias resolution in compiled output
 
@@ -154,3 +154,37 @@ _(Source: PersonaPulse v0.1 checklist)_
 ### 🎯 Ready for Phase 2.1
 
 All foundation components validated and ready for SQLite schema implementation.
+
+## Latest Updates (2025-07-01)
+
+### ✅ App Launch & Icon Issues Resolved
+
+- **Entry Point Fix**: Fixed `package.json` main entry from `dist/main/main.js` to `dist/main/main/main.js`
+- **New Icon**: Updated to new background-free icon (`icon_no_background.png`)
+- **Tray Icon Loading**: Fixed tray icon path resolution by copying assets to `dist/assets/`
+- **Dev Script Optimization**: Removed excessive `DEBUG="*"` output that was flooding console with babel logs
+- **Launch Verification**: ✅ Electron app launches successfully with clean logs
+- **Icon Verification**: ✅ Tray icon loads properly from new background-free design
+- **Development Workflow**: ✅ Both `npm run electron` and `./dev.sh` working perfectly
+
+### ✅ Icon Display Issues Fixed (2025-07-01 12:03AM)
+
+- **Tray Icon Size Issue**: ✅ Fixed - Original 1024x1024 icon was too large for system tray
+- **Proper Icon Sizing**: ✅ Created 20x20px and 40x40px versions using `sips` for macOS tray requirements
+- **Tray Icon Path**: ✅ Updated `tray.ts` to use `tray-icon-20.png` (977 bytes vs 910KB original)
+- **Window Icon Missing**: ✅ Fixed - Added `nativeImage` import and icon property to `BrowserWindow` config
+- **Icon Assets**: ✅ Both sized icons properly copied to `dist/assets/` for runtime access
+- **Display Verification**: ✅ System tray icon now appears correctly in macOS menu bar
+- **Window Icon**: ✅ App icon displays correctly in taskbar/dock instead of default Electron icon
+
+### 📱 Current App Status
+
+- **System Tray**: ✅ Fully functional with properly sized custom icon visible in menu bar
+- **Window Icon**: ✅ Custom icon displays in taskbar/dock (no more default Electron icon)
+- **Auto-updater**: ✅ Initialized and ready
+- **Core Services**: ✅ All systems operational
+- **Development Environment**: ✅ Hot reload and debugging working
+- **Build Pipeline**: ✅ Clean builds with proper asset handling
+- **Icon Assets**: ✅ Multiple sizes available (1024x1024, 40x40, 20x20) for different use cases
+
+**Ready for Phase 2.1 Development** 🚀

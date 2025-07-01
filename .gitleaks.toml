@@ -1,5 +1,5 @@
-# Gitleaks Configuration for PersonaPulse
-title = "PersonaPulse Security Configuration"
+# Gitleaks Configuration for Personyx
+title = "Personyx Security Configuration"
 
 # Custom rules for our project
 [[rules]]

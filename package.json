@@ -1,14 +1,14 @@
 {
-  "name": "personapulse",
+  "name": "personyx",
   "version": "0.1.0",
-  "description": "DeskResearcher - Persona-based evidence analysis for product requirements",
+  "description": "Personyx - Persona-based evidence analysis for product requirements",
   "main": "dist/main/main/main.js",
-  "author": "PersonaPulse Team",
+  "author": "Personyx Team",
   "license": "MIT",
-  "homepage": "https://github.com/astrogirlnim/PersonaPulse",
+  "homepage": "https://github.com/astrogirlnim/Personyx",
   "repository": {
     "type": "git",
-    "url": "git@github.com:astrogirlnim/PersonaPulse.git"
+    "url": "git@github.com:astrogirlnim/Personyx.git"
   },
   "scripts": {
     "start": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron:dev\"",
@@ -75,8 +75,8 @@
     "npm": ">=10.0.0"
   },
   "build": {
-    "appId": "com.personapulse.deskresearcher",
-    "productName": "PersonaPulse",
+    "appId": "com.personyx.app",
+    "productName": "Personyx",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -85,8 +85,10 @@
       "dist/**/*",
       "package.json"
     ],
+    "icon": "build/icon.png",
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "dmg",
@@ -98,6 +100,7 @@
       ]
     },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -108,6 +111,7 @@
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "AppImage",

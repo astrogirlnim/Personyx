@@ -1,11 +1,11 @@
 /**
- * TrayManager - Handles system tray functionality for PersonaPulse
+ * TrayManager - Handles system tray functionality for Personyx
  */
 
 import { Tray, Menu, nativeImage, dialog, BrowserWindow } from 'electron';
 import { join } from 'path';
 import { readFileSync, statSync } from 'fs';
-import { personaPulseApp } from './main';
+import { personyxApp } from './main';
 import { FILE_FILTERS } from '@shared/constants';
 import type { Logger } from './utils/logger';
 import type { TrayAction } from '@shared/types';
@@ -36,7 +36,7 @@ export class TrayManager {
       this.logger.debug('📱 Tray object created successfully');
 
       // Set tray tooltip and title for visual confirmation
-      this.tray.setToolTip('PersonaPulse - Evidence-based PRD analysis');
+      this.tray.setToolTip('Personyx - Evidence-based PRD analysis');
       this.tray.setTitle('PP'); // Visual confirmation - shows text in macOS menu bar
       this.logger.debug('📱 Tray tooltip and title set');
 
@@ -62,7 +62,7 @@ export class TrayManager {
    */
   private createTrayIcon(): Electron.NativeImage {
     // Try to load icon from assets, fall back to generated icon
-    const iconPath = join(__dirname, '../../assets/tray-icon.png');
+    const iconPath = join(__dirname, '../../assets/tray-icon-20.png');
 
     this.logger.debug(`📱 Attempting to load tray icon from: ${iconPath}`);
 
@@ -123,7 +123,7 @@ export class TrayManager {
 
     const menu = Menu.buildFromTemplate([
       {
-        label: 'Show PersonaPulse',
+        label: 'Show Personyx',
         click: () => this.handleAction('show-window'),
       },
       { type: 'separator' },
@@ -154,7 +154,7 @@ export class TrayManager {
       },
       { type: 'separator' },
       {
-        label: 'Quit PersonaPulse',
+        label: 'Quit Personyx',
         accelerator: 'CmdOrCtrl+Q',
         click: () => this.handleAction('quit-app'),
       },
@@ -247,7 +247,7 @@ export class TrayManager {
       switch (action) {
         case 'show-window':
           this.logger.debug('🔧 Executing: show-window');
-          personaPulseApp.createMainWindow();
+          personyxApp.createMainWindow();
           this.logger.info('✅ show-window completed');
           break;
 
@@ -283,7 +283,7 @@ export class TrayManager {
 
         case 'quit-app':
           this.logger.debug('🔧 Executing: quit-app');
-          personaPulseApp.quit();
+          personyxApp.quit();
           this.logger.info('✅ quit-app completed');
           break;
 
@@ -570,7 +570,7 @@ export class TrayManager {
     try {
       this.logger.info('🔄 Manual update check from tray');
 
-      const autoUpdater = personaPulseApp.getAutoUpdater();
+      const autoUpdater = personyxApp.getAutoUpdater();
       if (autoUpdater) {
         await autoUpdater.checkForUpdates();
       } else {

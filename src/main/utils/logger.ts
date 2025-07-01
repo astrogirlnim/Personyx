@@ -1,5 +1,5 @@
 /**
- * Logger utility for PersonaPulse main process
+ * Logger utility for Personyx main process
  * Handles both console and file logging with rotation
  */
 

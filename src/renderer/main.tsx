@@ -1,5 +1,5 @@
 /**
- * PersonaPulse Renderer Process - React Entry Point
+ * Personyx Renderer Process - React Entry Point
  */
 
 import React from 'react';
@@ -20,4 +20,4 @@ root.render(
   </React.StrictMode>
 );
 
-console.log('🎨 PersonaPulse renderer initialized');
+console.log('🎨 Personyx renderer initialized');
