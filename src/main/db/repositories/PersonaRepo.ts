@@ -5,8 +5,26 @@
 
 import { eq } from 'drizzle-orm';
 import { getDatabase } from '@main/db/connection';
-import { personas, type Persona, type NewPersona } from '@main/db/schema';
+import { personas, type NewPersona } from '@main/db/schema';
+import { type Persona } from '@shared/types';
 import { Logger } from '@main/utils/logger';
+
+// Application-level interfaces for repository operations
+interface PersonaCreateData {
+  name: string;
+  description: string;
+  primaryGoal: string;
+  mainPainPoint: string;
+  keywords: string[];
+}
+
+interface PersonaUpdateData {
+  name?: string;
+  description?: string;
+  primaryGoal?: string;
+  mainPainPoint?: string;
+  keywords?: string[];
+}
 
 const logger = new Logger('persona-repo');
 
@@ -14,9 +32,7 @@ export class PersonaRepo {
   /**
    * Create a new persona
    */
-  async create(
-    data: Omit<NewPersona, 'id' | 'createdAt' | 'updatedAt'>
-  ): Promise<Persona> {
+  async create(data: PersonaCreateData): Promise<Persona> {
     try {
       logger.info('➕ Creating new persona', { name: data.name });
 
@@ -114,10 +130,7 @@ export class PersonaRepo {
   /**
    * Update persona
    */
-  async update(
-    id: string,
-    data: Partial<Omit<NewPersona, 'id' | 'createdAt'>>
-  ): Promise<Persona | null> {
+  async update(id: string, data: PersonaUpdateData): Promise<Persona | null> {
     try {
       logger.info('📝 Updating persona', { id, fields: Object.keys(data) });
 

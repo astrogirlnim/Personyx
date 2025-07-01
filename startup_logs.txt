@@ -1,0 +1,29 @@
+
+> personyx@0.1.0 dev /Users/ns/Development/GauntletAI/PersonaPulse
+> concurrently "npm run dev:main" "npm run dev:renderer"
+
+[0] 
+[0] > personyx@0.1.0 dev:main
+[0] > concurrently "tsc -p src/main/tsconfig.json --watch" "tsc-alias -p src/main/tsconfig.json --watch"
+[0] 
+[1] 
+[1] > personyx@0.1.0 dev:renderer
+[1] > vite src/renderer --port 3000
+[1] 
+[1] [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+[1] error when starting dev server:
+[1] Error: Port 3000 is already in use
+[1]     at Server.onError (file:///Users/ns/Development/GauntletAI/PersonaPulse/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:45596:18)
+[1]     at Server.emit (node:events:524:28)
+[1]     at emitErrorNT (node:net:1944:8)
+[1]     at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+[1] npm run dev:renderer exited with code 1
+[0] [1] tsc-alias info: [Watching for file changes...]
+[0] [0] [2J[3J[H9:18:47 AM - Starting compilation in watch mode...
+[0] [0] 
+[0] [0] 
+[0] [0] 9:18:48 AM - Found 0 errors. Watching for file changes.
+[0] [1] tsc-alias -p src/main/tsconfig.json --watch exited with code SIGTERM
+[0] [0] tsc -p src/main/tsconfig.json --watch exited with code SIGTERM
+[0] npm run dev:main exited with code 1
+ ELIFECYCLE  Command failed with exit code 1.

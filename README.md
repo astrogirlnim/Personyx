@@ -94,11 +94,11 @@ graph TB
 - [x] **Auto-update** - Seamless updates
 - [x] **Development Tools** - Hot reload, type safety, linting
 
-### 🔄 Phase 2 - Data Layer (Planned)
+### 🔄 Phase 2 - Data Layer (Partially Complete)
 
-- [ ] **SQLite Database** - Local evidence storage
-- [ ] **Encryption** - Secure API token management
-- [ ] **Persona Classification** - AI-powered analysis
+- [x] **SQLite Database** - Local evidence storage with encryption
+- [x] **Encryption** - Secure API token management with AES-256
+- [x] **Persona Classification** - AI-powered analysis via LangGraph
 - [ ] **Evidence Scoring** - Quantified risk assessment
 
 ### 🔄 Phase 3 - Interface Layer (Planned)
@@ -222,25 +222,25 @@ Personyx/
 - **[Prettier](https://prettier.io/)** - Code formatting
 - **[Electron Builder](https://electron.build/)** - Packaging and distribution
 
-### **Future Integrations** (Upcoming Phases)
+### **Current Integrations**
 
-- **[LangGraph](https://langchain-ai.github.io/langgraph/)** - AI workflow orchestration
-- **[n8n](https://n8n.io/)** - Workflow automation
-- **[SQLite + SQLCipher](https://sqlcipher.net/)** - Encrypted local database
-- **[OpenAI APIs](https://openai.com/)** - Embeddings and chat completion
+- **[LangGraph](https://langchain-ai.github.io/langgraph/)** - ✅ AI workflow orchestration implemented
+- **[n8n](https://n8n.io/)** - ✅ Workflow automation pattern implemented
+- **[SQLite + Drizzle](https://orm.drizzle.team/)** - ✅ Encrypted local database with type safety
+- **[OpenAI APIs](https://openai.com/)** - ✅ Embeddings and chat completion integrated
 
 ## 📊 Development Progress
 
-### ✅ **Phase 1: Foundation** (1/4 Complete)
+### ✅ **Phase 1: Foundation** (3/4 Complete)
 
 - [x] **1.1** Electron 28 + TypeScript monorepo scaffolding
-- [ ] **1.2** Cross-platform build/packaging scripts + ESLint+Prettier
-- [ ] **1.3** Tray menu with PRD drop zone
-- [ ] **1.4** Auto-update mechanism placeholder
+- [x] **1.2** Cross-platform build/packaging scripts + ESLint+Prettier
+- [x] **1.3** LangGraph + n8n workflow with OpenAI integration
+- [ ] **1.4** Persona definitions & mock data
 
-### 🔄 **Phase 2: Data Layer** (Upcoming)
+### 🔄 **Phase 2: Data Layer** (Partially Complete)
 
-- [ ] **2.1** SQLite schema + encrypted token vault
+- [x] **2.1** SQLite schema + encrypted token vault
 - [ ] **2.2** Evidence scoring engine
 - [ ] **2.3** Embedding retrieval API
 - [ ] **2.4** Secure file ingest system
@@ -343,8 +343,37 @@ For questions, issues, or feature requests, please [open an issue](https://githu
 
 ## Native Modules & Electron
 
-After installing dependencies, native modules are automatically rebuilt for Electron's Node version via the postinstall script. If you encounter native module errors, run:
+PersonaPulse uses native modules (better-sqlite3, keytar) that must be compiled for Electron's specific Node.js version.
 
-    pnpm exec electron-builder install-app-deps
+### Automatic Handling
 
-Always use the Node version in .nvmrc for local development and CI. This ensures compatibility between Electron and native modules.
+Native modules are automatically rebuilt during `pnpm install` via the postinstall script. If this fails (common with Python 3.12+ due to missing distutils), the script automatically falls back to `@electron/rebuild`.
+
+### Manual Fix for Native Module Issues
+
+If you encounter `NODE_MODULE_VERSION` mismatch errors, run:
+
+```bash
+# Use our automated fix script
+pnpm run fix-native-modules
+
+# Or manually rebuild
+npx @electron/rebuild
+
+# Or clean install if needed
+rm -rf node_modules pnpm-lock.yaml
+pnpm install --ignore-scripts
+npx @electron/rebuild
+```
+
+### Node.js Version Requirements
+
+- Always use the Node.js version specified in `.nvmrc` (20.19.2)
+- Electron 28 requires NODE_MODULE_VERSION 119
+- Native modules must be compiled specifically for Electron's Node.js version
+
+### Common Issues
+
+- **Python 3.12+ distutils error**: Fixed automatically by fallback to `@electron/rebuild`
+- **Module version mismatch**: Run `pnpm run fix-native-modules`
+- **Missing native modules**: Ensure you're using the correct Node.js version from `.nvmrc`

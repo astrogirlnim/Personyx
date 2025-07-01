@@ -37,6 +37,22 @@ export const evidence = sqliteTable('evidence', {
   importance: integer('importance').notNull(), // 1-10 scale
 });
 
+// Embeddings table - stores vector embeddings for similarity search
+export const embeddings = sqliteTable('embeddings', {
+  id: text('id').primaryKey(),
+  evidenceId: text('evidence_id')
+    .notNull()
+    .references(() => evidence.id),
+  embedding: text('embedding').notNull(), // JSON-serialized float array
+  model: text('model').notNull(), // e.g., 'text-embedding-3-small'
+  dimensions: integer('dimensions').notNull(), // vector dimensions
+  chunkIndex: integer('chunk_index').notNull(), // for multi-chunk content
+  chunkCount: integer('chunk_count').notNull(), // total chunks for this evidence
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
 // Product documents table
 export const productDocuments = sqliteTable('product_documents', {
   id: text('id').primaryKey(),
@@ -93,6 +109,8 @@ export type Persona = typeof personas.$inferSelect;
 export type NewPersona = typeof personas.$inferInsert;
 export type Evidence = typeof evidence.$inferSelect;
 export type NewEvidence = typeof evidence.$inferInsert;
+export type Embedding = typeof embeddings.$inferSelect;
+export type NewEmbedding = typeof embeddings.$inferInsert;
 export type ProductDocument = typeof productDocuments.$inferSelect;
 export type NewProductDocument = typeof productDocuments.$inferInsert;
 export type EvidenceScore = typeof evidenceScores.$inferSelect;
