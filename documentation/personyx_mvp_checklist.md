@@ -14,7 +14,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 
 ## Phases Overview
 
-[ ] **Phase 1:** Foundation  
+[X] **Phase 1:** Foundation ✅ COMPLETE  
 [ ] **Phase 2:** Data Layer  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
@@ -46,12 +46,12 @@ _Criteria: essential build & tooling; no cross-dependencies._
 - [x] **3.3** Persist embeddings and metadata to SQLite.
 - [x] **3.4** Emit a "TranscriptIngested" IPC event to the Tray process.
 
-[ ] **Feature 4 – Persona Definitions & Mock Data**
+[X] **Feature 4 – Persona Definitions & Mock Data** ✅ COMPLETE
 
-- [ ] **4.1** Author `personas.yml` with **Solo Founder** & **Agency Marketer** objects.
-- [ ] **4.2** Seed two mock interview transcripts in `/interviews`.
-- [ ] **4.3** Place a sample PRD markdown file in `/samples` for import tests.
-- [ ] **4.4** Write Jest tests that prove transcripts and PRDs ingest without error.
+- [x] **4.1** Author `personas.yml` with **Solo Founder** & **Agency Marketer** objects. ✅ COMPLETE
+- [x] **4.2** Seed two mock interview transcripts in `/interviews`. ✅ COMPLETE
+- [x] **4.3** Place a sample PRD markdown file in `/samples` for import tests. ✅ COMPLETE
+- [x] **4.4** Write Jest tests that prove transcripts and PRDs ingest without error. ✅ COMPLETE
 
 ---
 
