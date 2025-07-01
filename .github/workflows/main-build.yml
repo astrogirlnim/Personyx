@@ -151,10 +151,11 @@ jobs:
           node-version-file: .nvmrc # Consistent with PR validation
           cache: pnpm
 
-      # ---------- Platform-Specific System Dependencies ----------
-      - name: 🔧 Install system dependencies for native modules (Linux)
+      # ---------- CRITICAL: Platform-Specific Python Setup BEFORE Install ----------
+      - name: 🔧 Setup Python 3.11 for native modules (Linux)
         if: matrix.platform == 'linux'
         run: |
+          echo "🔧 Setting up Python 3.11 for Linux native module compilation..."
           sudo apt-get update
           # Install Python 3.11 specifically (has distutils, unlike 3.12+)
           sudo apt-get install -y software-properties-common
@@ -166,99 +167,98 @@ jobs:
           # Configure Python for node-gyp
           sudo ln -sf /usr/bin/python3.11 /usr/bin/python3
           python3 --version
-          echo "✅ Linux system dependencies installed with Python 3.11"
+          echo "✅ Linux Python 3.11 setup completed successfully"
 
-      - name: 🔧 Setup Python for native modules (macOS)
+      - name: 🔧 Setup Python 3.11 for native modules (macOS)
         if: matrix.platform == 'mac'
         run: |
-          # Install Python 3.11 via Homebrew to avoid distutils issues
           echo "🔧 Setting up Python 3.11 for macOS native module compilation..."
+          # Install Python 3.11 via Homebrew to avoid distutils issues
           brew install python@3.11
-          # Link Python 3.11 as the default python3
+          # Configure Python paths for node-gyp
           echo "/opt/homebrew/opt/python@3.11/bin" >> $GITHUB_PATH
           export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
+          export PYTHON="/opt/homebrew/opt/python@3.11/bin/python3.11"
+          # Update environment for current session
+          echo "PYTHON=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
+          echo "npm_config_python=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
+          # Verify Python setup
           python3.11 --version
-          # Verify distutils is available
           python3.11 -c "import distutils; print('✅ distutils available')"
           echo "✅ macOS Python 3.11 setup completed successfully"
 
-      - name: 🔧 Setup Python for native modules (Windows)
+      - name: 🔧 Setup Python 3.11 for native modules (Windows)
         if: matrix.platform == 'win'
         run: |
-          # Install Python 3.11 specifically for Windows
           echo "🔧 Setting up Python 3.11 for Windows native module compilation..."
+          # Install Python 3.11 specifically for Windows
           choco install python --version=3.11.9 --force --yes
-          # Refresh PATH
-          refreshenv
+          # Configure Python paths for node-gyp
+          echo "PYTHON=C:\Python311\python.exe" >> $env:GITHUB_ENV
+          echo "npm_config_python=C:\Python311\python.exe" >> $env:GITHUB_ENV
+          # Verify Python setup
           python --version
           echo "✅ Windows Python 3.11 setup completed successfully"
 
-      # ---------- Install Dependencies ----------
+      # ---------- Install Dependencies (Python 3.11 now available) ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          # Ensure Python 3.11 is used during postinstall scripts
+          npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
 
-      # ---------- Comprehensive Platform-Specific Native Module Rebuild ----------
-      - name: 🔧 Rebuild native modules for target platform (Linux)
+      # ---------- Additional Native Module Rebuild (if needed) ----------
+      - name: 🔧 Additional native module rebuild (Linux)
         if: matrix.platform == 'linux'
         run: |
-          echo "🔧 Rebuilding native modules for Linux x64..."
-
+          echo "🔧 Performing additional native module rebuild for Linux..."
           # Clear any existing builds that might cause conflicts
           echo "🧹 Cleaning build artifacts..."
           rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
           rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
           find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-
-          # Rebuild native modules specifically for Electron's Node version
-          echo "🏗️ Rebuilding with electron-builder..."
+          # Additional rebuild to ensure Electron compatibility
+          echo "🏗️ Additional rebuild with electron-builder..."
           pnpm exec electron-builder install-app-deps
-
-          echo "✅ Linux native module rebuild completed successfully"
+          echo "✅ Linux additional native module rebuild completed"
         env:
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
           PYTHON: /usr/bin/python3.11
 
-      - name: 🔧 Rebuild native modules for target platform (macOS)
+      - name: 🔧 Additional native module rebuild (macOS)
         if: matrix.platform == 'mac'
         run: |
-          echo "🔧 Rebuilding native modules for macOS Universal..."
-
+          echo "🔧 Performing additional native module rebuild for macOS..."
           # Clear any existing builds that might cause conflicts
           echo "🧹 Cleaning build artifacts..."
           rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
           rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
           find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-
-          # Set up Python path for native module compilation
+          # Set up Python path for additional rebuild
           export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
           export PYTHON="/opt/homebrew/opt/python@3.11/bin/python3.11"
-
-          # Rebuild native modules specifically for Electron's Node version
-          echo "🏗️ Rebuilding with electron-builder..."
+          # Additional rebuild to ensure Electron compatibility
+          echo "🏗️ Additional rebuild with electron-builder..."
           pnpm exec electron-builder install-app-deps
-
-          echo "✅ macOS native module rebuild completed successfully"
+          echo "✅ macOS additional native module rebuild completed"
         env:
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
-          PYTHON: /opt/homebrew/opt/python@3.11/bin/python3.11
 
-      - name: 🔧 Rebuild native modules for target platform (Windows)
+      - name: 🔧 Additional native module rebuild (Windows)
         if: matrix.platform == 'win'
         run: |
-          echo "🔧 Rebuilding native modules for Windows x64..."
-
+          echo "🔧 Performing additional native module rebuild for Windows..."
           # Clear any existing builds that might cause conflicts
           echo "🧹 Cleaning build artifacts..."
           if (Test-Path "node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build") { Remove-Item -Recurse -Force "node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build" }
           if (Test-Path "node_modules/.pnpm/keytar*/node_modules/keytar/build") { Remove-Item -Recurse -Force "node_modules/.pnpm/keytar*/node_modules/keytar/build" }
-
-          # Rebuild native modules specifically for Electron's Node version
-          echo "🏗️ Rebuilding with electron-builder..."
+          # Additional rebuild to ensure Electron compatibility
+          echo "🏗️ Additional rebuild with electron-builder..."
           pnpm exec electron-builder install-app-deps
-
-          echo "✅ Windows native module rebuild completed successfully"
+          echo "✅ Windows additional native module rebuild completed"
         env:
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
