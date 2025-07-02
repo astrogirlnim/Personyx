@@ -114,31 +114,31 @@ runTest('5.0 - Core Implementation Files Present', () => {
   return `All ${requiredFiles.length} core files present`;
 });
 
-  // Test 2: FirebaseCloudService Implementation  
-  runTest('5.3 - FirebaseCloudService Implementation', () => {
+// Test 2: FirebaseCloudService Implementation
+runTest('5.3 - FirebaseCloudService Implementation', () => {
   const {
     PersonyxCloudService,
   } = require('../dist/main/main/services/PersonyxCloudService.js');
 
-      console.log('   🌐 Testing FirebaseCloudService...');
-    const cloudService = new PersonyxCloudService();
+  console.log('   🌐 Testing FirebaseCloudService...');
+  const cloudService = new PersonyxCloudService();
 
   // Test service creation
   if (!cloudService) {
-          throw new Error('Failed to create FirebaseCloudService instance');
+    throw new Error('Failed to create FirebaseCloudService instance');
   }
   console.log('      ✓ Service instance created');
 
   // Test status method
   const status = cloudService.getStatus();
   if (!status || typeof status.initialized !== 'boolean') {
-          throw new Error('Invalid status response from FirebaseCloudService');
+    throw new Error('Invalid status response from FirebaseCloudService');
   }
   console.log('      ✓ Status method working');
   console.log(`      ✓ Service initialized: ${status.initialized}`);
   console.log(`      ✓ Has API key: ${status.hasApiKey}`);
 
-      return `FirebaseCloudService functional with status: ${JSON.stringify(status)}`;
+  return `FirebaseCloudService functional with status: ${JSON.stringify(status)}`;
 });
 
 // Test 3: SettingsService Implementation

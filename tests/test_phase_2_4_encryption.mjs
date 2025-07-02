@@ -16,7 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Mock Electron for testing environment
 global.process = {
   ...process,
-  type: 'main'
+  type: 'main',
 };
 
 // Add src paths to Node resolution
@@ -33,12 +33,12 @@ let criticalFailures = [];
 function logTest(name, passed, details = '') {
   const status = passed ? '✅' : '❌';
   const message = `${status} ${name}`;
-  
+
   console.log(message);
   if (details) {
     console.log(`   ${details}`);
   }
-  
+
   if (passed) {
     testsPassed++;
   } else {
@@ -54,7 +54,9 @@ async function runEncryptionTests() {
     console.log('1. 🏗️ Testing TokenVault Encryption System\n');
 
     // Import TokenVault functions
-    const { storeToken, getToken } = await import('../dist/main/main/security/tokenVault.js');
+    const { storeToken, getToken } = await import(
+      '../dist/main/main/security/tokenVault.js'
+    );
 
     // Test 1: Basic Token Storage and Retrieval
     console.log('📝 Test 1: Basic Token Storage and Retrieval');
@@ -67,28 +69,37 @@ async function runEncryptionTests() {
     console.log('\n📝 Test 2: Token Encryption Verification');
     const { getDatabase } = await import('../dist/main/main/db/connection.js');
     const db = getDatabase();
-    
+
     const { apiTokens } = await import('../dist/main/main/db/schema.js');
     const encryptedRows = await db.select().from(apiTokens);
-    const hasEncryptedTokens = encryptedRows.length > 0 && encryptedRows.every(row => 
-      row.tokenEncrypted !== testToken && // Token is not stored in plaintext
-      row.tokenEncrypted.length > 0 && // Encrypted token exists
-      row.iv.length > 0 && // IV exists
-      row.authTag.length > 0 // Auth tag exists
+    const hasEncryptedTokens =
+      encryptedRows.length > 0 &&
+      encryptedRows.every(
+        row =>
+          row.tokenEncrypted !== testToken && // Token is not stored in plaintext
+          row.tokenEncrypted.length > 0 && // Encrypted token exists
+          row.iv.length > 0 && // IV exists
+          row.authTag.length > 0 // Auth tag exists
+      );
+    logTest(
+      'CRITICAL: Tokens are properly encrypted in database',
+      hasEncryptedTokens
     );
-    logTest('CRITICAL: Tokens are properly encrypted in database', hasEncryptedTokens);
 
     // Test 3: IV Uniqueness
     console.log('\n📝 Test 3: IV Uniqueness');
     const testToken2 = 'sk-test-different-token';
     await storeToken('notion', testToken2);
-    
+
     const allRows = await db.select().from(apiTokens);
     const ivs = allRows.map(row => row.iv);
     const uniqueIvs = [...new Set(ivs)];
-    logTest('CRITICAL: Each token has unique IV', ivs.length === uniqueIvs.length && ivs.length > 1);
+    logTest(
+      'CRITICAL: Each token has unique IV',
+      ivs.length === uniqueIvs.length && ivs.length > 1
+    );
 
-    // Test 4: Auth Tag Verification  
+    // Test 4: Auth Tag Verification
     console.log('\n📝 Test 4: Authentication Tag Verification');
     const hasValidAuthTags = allRows.every(row => {
       // Auth tags should be hex encoded and have expected length
@@ -104,10 +115,11 @@ async function runEncryptionTests() {
     // Test 5: Tamper Detection (Database Integrity)
     console.log('\n📝 Test 5: Tamper Detection');
     // Verify that encrypted tokens are different from original
-    const tamperDetected = allRows.every(row => 
-      row.tokenEncrypted !== testToken && 
-      row.tokenEncrypted !== testToken2 &&
-      row.tokenEncrypted.length > 0
+    const tamperDetected = allRows.every(
+      row =>
+        row.tokenEncrypted !== testToken &&
+        row.tokenEncrypted !== testToken2 &&
+        row.tokenEncrypted.length > 0
     );
     logTest('CRITICAL: Tamper detection works', tamperDetected);
 
@@ -118,24 +130,26 @@ async function runEncryptionTests() {
     await storeToken('test-strength', testKeyStrength);
     const retrievedKeyTest = await getToken('test-strength');
     const keyDerivationStrong = retrievedKeyTest === testKeyStrength;
-    logTest('CRITICAL: Strong key derivation (functional test)', keyDerivationStrong);
+    logTest(
+      'CRITICAL: Strong key derivation (functional test)',
+      keyDerivationStrong
+    );
 
     // Test 7: Multiple Service Isolation
     console.log('\n📝 Test 7: Multiple Service Isolation');
     await storeToken('slack', 'xoxb-slack-token-123');
     await storeToken('linear', 'lin_api_token_456');
-    
+
     const openaiToken = await getToken('openai');
     const slackToken = await getToken('slack');
     const linearToken = await getToken('linear');
-    
-    const tokensIsolated = (
+
+    const tokensIsolated =
       openaiToken === testToken &&
       slackToken === 'xoxb-slack-token-123' &&
       linearToken === 'lin_api_token_456' &&
       openaiToken !== slackToken &&
-      slackToken !== linearToken
-    );
+      slackToken !== linearToken;
     logTest('Multiple service token isolation', tokensIsolated);
 
     // Test 8: Token Overwrite Security
@@ -143,14 +157,21 @@ async function runEncryptionTests() {
     const newOpenAiToken = 'sk-new-openai-token-789';
     await storeToken('openai', newOpenAiToken);
     const updatedToken = await getToken('openai');
-    
+
     // Verify old token is completely overwritten
     const currentRows = await db.select().from(apiTokens);
     const openaiRows = currentRows.filter(row => row.service === 'openai');
-    const noOldTokenRemaining = !currentRows.some(row => 
-      row.tokenEncrypted === testToken || row.tokenEncrypted.includes('1234567890abcdef')
+    const noOldTokenRemaining = !currentRows.some(
+      row =>
+        row.tokenEncrypted === testToken ||
+        row.tokenEncrypted.includes('1234567890abcdef')
     );
-    logTest('Token overwrite security', updatedToken === newOpenAiToken && openaiRows.length === 1 && noOldTokenRemaining);
+    logTest(
+      'Token overwrite security',
+      updatedToken === newOpenAiToken &&
+        openaiRows.length === 1 &&
+        noOldTokenRemaining
+    );
 
     // Test 9: Empty/Null Token Handling
     console.log('\n📝 Test 9: Empty/Null Token Handling');
@@ -179,24 +200,27 @@ async function runEncryptionTests() {
     // Test 11: Database Storage Verification
     console.log('📝 Test 11: Database Storage Verification');
     const finalRows = await db.select().from(apiTokens);
-    const allFieldsPresent = finalRows.every(row => 
-      row.id && 
-      row.service && 
-      row.tokenEncrypted && 
-      row.iv && 
-      row.authTag
+    const allFieldsPresent = finalRows.every(
+      row =>
+        row.id && row.service && row.tokenEncrypted && row.iv && row.authTag
       // Note: Skip timestamp validation due to SQLite/Drizzle timestamp handling
     );
     logTest('All required encryption fields present', allFieldsPresent);
 
     // Test 12: No Plaintext Storage
     console.log('\n📝 Test 12: No Plaintext Storage');
-    const testTokens = [testToken, newOpenAiToken, 'xoxb-slack-token-123', 'lin_api_token_456'];
-    const noPlaintextStored = !finalRows.some(row => 
-      testTokens.some(token => 
-        row.tokenEncrypted.includes(token) ||
-        row.iv.includes(token) ||
-        row.authTag.includes(token)
+    const testTokens = [
+      testToken,
+      newOpenAiToken,
+      'xoxb-slack-token-123',
+      'lin_api_token_456',
+    ];
+    const noPlaintextStored = !finalRows.some(row =>
+      testTokens.some(
+        token =>
+          row.tokenEncrypted.includes(token) ||
+          row.iv.includes(token) ||
+          row.authTag.includes(token)
       )
     );
     logTest('CRITICAL: No plaintext tokens in database', noPlaintextStored);
@@ -209,11 +233,11 @@ async function runEncryptionTests() {
         Buffer.from(row.tokenEncrypted, 'hex');
         Buffer.from(row.iv, 'hex');
         Buffer.from(row.authTag, 'hex');
-        
+
         // Verify expected lengths
         const ivBuffer = Buffer.from(row.iv, 'hex');
         const authTagBuffer = Buffer.from(row.authTag, 'hex');
-        
+
         return ivBuffer.length === 16 && authTagBuffer.length === 16; // GCM standard
       } catch {
         return false;
@@ -223,17 +247,18 @@ async function runEncryptionTests() {
 
     // Clean up test tokens
     console.log('\n🧹 Cleaning up test data...');
-    const { removeToken } = await import('../dist/main/main/security/tokenVault.js');
+    const { removeToken } = await import(
+      '../dist/main/main/security/tokenVault.js'
+    );
     try {
       await removeToken('openai');
-      await removeToken('notion'); 
+      await removeToken('notion');
       await removeToken('slack');
       await removeToken('linear');
       await removeToken('test-strength');
     } catch (error) {
       console.log('⚠️ Cleanup warning:', error.message);
     }
-
   } catch (error) {
     console.error('❌ CRITICAL: Encryption test setup failed:', error);
     testsFailed++;
@@ -256,7 +281,9 @@ async function main() {
   }
 
   if (testsFailed === 0) {
-    console.log('\n🎉 All encryption tests passed! Row-level security is robust.');
+    console.log(
+      '\n🎉 All encryption tests passed! Row-level security is robust.'
+    );
     process.exit(0);
   } else {
     console.log('\n⚠️ Some encryption tests failed. Security review required.');
@@ -267,4 +294,4 @@ async function main() {
 main().catch(error => {
   console.error('💥 Encryption test runner failed:', error);
   process.exit(1);
-}); 
+});
