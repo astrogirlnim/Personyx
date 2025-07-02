@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Personyx Development Script - Using PROVEN Working Approach
-# Based on successful aggressive-native-fix.sh implementation
-# Python 3.11 + @electron/rebuild method that actually works
+# Personyx Development Script - Comprehensive One-Step Setup
+# Handles ALL native module issues automatically with robust fallback strategies
+# This approach eliminates manual fixes and ensures consistent development environment
 
 set -e  # Exit on any error
 
 echo ""
 echo "🚀 Starting Personyx Development Environment..."
-echo "   📋 Using PROVEN Working Approach (Python 3.11 + @electron/rebuild)"
-echo "   ✅ Based on successful aggressive-native-fix.sh results"
+echo "   ✅ Comprehensive one-step setup with automatic native module handling"
+echo "   🛠️  Includes automatic fixes for better-sqlite3 and keytar issues"
 echo ""
 
 # Function to check if a command exists
@@ -60,7 +60,6 @@ check_node_version() {
     
     if [ "$current_version" = "$expected_version" ]; then
         echo "✅ Node.js version is correct!"
-        echo "🚀 All systems ready for development"
         return 0
     else
         echo "⚠️  Node.js version mismatch detected"
@@ -90,101 +89,247 @@ validate_project_structure() {
     return 0
 }
 
-# Setup Python 3.11 environment (PROVEN WORKING APPROACH)
-setup_python_environment() {
+# Check if native modules are properly built and located
+check_native_modules() {
     echo ""
-    echo "🐍 Setting up Python 3.11 environment (PROVEN WORKING)..."
-    echo "   📋 Using the same approach that successfully built native modules"
-    echo ""
+    echo "🔍 Comprehensive native module status check..."
     
-    # Check if Python 3.11 is available
-    if ! command -v python3.11 >/dev/null 2>&1; then
-        echo "❌ Python 3.11 not found"
-        echo "💡 Install: brew install python@3.11"
-        return 1
+    local all_modules_ok=true
+    
+    # Check better-sqlite3 in expected location
+    local better_sqlite3_patterns=(
+        "node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3/lib/binding/node-v119-darwin-*/better_sqlite3.node"
+        "node_modules/better-sqlite3/lib/binding/node-v119-darwin-*/better_sqlite3.node"
+    )
+    
+    local sqlite_found=false
+    for pattern in "${better_sqlite3_patterns[@]}"; do
+        if ls $pattern >/dev/null 2>&1; then
+            echo "✅ better-sqlite3: Native module found in correct location"
+            sqlite_found=true
+            break
+        fi
+    done
+    
+    if [ "$sqlite_found" = false ]; then
+        echo "⚠️  better-sqlite3: Native module missing from expected location"
+        all_modules_ok=false
     fi
     
-    local python_version=$(python3.11 --version)
-    echo "✅ Found: $python_version"
+    # Check keytar native module
+    local keytar_patterns=(
+        "node_modules/.pnpm/keytar@*/node_modules/keytar/build/Release/keytar.node"
+        "node_modules/keytar/build/Release/keytar.node"
+    )
     
-    # Check setuptools
-    if python3.11 -c "import setuptools" 2>/dev/null; then
-        echo "✅ setuptools available in Python 3.11"
+    local keytar_found=false
+    for pattern in "${keytar_patterns[@]}"; do
+        if ls $pattern >/dev/null 2>&1; then
+            echo "✅ keytar: Native module found"
+            keytar_found=true
+            break
+        fi
+    done
+    
+    if [ "$keytar_found" = false ]; then
+        echo "⚠️  keytar: Native module missing"
+        all_modules_ok=false
+    fi
+    
+    if [ "$all_modules_ok" = true ]; then
+        echo "✅ All native modules are properly built and located"
+        return 0
     else
-        echo "❌ setuptools missing in Python 3.11"
-        echo "💡 Install: python3.11 -m pip install setuptools wheel"
+        echo "🔧 Native modules need rebuilding/fixing"
         return 1
     fi
-    
-    # Configure environment variables (same as aggressive script)
-    export PYTHON="/opt/homebrew/bin/python3.11"
-    export npm_config_python="/opt/homebrew/bin/python3.11"
-    
-    echo "✅ Python 3.11 environment configured:"
-    echo "   PYTHON=$PYTHON"
-    echo "   npm_config_python=$npm_config_python"
-    
-    return 0
 }
 
-# Clean environment (enhanced approach)
-clean_environment() {
+# Fix better-sqlite3 location if built in wrong place
+fix_better_sqlite3_location() {
     echo ""
-    echo "🧹 Applying Enhanced Clean Environment Strategy..."
-    echo "   📋 Using the proven approach that resolved CI/CD native module conflicts"
-    echo ""
+    echo "🔧 Checking and fixing better-sqlite3 location..."
     
-    echo "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
-    rm -rf node_modules
-    npm cache clean --force >/dev/null 2>&1 || true
+    # Check if it's built but in wrong location
+    local built_sqlite3_patterns=(
+        "node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+        "node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+    )
     
-    echo "🧹 Cleaning node_gyp_bins directories (symlink conflict prevention)..."
-    find . -type d -name "node_gyp_bins" -exec rm -rf {} + 2>/dev/null || true
+    local built_found=false
+    local source_path=""
+    for pattern in "${built_sqlite3_patterns[@]}"; do
+        if ls $pattern >/dev/null 2>&1; then
+            source_path=$(ls $pattern | head -1)
+            built_found=true
+            break
+        fi
+    done
     
-    echo "🧹 Cleaning pnpm cache..."
-    pnpm store prune >/dev/null 2>&1 || true
-    
-    echo "✅ Enhanced clean environment prepared"
+    if [ "$built_found" = true ]; then
+        echo "🔍 Found better-sqlite3 built in: $source_path"
+        
+        # Determine target directory
+        local target_dir=""
+        if [[ $source_path == *".pnpm"* ]]; then
+            # Extract the pnpm path
+            local pnpm_base=$(echo "$source_path" | sed 's|/build/Release/better_sqlite3.node||')
+            target_dir="$pnpm_base/lib/binding/node-v119-darwin-arm64"
+        else
+            target_dir="node_modules/better-sqlite3/lib/binding/node-v119-darwin-arm64"
+        fi
+        
+        echo "🎯 Target directory: $target_dir"
+        
+        # Create target directory and copy file
+        mkdir -p "$target_dir"
+        cp "$source_path" "$target_dir/better_sqlite3.node"
+        
+        echo "✅ better-sqlite3 copied to correct location"
+        return 0
+    else
+        echo "❌ better-sqlite3 not found in build directory"
+        return 1
+    fi
 }
 
-# Install dependencies
-install_dependencies() {
-    echo ""
-    echo "📦 Installing dependencies (clean approach from proven method)..."
-    pnpm install --frozen-lockfile
-    echo "✅ Dependencies installed"
-}
-
-# Rebuild native modules (PROVEN WORKING METHOD)
+# Rebuild native modules using comprehensive approach
 rebuild_native_modules() {
     echo ""
-    echo "🔧 Rebuilding native modules for Electron context..."
-    echo "   📋 Using PROVEN @electron/rebuild method (Python 3.11)"
+    echo "🔧 Rebuilding native modules using comprehensive approach..."
+    echo "   📋 Strategy: electron-builder install-app-deps + targeted rebuilds"
     echo "   🎯 Target: Electron 28.3.3 (Node.js module version 119)"
-    echo "   🐍 Python: $(python3.11 --version)"
     echo ""
     
-    # Use the proven @electron/rebuild approach
-    echo "🔧 Running @electron/rebuild with Python 3.11..."
-    npx electron-rebuild --version=28.3.3 --arch=arm64
+    local rebuild_success=false
     
-    echo "✅ Native modules rebuilt successfully for Electron"
-    echo "   📋 Using proven @electron/rebuild approach"
+    # Strategy 1: Use electron-builder install-app-deps (primary approach)
+    echo "🔧 Strategy 1: Running electron-builder install-app-deps..."
+    if electron-builder install-app-deps; then
+        echo "✅ electron-builder install-app-deps completed"
+        
+        # Check if better-sqlite3 needs location fix
+        if ! check_native_modules >/dev/null 2>&1; then
+            echo "🔧 Applying better-sqlite3 location fix..."
+            if fix_better_sqlite3_location; then
+                echo "✅ better-sqlite3 location fixed"
+            fi
+        fi
+        
+        # Check if keytar needs targeted rebuild
+        if ! ls node_modules/.pnpm/keytar@*/node_modules/keytar/build/Release/keytar.node >/dev/null 2>&1 && \
+           ! ls node_modules/keytar/build/Release/keytar.node >/dev/null 2>&1; then
+            echo "🔧 keytar missing, doing targeted rebuild..."
+            if npx @electron/rebuild --only=keytar --force >/dev/null 2>&1; then
+                echo "✅ keytar rebuilt successfully"
+            else
+                echo "⚠️  keytar rebuild had issues but continuing..."
+            fi
+        fi
+        
+        rebuild_success=true
+    else
+        echo "⚠️  electron-builder install-app-deps failed, trying fallback..."
+    fi
+    
+    # Strategy 2: Targeted rebuilds (fallback approach)
+    if [ "$rebuild_success" = false ]; then
+        echo "🔧 Strategy 2: Targeted native module rebuilds..."
+        
+        echo "   🔧 Rebuilding better-sqlite3..."
+        if npx @electron/rebuild --only=better-sqlite3 --force; then
+            echo "   ✅ better-sqlite3 rebuilt"
+            fix_better_sqlite3_location || true
+        fi
+        
+        echo "   🔧 Rebuilding keytar..."
+        if npx @electron/rebuild --only=keytar --force; then
+            echo "   ✅ keytar rebuilt"
+        fi
+        
+        rebuild_success=true
+    fi
+    
+    if [ "$rebuild_success" = true ]; then
+        echo "✅ Native module rebuild process completed"
+        return 0
+    else
+        echo "❌ All rebuild strategies failed"
+        return 1
+    fi
 }
 
-# Verify native modules
+# Ensure dependencies are installed
+ensure_dependencies() {
+    echo ""
+    echo "📦 Checking dependencies..."
+    
+    if [ ! -d "node_modules" ]; then
+        echo "📦 Installing dependencies (this will also rebuild native modules)..."
+        pnpm install --frozen-lockfile
+        echo "✅ Dependencies installed"
+    else
+        echo "✅ Dependencies already installed"
+    fi
+}
+
+# Final verification of native modules
 verify_native_modules() {
     echo ""
-    echo "🔍 Verifying native modules (CI/CD pipeline verification)..."
+    echo "🔍 Final verification of native modules..."
     
-    local better_sqlite3_path="node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3/lib/binding/node-v119-darwin-arm64/better_sqlite3.node"
+    local verification_passed=true
     
-    if ls $better_sqlite3_path >/dev/null 2>&1; then
-        echo "✅ better-sqlite3: Native binding found"
-        echo "💡 Database functionality should work correctly"
+    # Verify better-sqlite3
+    local better_sqlite3_patterns=(
+        "node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3/lib/binding/node-v119-darwin-*/better_sqlite3.node"
+        "node_modules/better-sqlite3/lib/binding/node-v119-darwin-*/better_sqlite3.node"
+    )
+    
+    local sqlite_verified=false
+    for pattern in "${better_sqlite3_patterns[@]}"; do
+        if ls $pattern >/dev/null 2>&1; then
+            echo "✅ better-sqlite3: Verified and ready"
+            sqlite_verified=true
+            break
+        fi
+    done
+    
+    if [ "$sqlite_verified" = false ]; then
+        echo "❌ better-sqlite3: Still missing after rebuild"
+        verification_passed=false
+    fi
+    
+    # Verify keytar
+    local keytar_patterns=(
+        "node_modules/.pnpm/keytar@*/node_modules/keytar/build/Release/keytar.node"
+        "node_modules/keytar/build/Release/keytar.node"
+    )
+    
+    local keytar_verified=false
+    for pattern in "${keytar_patterns[@]}"; do
+        if ls $pattern >/dev/null 2>&1; then
+            echo "✅ keytar: Verified and ready"
+            keytar_verified=true
+            break
+        fi
+    done
+    
+    if [ "$keytar_verified" = false ]; then
+        echo "❌ keytar: Still missing after rebuild"
+        verification_passed=false
+    fi
+    
+    if [ "$verification_passed" = true ]; then
+        echo "🎉 All native modules verified and ready!"
+        return 0
     else
-        echo "❌ better-sqlite3: Native binding missing"
-        echo "💡 Database functionality will fail - this was the original error"
+        echo "⚠️  Some native modules still have issues - app may have limited functionality"
+        echo ""
+        echo "🛠️  Manual troubleshooting options:"
+        echo "   1. Run: ./scripts/aggressive-native-fix.sh"
+        echo "   2. Check Python 3.11: brew install python@3.11"
+        echo "   3. Clean install: rm -rf node_modules && pnpm install"
         return 1
     fi
 }
@@ -193,12 +338,20 @@ verify_native_modules() {
 start_development() {
     echo ""
     echo "🚀 Starting Personyx development server..."
-    echo "   📋 All native modules verified and ready"
-    echo "   🔧 Database connectivity should work correctly"
+    echo "   🔧 All native modules verified and ready"
+    echo "   🎯 This will start BOTH renderer (Vite) AND main process (Electron)"
+    echo "   🖥️  Look for the tray icon in your system tray/menu bar"
+    echo ""
+    echo "📋 Development server will:"
+    echo "   1. Start Vite dev server on http://localhost:3000"
+    echo "   2. Compile TypeScript for main process (watch mode)"
+    echo "   3. Launch Electron app with hot reload"
+    echo "   4. Show tray icon in system tray"
     echo ""
     
-    # Run the development server
-    npm run dev
+    # Run the development server using the start script
+    # This runs: concurrently "npm run dev" "wait-on http://localhost:3000 && npm run electron:dev"
+    npm run start
 }
 
 # Main execution flow
@@ -221,36 +374,27 @@ main() {
         exit 1
     fi
     
-    # Step 4: Setup Python 3.11 environment (PROVEN APPROACH)
-    if ! setup_python_environment; then
-        echo "❌ Python 3.11 environment setup failed"
-        echo "💡 This is required for native module compilation"
-        exit 1
+    # Step 4: Ensure dependencies are installed
+    ensure_dependencies
+    
+    # Step 5: Check and fix native modules
+    if ! check_native_modules; then
+        echo "🔧 Native modules need rebuilding/fixing..."
+        
+        if rebuild_native_modules; then
+            echo "✅ Native module rebuild completed"
+        else
+            echo "❌ Native module rebuild failed"
+            echo "⚠️  Continuing anyway - app may have limited functionality"
+        fi
     fi
     
-    # Step 5: Clean environment
-    clean_environment
+    # Step 6: Final verification
+    verify_native_modules
     
-    # Step 6: Install dependencies
-    install_dependencies
-    
-    # Step 7: Rebuild native modules (PROVEN METHOD)
-    if ! rebuild_native_modules; then
-        echo "❌ Native module rebuild failed"
-        echo "💡 Try running: ./scripts/aggressive-native-fix.sh"
-        exit 1
-    fi
-    
-    # Step 8: Verify native modules
-    if ! verify_native_modules; then
-        echo "❌ Native module verification failed"
-        # Don't exit - let user decide whether to continue
-        echo "⚠️  Continuing anyway - app may have database issues"
-    fi
-    
-    # Step 9: Start development
+    # Step 7: Start development server
     start_development
 }
 
-# Execute main function
+# Run main function
 main "$@" 
