@@ -1,6 +1,6 @@
 # System Patterns – The "How"
 
-_Last updated: 2025-01-03_
+_Last updated: 2025-01-13_
 
 ## High‑Level Architecture (Current Implementation)
 
@@ -23,25 +23,55 @@ Slack Bot / Linear Labeler ◄─── Hybrid AI Provider ────┘
                              Firebase Auth            Direct API
                              Cloud Functions         (User Keys)
                              (Managed Service)
+
+                Development Infrastructure Layer
+                          │
+                          ▼
+        Node.js Version Management → Native Module Context → Development Pipeline
+               │                           │                        │
+               ▼                           ▼                        ▼
+          .nvmrc + Volta           rebuild-for-electron      Enhanced dev.sh
+          check-node-version.js    rebuild-for-node          Comprehensive Validation
 ```
 
 ## Key Design Decisions
 
-| Decision                               | Reason                                                                             |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Electron 28 + TypeScript**           | Rapid cross‑platform desktop shell with mature tray APIs and native file access.   |
-| **React 18 + Tailwind CSS**            | Modern UI framework with responsive design system and component reusability.       |
-| **Event‑driven IPC (Electron ⇄ Core)** | Decouples UI from backend processing with type-safe communication.                 |
-| **SQLite + Drizzle ORM**               | Zero‑setup DB with typed migrations; lives inside user profile with encryption.    |
-| **LangGraph + OpenAI pipeline**        | Modular chain for embeddings, persona classification, and evidence scoring.        |
-| **Firebase + Cloud Functions**         | Managed embedding service with authentication and automatic scaling.               |
-| **Hybrid AI Provider System**          | User choice between self-managed keys and managed service with automatic fallback. |
-| **AES‑256-GCM TokenVault**             | Keeps all credentials local and encrypted with enterprise-grade security.          |
-| **Repository Pattern**                 | Clean data access layer with pagination, filtering, and type safety.               |
+| Decision                                | Reason                                                                             |
+| --------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Electron 28 + TypeScript**            | Rapid cross‑platform desktop shell with mature tray APIs and native file access.   |
+| **React 18 + Tailwind CSS**             | Modern UI framework with responsive design system and component reusability.       |
+| **Event‑driven IPC (Electron ⇄ Core)**  | Decouples UI from backend processing with type-safe communication.                 |
+| **SQLite + Drizzle ORM**                | Zero‑setup DB with typed migrations; lives inside user profile with encryption.    |
+| **LangGraph + OpenAI pipeline**         | Modular chain for embeddings, persona classification, and evidence scoring.        |
+| **Firebase + Cloud Functions**          | Managed embedding service with authentication and automatic scaling.               |
+| **Hybrid AI Provider System**           | User choice between self-managed keys and managed service with automatic fallback. |
+| **AES‑256-GCM TokenVault**              | Keeps all credentials local and encrypted with enterprise-grade security.          |
+| **Repository Pattern**                  | Clean data access layer with pagination, filtering, and type safety.               |
+| **Exact Node.js Version Enforcement**   | Eliminates ALL native module conflicts with 20.19.2 + comprehensive validation.    |
+| **Dual-Context Native Module Handling** | Perfect support for both Node.js testing and Electron runtime environments.        |
 
 ## Core Service Architecture
 
-### 1. Data Layer Services (Phase 2 - Complete)
+### 1. Development Infrastructure Layer (Infrastructure - Complete)
+
+```typescript
+// Node.js version enforcement and validation
+NodeVersionChecker.validate() → enforces exact 20.19.2 with helpful guidance
+VoltaConfig.autoSwitch() → automatic team member version switching
+EngineStrict.prevent() → blocks incompatible Node.js versions
+
+// Dual-context native module management
+NativeModuleManager.rebuildForElectron() → MODULE_VERSION 119 (runtime)
+NativeModuleManager.rebuildForNode() → MODULE_VERSION 115 (testing)
+NativeModuleManager.autoDetectContext() → intelligent context switching
+
+// Comprehensive development pipeline
+DevScript.validateEnvironment() → tools + versions + packages + rebuild
+DevScript.launchWithValidation() → pre-flight checks + enhanced debugging
+DevScript.handleErrors() → clear guidance + resolution steps
+```
+
+### 2. Data Layer Services (Phase 2 - Complete)
 
 ```typescript
 // Evidence scoring with sophisticated algorithm
@@ -58,7 +88,7 @@ PersonaRepo.findMany({ search?, pagination?, sorting? }) → personas[]
 EmbeddingRepo.findSimilar(vector, limit) → embeddings[]
 ```
 
-### 2. Hybrid AI Management (Phase 2.5 - Complete)
+### 3. Hybrid AI Management (Phase 2.5 - Complete)
 
 ```typescript
 // Secure credential storage
@@ -74,7 +104,7 @@ EmbeddingProviderManager.generateEmbeddings(texts[]) → embeddings[]
 // Automatically selects: Firebase (if available) → OpenAI (fallback)
 ```
 
-### 3. Interface Layer (Phase 3.1 - Complete)
+### 4. Interface Layer (Phase 3.1 - Complete)
 
 ```typescript
 // Tray UI with native integration
@@ -87,7 +117,26 @@ EvidenceScoreBanner.display() → score + setup instructions
 
 ## Reusable Patterns
 
-### 1. Provider Pattern (AI Services)
+### 1. Development Infrastructure Pattern (Node.js Standardization)
+
+```typescript
+interface IVersionManager {
+  validateVersion(): Promise<boolean>;
+  enforceExactVersion(): void;
+  provideGuidance(): string[];
+}
+
+interface INativeModuleManager {
+  rebuildForContext(context: 'node' | 'electron'): Promise<boolean>;
+  detectCurrentContext(): 'node' | 'electron';
+  handleVersionConflicts(): Promise<void>;
+}
+
+// Implementation: NodeVersionChecker, NativeModuleManager
+// Usage: Pre-hooks in package.json scripts, enhanced dev.sh
+```
+
+### 2. Provider Pattern (AI Services)
 
 ```typescript
 interface IEmbeddingProvider {
@@ -100,7 +149,7 @@ interface IEmbeddingProvider {
 // Manager: EmbeddingProviderManager (auto-selection + fallback)
 ```
 
-### 2. Repository Pattern (Data Access)
+### 3. Repository Pattern (Data Access)
 
 ```typescript
 interface IRepository<T> {
@@ -114,7 +163,7 @@ interface IRepository<T> {
 // Implementations: PersonaRepo, EvidenceRepo, ProductDocumentRepo, etc.
 ```
 
-### 3. Service Layer Pattern (Business Logic)
+### 4. Service Layer Pattern (Business Logic)
 
 ```typescript
 abstract class BaseService {
@@ -128,13 +177,34 @@ abstract class BaseService {
 // Implementations: EvidenceScoreService, EmbeddingRetrievalService, etc.
 ```
 
-### 4. Configuration Pattern (Environment Management)
+### 5. Configuration Pattern (Environment Management)
 
 ```typescript
 // Environment-based configuration with validation
 dotenv.config(); // Load .env file
 ConfigValidator.validate(); // Ensure required variables present
 TokenVault.loadCredentials(); // Decrypt stored credentials
+
+// Node.js version enforcement
+NodeVersionChecker.enforceExact('20.19.2'); // Exact version validation
+VoltaManager.autoSwitch(); // Team consistency
+```
+
+### 6. Development Pipeline Pattern (Enhanced Development Experience)
+
+```typescript
+// Comprehensive pre-flight validation pipeline
+DevelopmentPipeline = [
+  ToolsValidator.checkCriticalTools(), // node, pnpm, git
+  NodeVersionChecker.validateExact(),  // 20.19.2 enforcement
+  ProjectValidator.checkStructure(),   // package.json, .nvmrc, scripts
+  DependencyValidator.checkPackages(), // critical packages present
+  NativeModuleManager.rebuildForElectron(), // context-aware rebuild
+  ApplicationLauncher.startWithDebugging()  // enhanced debugging
+];
+
+// Error handling with guidance
+ErrorHandler.provideGuidance(error) → specific resolution steps
 ```
 
 ## Security Architecture
@@ -156,6 +226,12 @@ TokenVault.loadCredentials(); // Decrypt stored credentials
 - **User Choice**: Self-managed OpenAI keys OR managed Firebase service
 - **Automatic Fallback**: Firebase unavailable → OpenAI direct (seamless)
 - **Error Handling**: Clear guidance when API keys missing or invalid
+
+### 4. Development Security
+
+- **Version Enforcement**: Prevents potentially vulnerable Node.js versions
+- **Native Module Security**: Controlled compilation with verified sources
+- **Pre-commit Hooks**: Gitleaks security scanning + linting validation
 
 ## Database Schema Patterns
 
@@ -199,73 +275,8 @@ interface PersonaType {
 - **Vector Indexing**: Efficient similarity search with cosine distance
 - **Lazy Loading**: Services initialize only when needed
 
-## Error Handling Patterns
+### 3. Development Performance
 
-### 1. Graceful Degradation
-
-```typescript
-try {
-  return await firebaseProvider.generateEmbeddings(texts);
-} catch (error) {
-  logger.warn('Firebase unavailable, falling back to OpenAI');
-  return await openaiProvider.generateEmbeddings(texts);
-}
-```
-
-### 2. User Guidance
-
-- **Missing API Keys**: Clear setup instructions with validation
-- **Service Unavailable**: Automatic fallback with user notification
-- **Configuration Errors**: Detailed error messages with resolution steps
-
-## Development Patterns
-
-### 1. Testing Strategy
-
-- **Unit Tests**: Individual service methods with mock dependencies
-- **Integration Tests**: End-to-end feature validation with real database
-- **Configuration Tests**: Validation scripts for environment setup
-
-### 2. Documentation
-
-- **Code Comments**: JSDoc annotations for all public APIs
-- **Setup Guides**: Step-by-step instructions for Firebase and OpenAI
-- **Architecture Docs**: ER diagrams, API specifications, deployment guides
-
-## Future Extension Points
-
-### 1. Additional AI Providers
-
-- **Pattern Ready**: IEmbeddingProvider interface supports new providers
-- **Examples**: Anthropic, Cohere, local models (Ollama)
-- **Integration**: Add to EmbeddingProviderManager with priority ordering
-
-### 2. Advanced Features
-
-- **Vector Databases**: Pinecone, Weaviate integration via repository pattern
-- **Model Options**: Multiple embedding models per provider
-- **Cost Tracking**: Usage monitoring and billing integration
-
-### 3. External Integrations
-
-- **Plugin Architecture**: VS Code, Slack, Linear adapters
-- **Webhook Support**: Real-time updates from external systems
-- **API Gateway**: GraphQL or REST API for external access
-
-## Technology Stack Validation
-
-### ✅ Production Ready
-
-- **Electron 28**: Cross-platform desktop with native file access
-- **React 18**: Modern UI with hooks and concurrent features
-- **TypeScript 5.3**: Strict type checking with advanced features
-- **SQLite + Drizzle**: Zero-config database with type-safe migrations
-- **Firebase**: Enterprise-grade authentication and cloud functions
-- **OpenAI**: Production embedding service with rate limiting
-
-### 🎯 Scaling Considerations
-
-- **Database**: SQLite → PostgreSQL for multi-user scenarios
-- **Caching**: In-memory → Redis for distributed caching
-- **Functions**: Firebase → Dedicated microservices for higher volume
-- **Monitoring**: Application insights and performance tracking
+- **Native Module Caching**: Context-aware rebuilds prevent unnecessary recompilation
+- **Version Validation Caching**: Fast validation with helpful error messages
+- **Parallel Processing**: Concurrent TypeScript compilation + validation
