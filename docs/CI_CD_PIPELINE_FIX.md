@@ -12,6 +12,7 @@ The GitHub Actions `main-build.yml` pipeline was failing at the package step due
    - Caused NODE_MODULE_VERSION mismatches
 
 2. **Python distutils Missing**
+   - Ubuntu 24.04 lacks Python 3.11 dev packages
    - Python 3.12+ removed distutils module
    - node-gyp requires distutils for native module compilation
    - Caused `ModuleNotFoundError: No module named 'distutils'`
@@ -54,15 +55,17 @@ npm install --save-dev @electron/rebuild@3.6.0
 **Linux**:
 
 ```bash
-sudo apt-get install python3.11-dev python3.11-distutils
-python3.11 -c "import distutils; print('✅ distutils available')"
+sudo apt-get install build-essential libsecret-1-dev python3-dev
+python -m pip install --upgrade setuptools wheel
+python -c "import setuptools; print('✅ setuptools available')"
 ```
 
 **macOS**:
 
 ```bash
-# Python 3.11 from setup-python includes distutils
-python3 -c "import distutils; print('✅ distutils ready')"
+# Install setuptools for the Python version from setup-python action
+python -m pip install --upgrade setuptools wheel
+python -c "import setuptools; print('✅ setuptools ready')"
 ```
 
 **Windows**:

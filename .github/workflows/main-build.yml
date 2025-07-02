@@ -41,9 +41,11 @@ jobs:
       - name: 🔧 Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libsecret-1-dev python3.11-dev python3.11-distutils
-          # Ensure distutils is available for node-gyp
-          python3.11 -c "import distutils; print('✅ distutils available')"
+          sudo apt-get install -y build-essential libsecret-1-dev python3-dev
+          # Install distutils for the Python version from setup-python action
+          python -m pip install --upgrade setuptools wheel
+          # Verify distutils is available for node-gyp
+          python -c "import setuptools; print('✅ setuptools available for node-gyp')"
 
       - name: 📋 Install dependencies
         run: |
@@ -130,17 +132,21 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libsecret-1-dev python3.11-dev python3.11-distutils
-          # Verify distutils availability
-          python3.11 -c "import distutils; print('✅ distutils ready for node-gyp')"
+          sudo apt-get install -y build-essential libsecret-1-dev python3-dev
+          # Install setuptools for the Python version from setup-python action
+          python -m pip install --upgrade setuptools wheel
+          # Verify setuptools availability
+          python -c "import setuptools; print('✅ setuptools ready for node-gyp')"
 
       - name: 🔧 Install system dependencies (macOS)
         if: matrix.platform == 'mac'
         run: |
           # Ensure latest build tools
           xcode-select --install 2>/dev/null || true
-          # Verify Python has distutils (should be available in 3.11)
-          python3 -c "import distutils; print('✅ distutils ready for node-gyp')"
+          # Install setuptools for the Python version from setup-python action
+          python -m pip install --upgrade setuptools wheel
+          # Verify setuptools availability
+          python -c "import setuptools; print('✅ setuptools ready for node-gyp')"
 
       - name: 🔧 Configure Python for native modules (Windows)
         if: matrix.platform == 'win'
