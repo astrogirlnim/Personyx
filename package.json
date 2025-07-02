@@ -48,8 +48,7 @@
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "check-firebase": "node scripts/check-firebase-config.js",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
-    "postinstall": "if [ \"$CI\" = \"true\" ]; then echo 'Skipping postinstall in CI'; else npm run rebuild-for-electron || echo 'Native module rebuild failed, but continuing...'; fi",
-    "prepare": "husky"
+    "postinstall": "echo \"Skipping postinstall in CI/dev environments\""
   },
   "dependencies": {
     "@types/js-yaml": "^4.0.9",

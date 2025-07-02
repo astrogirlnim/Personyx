@@ -34,89 +34,12 @@ jobs:
           node-version-file: .nvmrc # Consistent with PR validation
           cache: pnpm
 
-      # ---------- Install System Dependencies with Python 3.11 ----------
-      - name: 🔧 Install system dependencies for native modules
-        run: |
-          sudo apt-get update
-          # Install Python 3.11 specifically (has distutils, unlike 3.12+)
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.11 python3.11-dev python3.11-distutils
-          # Install other build dependencies
-          sudo apt-get install -y build-essential libsecret-1-dev
-          # Configure Python for node-gyp
-          sudo ln -sf /usr/bin/python3.11 /usr/bin/python3
-          python3 --version
-          echo "✅ System dependencies installed with Python 3.11"
-
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: |
-          echo "🔧 Installing dependencies with proper Electron native module configuration..."
-          # Install dependencies first
+          echo "🔧 Installing dependencies..."
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
-
-      # ---------- Comprehensive Native Module Setup ----------
-      - name: 🔧 Rebuild native modules for Electron
-        run: |
-          echo "🔧 Rebuilding native modules for Electron compatibility..."
-
-          # Clear any potentially problematic build artifacts
-          echo "🧹 Cleaning build artifacts..."
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-
-          # Multi-strategy rebuild approach to handle pnpm + CI environment issues
-          echo "🏗️ Attempting native module rebuild with fallback strategies..."
-
-          # Strategy 1: Use @electron/rebuild (most reliable in CI)
-          echo "🔄 Strategy 1: @electron/rebuild..."
-          if npx @electron/rebuild --only=better-sqlite3,keytar --force; then
-            echo "✅ @electron/rebuild succeeded"
-          else
-            echo "⚠️ @electron/rebuild failed, trying electron-builder..."
-            
-            # Strategy 2: electron-builder with error handling
-            echo "🔄 Strategy 2: electron-builder install-app-deps..."
-            if pnpm exec electron-builder install-app-deps; then
-              echo "✅ electron-builder succeeded"
-            else
-              echo "⚠️ electron-builder failed, trying manual pnpm rebuild..."
-              
-              # Strategy 3: Manual pnpm rebuild (fallback for CI)
-              echo "🔄 Strategy 3: pnpm rebuild with CI-friendly settings..."
-              # Set additional CI-friendly environment variables
-              export npm_config_prefer_offline=true
-              export npm_config_audit=false
-              export npm_config_fund=false
-              export npm_config_update_notifier=false
-              
-              # Use pnpm rebuild with specific modules
-              if pnpm rebuild better-sqlite3 keytar --reporter=silent; then
-                echo "✅ pnpm rebuild succeeded"
-              else
-                echo "❌ All rebuild strategies failed"
-                echo "📋 Attempting to continue with existing binaries..."
-                # Don't fail the build - let it continue and see if existing binaries work
-              fi
-            fi
-          fi
-
-          echo "✅ Native module rebuild process completed"
-        env:
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_prefer_offline: true
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_loglevel: warn
-          PYTHON: /usr/bin/python3.11
 
       # ---------- Security & Quality ----------
       - name: 🕵️ Gitleaks Secret Scan
