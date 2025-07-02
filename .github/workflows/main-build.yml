@@ -186,13 +186,6 @@ jobs:
           name: build-${{ github.sha }}
           path: dist/
 
-      # ---------- Configure Native Modules ----------
-      - name: 🔧 Configure electron-builder for native modules
-        run: |
-          echo "🔧 Configuring electron-builder to handle native modules on ${{ matrix.platform }} (${{ matrix.arch }})..."
-          # Let electron-builder handle native module rebuilds during packaging
-          echo "Native modules will be rebuilt during packaging step"
-
       # ---------- Platform-Specific Packaging ----------
       - name: 📦 Package for macOS ARM64
         if: matrix.platform == 'mac-arm64'

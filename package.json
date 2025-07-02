@@ -124,8 +124,8 @@
       "assets/**/*",
       "package.json"
     ],
-    "nodeGypRebuild": true,
-    "buildDependenciesFromSource": true,
+    "buildDependenciesFromSource": false,
+    "npmRebuild": false,
     "icon": "build/icon.png",
     "publish": null,
     "generateUpdatesFilesForAllChannels": false,
