@@ -77,7 +77,6 @@
     "autoprefixer": "^10.4.0",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
-    "dmg-license": "1.0.11",
     "electron": "28.3.3",
     "electron-builder": "24.13.3",
     "eslint": "^8.54.0",
@@ -100,6 +99,9 @@
     "vite": "^5.0.0",
     "vitest": "^3.2.4",
     "wait-on": "^8.0.3"
+  },
+  "optionalDependencies": {
+    "dmg-license": "^1.0.11"
   },
   "engines": {
     "node": "20.19.2",

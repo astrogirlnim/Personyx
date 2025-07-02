@@ -81,9 +81,6 @@ importers:
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
-      dmg-license:
-        specifier: 1.0.11
-        version: 1.0.11
       electron:
         specifier: 28.3.3
         version: 28.3.3
@@ -150,6 +147,10 @@ importers:
       wait-on:
         specifier: ^8.0.3
         version: 8.0.3
+    optionalDependencies:
+      dmg-license:
+        specifier: ^1.0.11
+        version: 1.0.11
 
 packages:
 
@@ -6071,6 +6072,7 @@ snapshots:
     dependencies:
       '@types/node': 20.19.4
       xmlbuilder: 15.1.1
+    optional: true
 
   '@types/prop-types@15.7.15': {}
 
@@ -6091,7 +6093,8 @@ snapshots:
 
   '@types/stack-utils@2.0.3': {}
 
-  '@types/verror@1.10.11': {}
+  '@types/verror@1.10.11':
+    optional: true
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -6452,11 +6455,13 @@ snapshots:
       get-intrinsic: 1.3.0
       is-array-buffer: 3.0.5
 
-  assert-plus@1.0.0: {}
+  assert-plus@1.0.0:
+    optional: true
 
   assertion-error@2.0.1: {}
 
-  astral-regex@2.0.0: {}
+  astral-regex@2.0.0:
+    optional: true
 
   async-exit-hook@2.0.1: {}
 
@@ -6765,6 +6770,7 @@ snapshots:
     dependencies:
       slice-ansi: 3.0.0
       string-width: 4.2.3
+    optional: true
 
   cli-truncate@4.0.0:
     dependencies:
@@ -6850,7 +6856,8 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  core-util-is@1.0.2: {}
+  core-util-is@1.0.2:
+    optional: true
 
   core-util-is@1.0.3: {}
 
@@ -6864,6 +6871,7 @@ snapshots:
   crc@3.8.0:
     dependencies:
       buffer: 5.7.1
+    optional: true
 
   create-jest@29.7.0(@types/node@20.19.4):
     dependencies:
@@ -7008,6 +7016,7 @@ snapshots:
       plist: 3.1.0
       smart-buffer: 4.2.0
       verror: 1.10.1
+    optional: true
 
   doctrine@2.1.0:
     dependencies:
@@ -7491,7 +7500,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  extsprintf@1.4.1: {}
+  extsprintf@1.4.1:
+    optional: true
 
   fast-deep-equal@3.1.3: {}
 
@@ -7854,6 +7864,7 @@ snapshots:
     dependencies:
       cli-truncate: 2.1.0
       node-addon-api: 1.7.2
+    optional: true
 
   iconv-lite@0.6.3:
     dependencies:
@@ -8737,7 +8748,8 @@ snapshots:
     dependencies:
       semver: 7.7.2
 
-  node-addon-api@1.7.2: {}
+  node-addon-api@1.7.2:
+    optional: true
 
   node-addon-api@4.3.0: {}
 
@@ -9367,6 +9379,7 @@ snapshots:
       ansi-styles: 4.3.0
       astral-regex: 2.0.0
       is-fullwidth-code-point: 3.0.0
+    optional: true
 
   slice-ansi@5.0.0:
     dependencies:
@@ -9774,6 +9787,7 @@ snapshots:
       assert-plus: 1.0.0
       core-util-is: 1.0.2
       extsprintf: 1.4.1
+    optional: true
 
   vite-node@3.2.4(@types/node@20.19.4):
     dependencies:
