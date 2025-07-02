@@ -28,29 +28,39 @@ echo "🔧 Fixing native modules for Electron compatibility..."
 echo "   This prevents Node.js version mismatches between system and Electron"
 echo ""
 
-# Force rebuild better-sqlite3 for Electron
-echo "🔄 Rebuilding better-sqlite3 specifically for Electron..."
-npx @electron/rebuild --only=better-sqlite3 --force
-
-# Verify the rebuild worked
-echo "🧪 Verifying native module compatibility..."
-if [ -f "node_modules/better-sqlite3/build/Release/better_sqlite3.node" ]; then
-    echo "✅ better-sqlite3 native module found"
-    # Check the module info
-    file node_modules/better-sqlite3/build/Release/better_sqlite3.node | head -1
-else
-    echo "❌ better-sqlite3 native module not found - attempting full rebuild..."
-    npm rebuild better-sqlite3
-fi
-
-# Additional fallback - use the comprehensive fix script if rebuild issues persist
+# Use the existing fix script if it exists, otherwise use direct rebuild
 if [ -f "scripts/fix-native-modules.sh" ]; then
-    echo "🔧 Running comprehensive native module fix..."
-    bash scripts/fix-native-modules.sh
+    echo "🔧 Running native module fix script..."
+    bash scripts/fix-native-modules.sh 2>&1 | tee rebuild.log
+    
+    # Verify the rebuild was successful by checking for the native module
+    if [ -f "node_modules/better-sqlite3/build/Release/better_sqlite3.node" ]; then
+        echo "✅ Native modules rebuilt successfully"
+        echo "   (Verified: better_sqlite3.node exists)"
+    else
+        echo "❌ Native module rebuild verification failed"
+        echo "   The better_sqlite3.node file is missing after rebuild"
+        echo "   You may need to run: bash scripts/fix-native-modules.sh"
+        exit 1
+    fi
+else
+    echo "🔄 Rebuilding better-sqlite3 for Electron..."
+    npx @electron/rebuild --only=better-sqlite3 2>&1 | tee rebuild.log
+    
+    # Verify the rebuild was successful
+    if [ -f "node_modules/better-sqlite3/build/Release/better_sqlite3.node" ]; then
+        echo "✅ Native modules rebuilt successfully"  
+        echo "   (Verified: better_sqlite3.node exists)"
+    else
+        echo "❌ Native module rebuild verification failed"
+        echo "   Check rebuild.log for details"
+        exit 1
+    fi
 fi
 
-echo ""
-echo "✅ Native module preparation complete"
+# Add a small delay to ensure everything is ready
+echo "⏳ Waiting for rebuild to stabilize..."
+sleep 2
 echo ""
 
 # Enhanced debugging environment variables
