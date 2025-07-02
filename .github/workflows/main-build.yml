@@ -247,125 +247,6 @@ jobs:
             release/*.blockmap
           retention-days: 90
 
-  # ---------- macOS Universal Binary ----------
-  mac-universal:
-    name: 🍎 macOS Universal Binary
-    needs: package
-    runs-on: macos-latest
-    timeout-minutes: 15
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: 📋 Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: 📥 Download macOS ARM64 package
-        uses: actions/download-artifact@v4
-        with:
-          name: packages-mac-arm64-${{ github.sha }}
-          path: release-arm64/
-
-      - name: 📥 Download macOS Intel package
-        uses: actions/download-artifact@v4
-        with:
-          name: packages-mac-x64-${{ github.sha }}
-          path: release-x64/
-
-      - name: 📥 Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-${{ github.sha }}
-          path: dist/
-
-      - name: 🔧 Setup Python for electron-builder
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: 🔧 Install system dependencies
-        run: |
-          # Ensure latest build tools
-          xcode-select --install 2>/dev/null || true
-          python -m pip install --upgrade setuptools wheel
-
-      - name: 🍎 Create Universal Binary
-        run: |
-          echo "🔧 Creating universal macOS binary..."
-
-          # Find the .app bundles from each architecture
-          ARM64_APP=$(find release-arm64 -name "*.app" -type d | head -1)
-          X64_APP=$(find release-x64 -name "*.app" -type d | head -1)
-
-          if [[ -z "$ARM64_APP" || -z "$X64_APP" ]]; then
-            echo "❌ Could not find .app bundles"
-            ls -la release-arm64/
-            ls -la release-x64/
-            exit 1
-          fi
-
-          echo "📦 Found ARM64 app: $ARM64_APP"
-          echo "📦 Found x64 app: $X64_APP"
-
-          # Create working directory
-          mkdir -p release
-          APP_NAME=$(basename "$ARM64_APP")
-          UNIVERSAL_APP="release/$APP_NAME"
-
-          # Copy ARM64 app as base
-          cp -R "$ARM64_APP" "$UNIVERSAL_APP"
-
-          # Create universal binary using lipo
-          ARM64_BINARY="$ARM64_APP/Contents/MacOS/$(basename "$ARM64_APP" .app)"
-          X64_BINARY="$X64_APP/Contents/MacOS/$(basename "$X64_APP" .app)"
-          UNIVERSAL_BINARY="$UNIVERSAL_APP/Contents/MacOS/$(basename "$APP_NAME" .app)"
-
-          echo "🔧 Merging binaries with lipo..."
-          lipo -create "$ARM64_BINARY" "$X64_BINARY" -output "$UNIVERSAL_BINARY"
-
-          # Verify the universal binary
-          echo "✅ Universal binary created:"
-          lipo -info "$UNIVERSAL_BINARY"
-
-          # Create DMG from universal app
-          echo "📦 Creating universal DMG..."
-          DMG_NAME="Personyx-universal.dmg"
-
-          # Create a temporary directory for DMG creation
-          mkdir -p dmg-temp
-          cp -R "$UNIVERSAL_APP" dmg-temp/
-
-          # Create the DMG
-          hdiutil create -volname "Personyx" -srcfolder dmg-temp -ov -format UDZO "release/$DMG_NAME"
-
-          echo "✅ Universal DMG created: release/$DMG_NAME"
-          ls -la release/
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: 📤 Upload Universal macOS Package
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages-mac-universal-${{ github.sha }}
-          path: |
-            release/*.dmg
-            release/latest*.yml
-            release/*.blockmap
-          retention-days: 90
-
   # ---------- Firebase Deployment (Optional) ----------
   deploy-firebase:
     name: 🔥 Deploy Firebase Functions
@@ -445,7 +326,7 @@ jobs:
   # ---------- Release Summary ----------
   release:
     name: 🎉 Release Summary
-    needs: [validate, package, mac-universal, security]
+    needs: [validate, package, security]
     runs-on: ubuntu-latest
     if: always()
 
@@ -458,17 +339,15 @@ jobs:
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Validation | ${{ needs.validate.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Packaging | ${{ needs.package.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS Universal | ${{ needs.mac-universal.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security | ${{ needs.security.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.package.result }}" == "success" && "${{ needs.mac-universal.result }}" == "success" ]]; then
+          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.package.result }}" == "success" ]]; then
             echo "🎉 **Build completed successfully!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 📦 Available Artifacts:" >> $GITHUB_STEP_SUMMARY
-            echo "- macOS DMG (Universal - ARM64 + Intel)" >> $GITHUB_STEP_SUMMARY
-            echo "- macOS DMG (ARM64 only)" >> $GITHUB_STEP_SUMMARY
-            echo "- macOS DMG (Intel only)" >> $GITHUB_STEP_SUMMARY  
+            echo "- macOS DMG (Apple Silicon - ARM64)" >> $GITHUB_STEP_SUMMARY
+            echo "- macOS DMG (Intel - x64)" >> $GITHUB_STEP_SUMMARY  
             echo "- Linux AppImage (x64)" >> $GITHUB_STEP_SUMMARY
             echo "- Windows NSIS Installer (x64)" >> $GITHUB_STEP_SUMMARY
           else

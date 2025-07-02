@@ -92,7 +92,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **5.1** Implement secure local storage for user-provided keys (AES-256-GCM) – TokenVault ✅
 - [x] **5.2** Integrate Firebase Auth + Cloud Functions for managed embedding (with auth) ✅ COMPLETE
 - [x] **5.3** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
-- [ ] **5.4** Unit-test key retrieval, cloud fallback & error states
+- [x] **5.4** Unit-test key retrieval, cloud fallback & error states
 
 ---
 
