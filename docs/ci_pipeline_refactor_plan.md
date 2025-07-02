@@ -27,13 +27,13 @@ Provide a phased roadmap for stabilising **`main-build.yml`** across macOS, Wind
 
 ## Phase 2 – macOS Universal Build Re-scope ✅ COMPLETE
 
-| Step | Action                                                                                     | Status  | Notes                                                                    |
-| ---- | ------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------------ |
-| 2.1  | Change mac matrix entry to `platform: mac-arm64` and run `electron-builder --mac --arm64`  | ✅ DONE | Implemented with separate `mac-arm64` and `mac-x64` matrix entries       |
-| 2.2  | Add separate job `mac-x64` and create `mac-universal` job to merge with `lipo` + `hdiutil` | ✅ DONE | Universal DMG created from merged binaries in separate workflow job      |
-| 2.3  | **Fix dependency issues**: Add missing `dmg-license` module for DMG packaging              | ✅ DONE | Added `dmg-license@1.0.11` to devDependencies (commit 6941392)           |
-| 2.4  | **Unified CI Approach**: Refactor `pr-validation.yml` to mirror main build matrix          | ✅ DONE | Split validation into Core + Platform jobs with representative subset    |
-| 2.5  | **Native Module Symlink Fix**: Comprehensive cache cleanup and rebuild strategy            | ✅ DONE | Aggressive cleanup + `electron-builder install-app-deps --arch` approach |
+| Step | Action                                                                                     | Status  | Notes                                                                        |
+| ---- | ------------------------------------------------------------------------------------------ | ------- | ---------------------------------------------------------------------------- |
+| 2.1  | Change mac matrix entry to `platform: mac-arm64` and run `electron-builder --mac --arm64`  | ✅ DONE | Implemented with separate `mac-arm64` and `mac-x64` matrix entries           |
+| 2.2  | Add separate job `mac-x64` and create `mac-universal` job to merge with `lipo` + `hdiutil` | ✅ DONE | Universal DMG created from merged binaries in separate workflow job          |
+| 2.3  | **Fix dependency issues**: Add missing `dmg-license` module for DMG packaging              | ✅ DONE | Added `dmg-license@1.0.11` to optionalDependencies (commits 6941392→29e1082) |
+| 2.4  | **Unified CI Approach**: Refactor `pr-validation.yml` to mirror main build matrix          | ✅ DONE | Split validation into Core + Platform jobs with representative subset        |
+| 2.5  | **Native Module Symlink Fix**: Comprehensive cache cleanup and rebuild strategy            | ✅ DONE | Aggressive cleanup + `electron-builder install-app-deps --arch` approach     |
 
 ---
 
@@ -84,6 +84,27 @@ Provide a phased roadmap for stabilising **`main-build.yml`** across macOS, Wind
 
 ---
 
+## Lessons Learned & Best Practices
+
+### Platform-Specific Dependencies in CI
+
+**Problem**: Platform-specific packages (like `dmg-license` for macOS-only DMG creation) create cross-platform CI challenges.
+
+**Failed Approaches**:
+
+1. Regular dependencies → Linux CI fails with `ERR_PNPM_UNSUPPORTED_PLATFORM`
+2. `optionalDependencies` + `--no-optional` flag → macOS CI can't find required packages
+
+**Correct Solution**:
+
+- Use `optionalDependencies` for platform-specific packages
+- **Remove** `--no-optional` flag from CI to allow platform-specific installation
+- Let package managers handle platform compatibility naturally
+
+**Key Insight**: CI configuration flags can override package.json dependency behavior, creating circular conflicts.
+
+---
+
 ## Risks & Mitigations
 
 - **Risk:** Dropping universal dmg removes native x64 binary.  
@@ -111,7 +132,9 @@ Provide a phased roadmap for stabilising **`main-build.yml`** across macOS, Wind
 - **✅ Unified CI Pipeline**: Refactored PR validation to mirror main build, eliminating "works in PR, fails in main" scenarios
 - **✅ Dependency Management**: Fixed missing `dmg-license` dependency required for DMG packaging
 
-**Latest Fix**: Added `dmg-license@1.0.11` dependency (commit 6941392) to resolve electron-builder DMG packaging errors.
+**Latest Fix**: Resolved platform-specific dependency conflicts with `dmg-license` through proper optionalDependencies configuration and CI workflow adjustment (commits 6941392→29e1082).
+
+**Key Lesson Learned**: CI configuration flags can override package.json dependency behavior. The `--no-optional` flag was preventing platform-specific `optionalDependencies` from working correctly, creating a circular dependency problem where Linux failed with platform errors and macOS failed with missing dependencies.
 
 **Next Steps**: Phase 2 testing in CI to validate complete solution, then proceed to Phase 3 Package Job Simplification.
 
