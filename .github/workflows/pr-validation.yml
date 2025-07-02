@@ -118,6 +118,18 @@ jobs:
           # Skip native module rebuild since we already did it
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
+      # ---------- Firebase Functions Validation ----------
+      - name: 🔥 Validate Firebase Functions
+        run: |
+          echo "🔧 Validating Firebase Functions configuration..."
+          cd functions
+          npm install
+          npm run build
+          echo "✅ Firebase Functions build completed successfully"
+        env:
+          # Skip Firebase deployment in PRs, just validate build
+          NODE_ENV: test
+
       # ---------- Upload Build Artifacts ----------
       - name: 📤 Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -127,6 +139,7 @@ jobs:
           path: |
             dist/
             dist-test/
+            functions/lib/
           retention-days: 7
 
   # ---------- Security & Dependency Analysis ----------
@@ -173,6 +186,7 @@ jobs:
           echo "| Build | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Database Schema | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Electron Packaging | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Firebase Functions | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then
