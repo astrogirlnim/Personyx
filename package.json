@@ -48,7 +48,7 @@
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "check-firebase": "node scripts/check-firebase-config.js",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
-    "postinstall": "if [ \"$CI\" != \"true\" ] && [ \"$NODE_ENV\" != \"production\" ]; then electron-builder install-app-deps; fi"
+    "postinstall": "node scripts/postinstall.js"
   },
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
