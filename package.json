@@ -11,11 +11,13 @@
     "url": "git@github.com:astrogirlnim/Personyx.git"
   },
   "scripts": {
+    "predev": "npm run check-node-version",
     "start": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron:dev\"",
     "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
     "dev:app": "npm run start",
     "dev:main": "concurrently \"tsc -p src/main/tsconfig.json --watch\" \"tsc-alias -p src/main/tsconfig.json --watch\"",
     "dev:renderer": "vite src/renderer --port 3000",
+    "prebuild": "npm run check-node-version",
     "build": "npm run build:assets && npm run build:main && npm run build:renderer",
     "build:assets": "mkdir -p dist/assets && cp assets/*.png dist/assets/ && mkdir -p build && cp assets/tray-icon.png build/icon.png && mkdir -p dist/main && cp assets/tray-icon.png dist/main/icon.png",
     "build:main": "tsc -p src/main/tsconfig.json && tsc-alias -p src/main/tsconfig.json",
@@ -32,17 +34,21 @@
     "lint:check": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "npm run rebuild-for-node && vitest run",
+    "test:watch": "npm run rebuild-for-node && vitest watch",
     "setup-api-key": "npm run build && node scripts/setup-api-key.js",
     "test-embedding-api": "npm run build && node scripts/test-embedding-api.js",
     "db:migrate": "drizzle-kit generate && drizzle-kit push",
-    "db:validate": "npm run build:main && pnpm rebuild better-sqlite3 && node scripts/validate-database.js",
+    "db:validate": "npm run build:main && npm run rebuild-for-node && node scripts/validate-database.js",
+    "check-node-version": "node scripts/check-node-version.js",
+    "rebuild-for-electron": "npm run fix-native-modules",
+    "rebuild-for-node": "pnpm rebuild better-sqlite3 keytar",
     "fix-native-modules": "bash scripts/fix-native-modules.sh",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "check-firebase": "node scripts/check-firebase-config.js",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
-    "postinstall": "electron-builder install-app-deps || echo 'Native module rebuild failed, but continuing...'",
+    "postinstall": "npm run rebuild-for-electron || echo 'Native module rebuild failed, but continuing...'",
     "prepare": "husky"
   },
   "dependencies": {
@@ -94,9 +100,15 @@
     "wait-on": "^8.0.3"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "node": "20.19.2",
+    "npm": ">=10.0.0",
+    "pnpm": ">=9.0.0"
   },
+  "volta": {
+    "node": "20.19.2",
+    "pnpm": "10.10.0"
+  },
+  "engineStrict": true,
   "build": {
     "appId": "com.personyx.app",
     "productName": "Personyx",
