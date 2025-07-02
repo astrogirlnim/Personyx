@@ -136,7 +136,7 @@ export interface AIServiceConfig {
   localApiKey?: string; // Encrypted and stored locally
   cloudSubscription?: {
     userId: string;
-    apiKey: string; // Personyx Cloud API key
+    apiKey: string; // Firebase Cloud API key
     tier: 'free' | 'pro' | 'enterprise';
     usageLimit: number;
     usageRemaining: number;

@@ -25,7 +25,7 @@ export type ApiService =
   | 'notion'
   | 'slack'
   | 'linear'
-  | 'personyx-cloud';
+  | 'firebase-cloud';
 
 /**
  * Encrypted token data structure
@@ -141,6 +141,15 @@ export async function storeToken(
   token: string
 ): Promise<void> {
   try {
+    // Input validation
+    if (!service || service.trim() === '') {
+      throw new Error('Service name cannot be empty');
+    }
+
+    if (!token || token.trim() === '') {
+      throw new Error('Token cannot be empty');
+    }
+
     logger.info(`🔐 Storing token for service: ${service}`);
 
     const db = getDatabase();

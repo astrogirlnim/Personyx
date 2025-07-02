@@ -1,6 +1,6 @@
 /**
  * LangGraph Service
- * Handles transcript embedding and persona classification using OpenAI or Personyx Cloud
+ * Handles transcript embedding and persona classification using OpenAI or Firebase Cloud
  * Phase 1, Feature 3.2 - Build a LangGraph pipeline to embed transcripts and classify by persona
  * Phase 2.5, Feature 5.4 - Add logic to select between local and cloud embedding at runtime
  */
@@ -127,14 +127,14 @@ export class LangGraphService {
    * Initialize cloud provider
    */
   private async initializeCloudProvider(): Promise<void> {
-    logger.debug('🔧 Initializing Personyx Cloud provider...');
+    logger.debug('🔧 Initializing Firebase Cloud provider...');
 
-    // Get Personyx Cloud API key from secure token vault
-    const apiKey = await getToken('personyx-cloud');
+    // Get Firebase Cloud API key from secure token vault
+    const apiKey = await getToken('firebase-cloud');
 
     if (!apiKey) {
       logger.warn(
-        '⚠️ No Personyx Cloud API key found - falling back to local provider'
+        '⚠️ No Firebase Cloud API key found - falling back to local provider'
       );
       this.currentProvider = 'local';
       await this.initializeLocalProvider();
@@ -148,7 +148,7 @@ export class LangGraphService {
     // Initialize cloud service
     await this.cloudService.initialize(apiKey);
 
-    logger.info('✅ Personyx Cloud provider initialized');
+    logger.info('✅ Firebase Cloud provider initialized');
   }
 
   /**
@@ -371,7 +371,7 @@ export class LangGraphService {
   }
 
   /**
-   * Generate embeddings using Personyx Cloud API
+   * Generate embeddings using Firebase Cloud API
    */
   private async generateCloudEmbeddings(chunks: ChunkData[]): Promise<
     Array<{
@@ -382,7 +382,7 @@ export class LangGraphService {
     }>
   > {
     if (!this.cloudService) {
-      throw new Error('Personyx Cloud service not initialized');
+      throw new Error('Firebase Cloud service not initialized');
     }
 
     try {
@@ -509,13 +509,13 @@ export class LangGraphService {
   }
 
   /**
-   * Classify content using Personyx Cloud API
+   * Classify content using Firebase Cloud API
    */
   private async classifyCloudContent(
     content: string
   ): Promise<PersonaClassification[]> {
     if (!this.cloudService) {
-      throw new Error('Personyx Cloud service not initialized');
+      throw new Error('Firebase Cloud service not initialized');
     }
 
     try {

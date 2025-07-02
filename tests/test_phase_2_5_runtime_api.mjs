@@ -52,7 +52,7 @@ console.log('   4. Check logs for successful key retrieval\n');
 console.log('📋 Test 3: Cloud Service Configuration');
 console.log('---------------------------------------');
 console.log('🔧 MANUAL TEST: Test cloud service integration');
-console.log('   1. Verify PersonyxCloudService initialization');
+console.log('   1. Verify FirebaseCloudService initialization');
 console.log('   2. Test connection to mock cloud endpoints');
 console.log('   3. Validate subscription info handling');
 console.log('   4. Test provider switching logic\n');
@@ -104,7 +104,7 @@ const manualTests = [
   },
   {
     id: '5.3',
-    name: 'Personyx Cloud Integration',
+    name: 'Firebase Cloud Integration',
     steps: [
       'Verify cloud service initialization',
       'Test mock API endpoints',
@@ -177,7 +177,7 @@ console.log('   node tests/test_phase_2_5_hybrid_ai_complete.mjs\n');
 console.log('📊 CURRENT STATUS SUMMARY');
 console.log('==========================');
 console.log('✅ Core Implementation: COMPLETE (7/10 tests passing)');
-console.log('✅ PersonyxCloudService: Functional with mock endpoints');
+console.log('✅ FirebaseCloudService: Functional with mock endpoints');
 console.log('✅ LangGraphService: Hybrid provider support working');
 console.log('✅ TokenVault: Secure storage implementation complete');
 console.log('✅ Type System: All IPC channels and types defined');
@@ -192,7 +192,7 @@ console.log(
 );
 console.log('All core components are implemented and ready for use.');
 console.log(
-  'The system supports both local OpenAI and Personyx Cloud providers.'
+  'The system supports both local OpenAI and Firebase Cloud providers.'
 );
 console.log(
   'Runtime testing requires the application to be running with proper Electron context.\n'

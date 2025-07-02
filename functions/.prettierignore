@@ -1,0 +1,12 @@
+# Built files
+lib/
+generated/
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# Lock files
+package-lock.json 

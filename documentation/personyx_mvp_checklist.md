@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[X] **Phase 2:** Data Layer ✅ COMPLETE (5/5 features)  
+[~] **Phase 2:** Data Layer 🔄 NEARLY COMPLETE (4.75/5 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -87,14 +87,12 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **4.3** Provide CLI `db:seed --mock` for local demos. ✅ COMPLETE
 - [x] **4.4** Generate ER-diagram in `/docs`. ✅ COMPLETE
 
-[X] **Feature 5 – Hybrid AI Key Management & Cloud Option** ✅ COMPLETE
+[~] **Feature 5 – Hybrid AI Key Management & Cloud Option** 🔄 NEARLY COMPLETE (3/4 sub-features)
 
-- [x] **5.1** Add UI for API key management (enter OpenAI key or select Personyx Cloud) ✅ COMPLETE
-- [x] **5.2** Implement secure local storage for user-provided keys (AES-256-GCM) ✅ COMPLETE
-- [x] **5.3** Integrate Personyx Cloud API endpoint for managed embedding (with auth) ✅ COMPLETE
-- [x] **5.4** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
-- [x] **5.5** Update onboarding and settings UI to guide user through both options ✅ COMPLETE
-- [x] **5.6** Document privacy, billing, and troubleshooting for both modes ✅ COMPLETE
+- [x] **5.1** Implement secure local storage for user-provided keys (AES-256-GCM) – TokenVault ✅
+- [x] **5.2** Integrate Firebase Auth + Cloud Functions for managed embedding (with auth) ✅ COMPLETE
+- [x] **5.3** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
+- [ ] **5.4** Unit-test key retrieval, cloud fallback & error states
 
 ---
 
@@ -108,6 +106,8 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [ ] **1.2** Add "Import PRD" modal with drag-&-drop and progress bar.
 - [ ] **1.3** Display real-time Evidence Score banner after import.
 - [ ] **1.4** Show global error toast for failed ingest events.
+- [ ] **1.5** Add "Import Interview Transcript" modal with drag-&-drop + "Open Folder" fallback.
+- [ ] **1.6** Implement Activity Log panel (ingest successes, errors, score updates).
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
 
@@ -130,10 +130,12 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [ ] **4.3** Provide install script with required OAuth scopes.
 - [ ] **4.4** Add rate-limit guard (max 3 calls / min / workspace).
 
-[ ] Add "AI Service" or "Manage API Key" modal to Tray UI/Settings
+[ ] **Feature 5 – Settings & Management**
 
-- [ ] Show error/warning if no key/service is configured
-- [ ] Allow switching between local and cloud AI modes at any time
+- [ ] **5.1** Implement "AI Service" settings modal (enter OpenAI key, select Firebase Cloud).
+- [ ] **5.2** Validate & encrypt keys via TokenVault; surface missing-key warnings.
+- [ ] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart).
+- [ ] **5.4** Persist dark / light theme toggle to local prefs.
 
 ---
 
@@ -159,8 +161,7 @@ _Criteria: value-delivering capabilities built atop 1–3._
 
 - [ ] **3.1** Implement a 30-day auto-prune job for expired transcripts & logs.
 - [ ] **3.2** Write audit-log exporter (CSV) with checksum verification.
-- [ ] **3.3** Add dark / light theme toggle persisting to local prefs.
-- [ ] **3.4** Integrate a one-click "Check for Updates" menu item (touches auto-update stub).
+- [ ] **3.3** Integrate a one-click "Check for Updates" menu item (touches auto-update stub).
 
 [ ] **Feature 4 – Proactive Notifications & Retro Tools**
 

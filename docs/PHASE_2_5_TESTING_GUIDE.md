@@ -5,7 +5,7 @@
 This guide provides comprehensive testing procedures for **Phase 2, Feature 5: Hybrid AI Key Management & Cloud Option** implementation. The hybrid system allows users to choose between:
 
 - **Local Provider**: Use their own OpenAI API key (stored securely locally)
-- **Cloud Provider**: Use Personyx Cloud managed AI services (with subscription)
+- **Cloud Provider**: Use Firebase Cloud managed AI services (with subscription)
 
 ---
 
@@ -17,7 +17,7 @@ All 6 sub-features have been implemented and verified:
 
 - ✅ **5.1** - UI for API key management (IPC handlers ready)
 - ✅ **5.2** - Secure local storage for user-provided keys (AES-256-GCM)
-- ✅ **5.3** - Personyx Cloud API endpoint integration (mock implementation)
+- ✅ **5.3** - Firebase Cloud API endpoint integration (mock implementation)
 - ✅ **5.4** - Runtime logic to select between local and cloud embedding
 - ✅ **5.5** - Settings UI guidance for both options (backend ready)
 - ✅ **5.6** - Documentation for privacy, billing, and troubleshooting
@@ -38,7 +38,7 @@ node tests/test_phase_2_5_hybrid_ai_complete.mjs
 | Test                            | Status           | Notes                      |
 | ------------------------------- | ---------------- | -------------------------- |
 | 5.0 - Core Implementation Files | ✅ PASS          | All 4 files present        |
-| 5.3 - PersonyxCloudService      | ✅ PASS          | Service functional         |
+| 5.3 - FirebaseCloudService      | ✅ PASS          | Service functional         |
 | 5.2 & 5.5 - SettingsService     | ❌ EXPECTED FAIL | Requires Electron context  |
 | 5.4 - LangGraphService Hybrid   | ✅ PASS          | Provider switching works   |
 | 5.1 - Type System               | ✅ PASS          | All 5 IPC channels defined |
@@ -141,7 +141,7 @@ npm run dev
 
 **Implementation Verification**:
 
-- [x] PersonyxCloudService implemented with mock endpoints
+- [x] FirebaseCloudService implemented with mock endpoints
 - [x] SettingsService with AI provider configuration
 - [x] LangGraphService hybrid provider switching
 - [x] TokenVault AES-256-GCM encryption

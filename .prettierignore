@@ -1,0 +1,30 @@
+# Built files
+dist/
+build/
+release/
+
+# Firebase functions built files
+functions/lib/
+functions/generated/
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# Database files
+*.db
+*.db-*
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+
+# Environment files
+.env*
+
+# Test files
+test-db/
+test-logs/
+test-electron-db/ 
