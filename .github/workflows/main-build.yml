@@ -179,11 +179,6 @@ jobs:
       - name: 📋 Install dependencies (clean)
         run: pnpm install --frozen-lockfile
 
-      - name: 🧹 Clean node_gyp_bins to prevent symlink conflicts
-        run: |
-          find node_modules -type d -name 'node_gyp_bins' -exec rm -rf {} + 2>/dev/null || true
-          echo "🧹 Cleaned node_gyp_bins directories"
-
       # ---------- Download Build ----------
       - name: 📥 Download build artifacts
         uses: actions/download-artifact@v4
@@ -191,42 +186,33 @@ jobs:
           name: build-${{ github.sha }}
           path: dist/
 
-      # ---------- Native Module Rebuild ----------
-      - name: 🔧 Rebuild native modules for Electron
+      # ---------- Configure Native Modules ----------
+      - name: 🔧 Configure electron-builder for native modules
         run: |
-          echo "🔧 Rebuilding native modules for Electron on ${{ matrix.platform }} (${{ matrix.arch }})..."
-          # Use electron-builder's official method for native module rebuilds
-          npx electron-builder install-app-deps --arch=${{ matrix.arch }}
-        env:
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_prefer_offline: true
-          npm_config_target_arch: ${{ matrix.arch }}
-          npm_config_arch: ${{ matrix.arch }}
+          echo "🔧 Configuring electron-builder to handle native modules on ${{ matrix.platform }} (${{ matrix.arch }})..."
+          # Let electron-builder handle native module rebuilds during packaging
+          echo "Native modules will be rebuilt during packaging step"
 
       # ---------- Platform-Specific Packaging ----------
       - name: 📦 Package for macOS ARM64
         if: matrix.platform == 'mac-arm64'
-        run: npx electron-builder --mac --arm64 --publish never
+        run: npx electron-builder --mac --arm64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: 📦 Package for macOS Intel
         if: matrix.platform == 'mac-x64'
-        run: npx electron-builder --mac --x64 --publish never
+        run: npx electron-builder --mac --x64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: 📦 Package for Linux
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --x64 --publish never
+        run: npx electron-builder --linux --x64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
 
       - name: 📦 Package for Windows
         if: matrix.platform == 'win'
-        run: npx electron-builder --win --x64 --publish never
+        run: npx electron-builder --win --x64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
