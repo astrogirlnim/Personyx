@@ -196,23 +196,23 @@ jobs:
       # ---------- Platform-Specific Packaging ----------
       - name: 📦 Package for macOS ARM64
         if: matrix.platform == 'mac-arm64'
-        run: npx electron-builder --mac --arm64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
+        run: npx electron-builder --mac --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: 📦 Package for macOS Intel
         if: matrix.platform == 'mac-x64'
-        run: npx electron-builder --mac --x64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
+        run: npx electron-builder --mac --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: 📦 Package for Linux
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --x64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
+        run: npx electron-builder --linux --x64 --publish never
 
       - name: 📦 Package for Windows
         if: matrix.platform == 'win'
-        run: npx electron-builder --win --x64 --publish never --config.nodeGypRebuild=true --config.buildDependenciesFromSource=true
+        run: npx electron-builder --win --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 

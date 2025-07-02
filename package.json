@@ -41,14 +41,14 @@
     "db:migrate": "drizzle-kit generate && drizzle-kit push",
     "db:validate": "npm run build:main && npm run rebuild-for-node && node scripts/validate-database.js",
     "check-node-version": "node scripts/check-node-version.js",
-    "rebuild-for-electron": "npx @electron/rebuild --only=better-sqlite3,keytar --force",
+    "rebuild-for-electron": "electron-builder install-app-deps",
     "rebuild-for-node": "if [ \"$CI\" = \"true\" ]; then echo 'Skipping native module rebuild in CI'; else pnpm rebuild better-sqlite3 keytar --reporter=silent; fi",
     "fix-native-modules": "npm run rebuild-for-electron",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
     "check-firebase": "node scripts/check-firebase-config.js",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
-    "postinstall": "if [ \"$CI\" != \"true\" ] && [ \"$NODE_ENV\" != \"production\" ]; then npm run rebuild-for-electron; fi"
+    "postinstall": "if [ \"$CI\" != \"true\" ] && [ \"$NODE_ENV\" != \"production\" ]; then electron-builder install-app-deps; fi"
   },
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
@@ -65,7 +65,6 @@
     "openai": "^5.8.2"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.10.0",
@@ -125,8 +124,8 @@
       "assets/**/*",
       "package.json"
     ],
-    "nodeGypRebuild": false,
-    "buildDependenciesFromSource": false,
+    "nodeGypRebuild": true,
+    "buildDependenciesFromSource": true,
     "icon": "build/icon.png",
     "publish": null,
     "generateUpdatesFilesForAllChannels": false,
