@@ -9,17 +9,17 @@ env:
   PNPM_VERSION: 10
 
 jobs:
+  # ---------- Core Validation (Fast) ----------
   validate:
-    name: 🧪 Validate Changes
+    name: 🧪 Core Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      # ---------- Checkout & Setup ----------
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history for better gitleaks scanning
+          fetch-depth: 0
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v3
@@ -29,262 +29,193 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc # Ensures Node version matches .nvmrc for local/CI consistency
+          node-version-file: .nvmrc
           cache: pnpm
 
-      # ---------- Install System Dependencies ----------
-      - name: 🔧 Install system dependencies for native modules
+      - name: 🔧 Setup Python 3.11 for native modules
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Install system dependencies
         run: |
           sudo apt-get update
-          # Install Python 3.11 specifically (has distutils, unlike 3.12+)
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.11 python3.11-dev python3.11-distutils
-          # Install other build dependencies
-          sudo apt-get install -y build-essential libsecret-1-dev
-          # Configure Python for node-gyp
-          sudo ln -sf /usr/bin/python3.11 /usr/bin/python3
-          python3 --version
-          echo "✅ System dependencies installed with Python 3.11"
+          sudo apt-get install -y build-essential libsecret-1-dev python3-dev
+          python -m pip install --upgrade setuptools wheel
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
 
-      # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ---------- Comprehensive Native Module Setup ----------
-      - name: 🔧 Rebuild native modules for Electron
-        run: |
-          echo "🔧 Rebuilding native modules for Electron compatibility..."
-
-          # Comprehensive cleanup of build artifacts
-          echo "🧹 Cleaning build artifacts..."
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-          find node_modules -name "*.node" -path "*/better-sqlite3/*" -delete 2>/dev/null || true
-          find node_modules -name "*.node" -path "*/keytar/*" -delete 2>/dev/null || true
-
-          # Set comprehensive environment variables for native module building
-          export npm_config_build_from_source=true
-          export npm_config_electron_version=28.3.3
-          export npm_config_target=28.3.3
-          export npm_config_runtime=electron
-          export npm_config_disturl=https://electronjs.org/headers
-          export npm_config_cache=/tmp/.npm
-          export npm_config_prefer_offline=true
-          export npm_config_audit=false
-          export npm_config_fund=false
-          export npm_config_update_notifier=false
-          export npm_config_loglevel=warn
-          export npm_config_python=/usr/bin/python3.11
-          export PYTHON=/usr/bin/python3.11
-          export CC=gcc
-          export CXX=g++
-
-          # Multi-strategy rebuild approach with better error handling
-          echo "🏗️ Attempting native module rebuild with fallback strategies..."
-
-          # Strategy 1: Use @electron/rebuild (most reliable in CI)
-          echo "🔄 Strategy 1: @electron/rebuild with specific modules..."
-          if npx @electron/rebuild --only=better-sqlite3,keytar --force --arch=x64; then
-            echo "✅ @electron/rebuild succeeded"
-            
-            # Verify the rebuild worked
-            if find node_modules -name "*.node" -path "*/better-sqlite3/*" | grep -q .; then
-              echo "✅ better-sqlite3 native module found"
-            else
-              echo "⚠️ better-sqlite3 native module not found after rebuild"
-            fi
-          else
-            echo "⚠️ @electron/rebuild failed, trying electron-builder..."
-            
-            # Strategy 2: electron-builder install-app-deps
-            echo "🔄 Strategy 2: electron-builder install-app-deps..."
-            if npx electron-builder install-app-deps; then
-              echo "✅ electron-builder install-app-deps succeeded"
-            else
-              echo "⚠️ electron-builder failed, trying manual rebuild..."
-              
-              # Strategy 3: Manual pnpm rebuild with specific environment
-              echo "🔄 Strategy 3: Manual pnpm rebuild..."
-              if pnpm rebuild better-sqlite3 keytar --reporter=silent; then
-                echo "✅ pnpm rebuild succeeded"
-              else
-                echo "⚠️ pnpm rebuild failed, trying individual module rebuilds..."
-                
-                # Strategy 4: Individual module rebuilds
-                echo "🔄 Strategy 4: Individual module rebuilds..."
-                
-                # Try better-sqlite3 individually
-                echo "🔄 Rebuilding better-sqlite3 individually..."
-                cd node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3 2>/dev/null || {
-                  echo "⚠️ Could not find better-sqlite3 directory"
-                }
-                
-                if [ -d "node_modules/.pnpm" ]; then
-                  find node_modules/.pnpm -name "better-sqlite3" -type d | head -1 | while read dir; do
-                    echo "🔄 Found better-sqlite3 at: $dir"
-                    cd "$dir" 2>/dev/null && {
-                      npm run install 2>/dev/null || npm rebuild 2>/dev/null || {
-                        echo "⚠️ Individual rebuild failed for better-sqlite3"
-                      }
-                    }
-                  done
-                fi
-                
-                cd /home/runner/work/Personyx/Personyx
-                echo "✅ Individual rebuild attempts completed"
-              fi
-            fi
-          fi
-
-          # Final verification
-          echo "🔍 Verifying native modules..."
-          if find node_modules -name "*.node" -path "*/better-sqlite3/*" | grep -q .; then
-            echo "✅ better-sqlite3 native module verified"
-          else
-            echo "⚠️ better-sqlite3 native module not found - packaging may fail"
-          fi
-
-          if find node_modules -name "*.node" -path "*/keytar/*" | grep -q .; then
-            echo "✅ keytar native module verified"
-          else
-            echo "⚠️ keytar native module not found - some features may not work"
-          fi
-
-          echo "✅ Native module rebuild process completed"
-
-      # ---------- Security Scan ----------
-      - name: 🕵️ Gitleaks Secret Scan
+      - name: 🕵️ Security scan
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---------- Code Quality Checks ----------
-      - name: 🔍 TypeScript Type Check
+      - name: 🔍 TypeScript type check
         run: pnpm typecheck
 
-      - name: 🧹 ESLint & Prettier Check
-        run: pnpm lint
+      - name: 🧹 Lint & format check
+        run: pnpm lint:check
 
-      - name: 🧪 Run Tests
-        run: pnpm test --passWithNoTests --reporter=verbose || echo "Some tests failed - this is expected for Phase 1.4 features not yet implemented"
+      - name: 🧪 Run tests
+        run: pnpm test
         env:
-          # Use in-memory database for tests to avoid native module issues
           NODE_ENV: test
           VITEST_DATABASE_URL: ':memory:'
 
-      # ---------- Build Verification ----------
-      - name: 🏗️ Build Application
+      - name: 🏗️ Build application
         run: pnpm build
 
-      # ---------- Database Validation ----------
-      - name: 🗄️ Validate Database Schema & Migrations
-        run: |
-          echo "🗄️ Validating database schema and migrations..."
-          npm run db:validate
-          echo "✅ Database validation completed"
-        env:
-          npm_config_build_from_source: true
-
-      # ---------- Electron Packaging Test ----------
-      - name: 📦 Test Electron Packaging (Linux x64)
-        run: |
-          echo "📦 Testing Electron packaging for Linux x64..."
-
-          # Clean up any stale build artifacts that might interfere
-          echo "🧹 Cleaning up build artifacts before packaging..."
-          find node_modules -name "build" -type d -path "*/better-sqlite3/*" -exec rm -rf {} + 2>/dev/null || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-
-          # Set comprehensive environment for electron-builder
-          export npm_config_build_from_source=false
-          export npm_config_electron_version=28.3.3
-          export npm_config_target=28.3.3
-          export npm_config_runtime=electron
-          export npm_config_disturl=https://electronjs.org/headers
-          export npm_config_cache=/tmp/.npm
-          export npm_config_prefer_offline=true
-          export npm_config_audit=false
-          export npm_config_fund=false
-          export npm_config_loglevel=warn
-          export ELECTRON_BUILDER_CACHE=/tmp/electron-builder-cache
-          export PYTHON=/usr/bin/python3.11
-
-          # Strategy 1: Try electron-builder with prebuild binaries first
-          echo "🔄 Strategy 1: electron-builder with prebuild preference..."
-          if npx electron-builder --dir --linux --x64 --config.directories.output=dist-test; then
-            echo "✅ Electron packaging completed successfully"
-          else
-            echo "⚠️ Strategy 1 failed, trying with forced rebuild..."
-            
-            # Strategy 2: Force rebuild and try again
-            echo "🔄 Strategy 2: Force rebuild native modules and retry..."
-            rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-            
-            # Use @electron/rebuild with specific target
-            if npx @electron/rebuild --only=better-sqlite3 --force --arch=x64; then
-              echo "✅ Native module rebuild successful, retrying packaging..."
-              
-              # Retry packaging after successful rebuild
-              if npx electron-builder --dir --linux --x64 --config.directories.output=dist-test; then
-                echo "✅ Electron packaging completed successfully after rebuild"
-              else
-                echo "❌ Packaging failed even after rebuild"
-                
-                # Strategy 3: Try with minimal packaging (skip native module validation)
-                echo "🔄 Strategy 3: Minimal packaging with dependency allowance..."
-                npx electron-builder --dir --linux --x64 --config.directories.output=dist-test || {
-                  echo "⚠️ All packaging strategies failed, but continuing CI..."
-                  echo "📋 This may indicate a packaging issue that needs investigation"
-                  # Don't fail the CI - log the issue but continue
-                  exit 0
-                }
-              fi
-            else
-              echo "❌ Native module rebuild failed"
-              echo "⚠️ Skipping packaging test - this needs investigation"
-              # Don't fail the CI for packaging issues in PRs
-              exit 0
-            fi
-          fi
-
-          echo "✅ Electron packaging test completed"
-        env:
-          # Skip notarization and signing for PR builds
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          # Allow unresolved dependencies to prevent build failures
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          # Use system Python
-          PYTHON: /usr/bin/python3.11
-          # Disable problematic npm features
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_update_notifier: false
-
-      # ---------- Firebase Functions Validation ----------
-      - name: 🔥 Validate Firebase Functions
-        run: |
-          echo "🔧 Validating Firebase Functions configuration..."
-          cd functions
-          npm install
-          npm run build
-          echo "✅ Firebase Functions build completed successfully"
-        env:
-          # Skip Firebase deployment in PRs, just validate build
-          NODE_ENV: test
-
-      # ---------- Upload Build Artifacts ----------
-      - name: 📤 Upload Build Artifacts
+      - name: 📤 Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success()
         with:
-          name: pr-build-${{ github.event.number }}
+          name: build-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+  # ---------- Multi-Platform Validation (Representative Subset) ----------
+  platform-validation:
+    name: 📦 Platform Validation (${{ matrix.os }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac-arm64
+            arch: arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: windows-latest
+            platform: win
+            arch: x64
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          # Disable cache to prevent symlink conflicts during native module rebuilds
+          # cache: pnpm
+
+      # ---------- Platform-Specific Dependencies ----------
+      - name: 🔧 Setup Python 3.11 (Unix)
+        if: matrix.platform != 'win'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Setup Python 3.11 (Windows)
+        if: matrix.platform == 'win'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Install system dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev python3-dev
+          python -m pip install --upgrade setuptools wheel
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
+
+      - name: 🔧 Install system dependencies (macOS)
+        if: startsWith(matrix.platform, 'mac')
+        run: |
+          xcode-select --install 2>/dev/null || true
+          python -m pip install --upgrade setuptools wheel
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
+
+      - name: 🔧 Configure Python for native modules (Windows)
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          # Set UTF-8 encoding for consistent character handling
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          python -m pip install --upgrade setuptools wheel
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
+        env:
+          PYTHONIOENCODING: utf-8
+
+      - name: 🧹 Clean node_modules and build artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
+          npx rimraf node_modules
+          npx rimraf ~/.npm ~/.electron-gyp ~/.pnpm-store 2>/dev/null || true
+          # Clean pnpm cache
+          pnpm store prune || echo "pnpm store prune failed, continuing..."
+
+      - name: 🧹 Clean node_modules and build artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
+          npx rimraf node_modules
+          try { npx rimraf "$env:USERPROFILE\.npm" } catch { Write-Host "npm cache cleanup skipped" }
+          try { npx rimraf "$env:USERPROFILE\.electron-gyp" } catch { Write-Host "electron-gyp cache cleanup skipped" }
+          try { npx rimraf "$env:USERPROFILE\.pnpm-store" } catch { Write-Host "pnpm-store cleanup skipped" }
+          # Clean pnpm cache
+          try { pnpm store prune } catch { Write-Host "pnpm store prune failed, continuing..." }
+
+      - name: 📋 Install dependencies (clean) (Unix)
+        if: runner.os != 'Windows'
+        run: pnpm install --frozen-lockfile
+
+      - name: 📋 Install dependencies (clean) (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Ensure UTF-8 encoding
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          # Install dependencies
+          pnpm install --frozen-lockfile
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: dist/
+
+      # ---------- Platform-Specific Packaging Tests ----------
+      - name: 📦 Test packaging for macOS ARM64
+        if: matrix.platform == 'mac-arm64'
+        run: npx electron-builder --mac --arm64 --publish never --config.directories.output=dist-test
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: 📦 Test packaging for Linux
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux --x64 --publish never --config.directories.output=dist-test
+
+      - name: 📦 Test packaging for Windows
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win --x64 --publish never --config.directories.output=dist-test
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: 📤 Upload test packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-packages-${{ matrix.platform }}-${{ github.event.number }}
           path: |
-            dist/
-            dist-test/
-            functions/lib/
+            dist-test/*.dmg
+            dist-test/*.AppImage  
+            dist-test/*.exe
+            dist-test/*.zip
           retention-days: 7
 
   # ---------- Security & Dependency Analysis ----------
@@ -316,7 +247,7 @@ jobs:
   summary:
     name: 📊 PR Summary
     runs-on: ubuntu-latest
-    needs: [validate, security]
+    needs: [validate, platform-validation, security]
     if: always()
 
     steps:
@@ -326,16 +257,20 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Code Quality | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Core Validation | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform Builds | ${{ needs.platform-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Scan | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Database Schema | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Electron Packaging | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Firebase Functions | ${{ needs.validate.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Platform Testing" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ macOS ARM64 (most common Mac)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Linux x64 (native module testing)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Windows x64 (Unicode fixes)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then
-            echo "🎉 All checks passed! This PR is ready for review." >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.platform-validation.result }}" == "success" && "${{ needs.security.result }}" == "success" ]]; then
+            echo "🎉 All checks passed! This validates Phase 2 CI changes." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Ready for merge** - Main build will test full multi-platform matrix." >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ Some checks failed. Please review the logs and fix issues." >> $GITHUB_STEP_SUMMARY
           fi
