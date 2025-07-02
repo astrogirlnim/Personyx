@@ -45,7 +45,7 @@ jobs:
           # Install distutils for the Python version from setup-python action
           python -m pip install --upgrade setuptools wheel
           # Verify distutils is available for node-gyp
-          python -c "import setuptools; print('✅ setuptools available for node-gyp')"
+          python -c "import setuptools; print('setuptools available for node-gyp')"
 
       - name: 📋 Install dependencies
         run: |
@@ -136,7 +136,7 @@ jobs:
           # Install setuptools for the Python version from setup-python action
           python -m pip install --upgrade setuptools wheel
           # Verify setuptools availability
-          python -c "import setuptools; print('✅ setuptools ready for node-gyp')"
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
 
       - name: 🔧 Install system dependencies (macOS)
         if: matrix.platform == 'mac'
@@ -146,15 +146,19 @@ jobs:
           # Install setuptools for the Python version from setup-python action
           python -m pip install --upgrade setuptools wheel
           # Verify setuptools availability
-          python -c "import setuptools; print('✅ setuptools ready for node-gyp')"
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
 
       - name: 🔧 Configure Python for native modules (Windows)
         if: matrix.platform == 'win'
         run: |
+          # Force UTF-8 console encoding to prevent Unicode errors
+          chcp 65001
           # Install setuptools to provide distutils functionality
           python -m pip install --upgrade setuptools wheel
           # Verify build tools
-          python -c "import setuptools; print('✅ setuptools ready for node-gyp')"
+          python -c "import setuptools; print('setuptools ready for node-gyp')"
+        env:
+          PYTHONIOENCODING: utf-8
 
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies
