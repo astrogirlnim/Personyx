@@ -25,7 +25,7 @@ export type ApiService =
   | 'notion'
   | 'slack'
   | 'linear'
-  | 'personyx-cloud';
+  | 'firebase-cloud';
 
 /**
  * Encrypted token data structure

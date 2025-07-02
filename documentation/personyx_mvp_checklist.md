@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[X] **Phase 2:** Data Layer ✅ COMPLETE (5/5 features)  
+[~] **Phase 2:** Data Layer 🔄 NEARLY COMPLETE (4.75/5 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -87,12 +87,12 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **4.3** Provide CLI `db:seed --mock` for local demos. ✅ COMPLETE
 - [x] **4.4** Generate ER-diagram in `/docs`. ✅ COMPLETE
 
-[X] **Feature 5 – Hybrid AI Key Management & Cloud Option** ✅ COMPLETE
+[~] **Feature 5 – Hybrid AI Key Management & Cloud Option** 🔄 NEARLY COMPLETE (3/4 sub-features)
 
 - [x] **5.1** Implement secure local storage for user-provided keys (AES-256-GCM) – TokenVault ✅
 - [x] **5.2** Integrate Firebase Auth + Cloud Functions for managed embedding (with auth) ✅ COMPLETE
 - [x] **5.3** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
-- [x] **5.4** Unit-test key retrieval, cloud fallback & error states ✅ COMPLETE
+- [ ] **5.4** Unit-test key retrieval, cloud fallback & error states
 
 ---
 

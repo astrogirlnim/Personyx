@@ -3,6 +3,10 @@
  * Entry point for the Electron main process (Core)
  */
 
+// Load environment variables first
+import dotenv from 'dotenv';
+dotenv.config();
+
 import {
   app,
   BrowserWindow,

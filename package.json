@@ -40,6 +40,7 @@
     "fix-native-modules": "bash scripts/fix-native-modules.sh",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
+    "check-firebase": "node scripts/check-firebase-config.js",
     "validate": "npm run typecheck && npm run lint:check && npm run format:check && npm run test",
     "postinstall": "electron-builder install-app-deps || echo 'Native module rebuild failed, but continuing...'",
     "prepare": "husky"
@@ -49,9 +50,11 @@
     "axios": "^1.10.0",
     "better-sqlite3": "^12.2.0",
     "chokidar": "^4.0.3",
+    "dotenv": "^17.0.1",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.2",
     "electron-store": "^8.1.0",
+    "firebase": "^10.14.1",
     "js-yaml": "^4.1.0",
     "keytar": "^7.9.0",
     "openai": "^5.8.2"
