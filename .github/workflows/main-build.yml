@@ -187,7 +187,13 @@ jobs:
           try { pnpm store prune } catch { Write-Host "pnpm store prune failed, continuing..." }
 
       # ---------- Install Dependencies ----------
-      - name: 📋 Install dependencies (clean)
+      - name: 📋 Install dependencies (clean) (Unix)
+        if: runner.os != 'Windows'
+        run: pnpm install --frozen-lockfile
+
+      - name: 📋 Install dependencies (clean) (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
         run: pnpm install --frozen-lockfile
 
       # ---------- Download Build ----------
