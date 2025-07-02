@@ -116,7 +116,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          # Disable cache to prevent symlink conflicts during native module rebuilds
+          # cache: pnpm
 
       # ---------- Platform-Specific Dependencies ----------
       - name: 🔧 Setup Python 3.11 (Unix)
@@ -163,34 +164,35 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
 
+      # ---------- Clean Build Environment ----------
+      - name: 🧹 Clean node_modules and build artifacts
+        run: |
+          echo "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
+          rm -rf node_modules
+          rm -rf ~/.npm
+          rm -rf ~/.electron-gyp
+          rm -rf ~/.pnpm-store
+          # Clean pnpm cache
+          pnpm store prune || echo "pnpm store prune failed, continuing..."
+
       # ---------- Install Dependencies ----------
-      - name: 📋 Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: 📋 Install dependencies (clean)
+        run: pnpm install --frozen-lockfile --no-optional
 
       # ---------- Download Build ----------
       - name: 📥 Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-${{ github.sha }}
-          path: dist/
+          path:
+            dist/
 
-      # ---------- Native Module Rebuild ----------
+            # ---------- Native Module Rebuild ----------
       - name: 🔧 Rebuild native modules for Electron
         run: |
           echo "🔧 Rebuilding native modules for Electron on ${{ matrix.platform }} (${{ matrix.arch }})..."
-
-          # Clean up any existing build artifacts that might cause conflicts
-          echo "🧹 Cleaning build artifacts..."
-          find node_modules -name "build" -type d -path "*/better-sqlite3/*" -exec rm -rf {} + 2>/dev/null || true
-          find node_modules -name "build" -type d -path "*/keytar/*" -exec rm -rf {} + 2>/dev/null || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-
           # Use electron-builder's official method for native module rebuilds
-          echo "🔄 Using electron-builder install-app-deps..."
-          npx electron-builder install-app-deps --arch=${{ matrix.arch }} || {
-            echo "⚠️ electron-builder install-app-deps failed, trying @electron/rebuild..."
-            npx @electron/rebuild --only=better-sqlite3,keytar --force --arch=${{ matrix.arch }}
-          }
+          npx electron-builder install-app-deps --arch=${{ matrix.arch }}
         env:
           npm_config_build_from_source: true
           npm_config_electron_version: 28.3.3
