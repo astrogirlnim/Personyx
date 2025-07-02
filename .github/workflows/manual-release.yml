@@ -1,0 +1,193 @@
+name: 🎯 Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag (e.g., v1.0.0 or dev-abc123)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name'
+        required: true
+        type: string
+      draft:
+        description: 'Create as draft release'
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 10
+
+jobs:
+  manual-release:
+    name: 🎉 Create Manual Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: 🔧 Setup Python 3.11 for native modules
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev python3-dev
+          python -m pip install --upgrade setuptools wheel
+
+      - name: 📋 Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          npm run check-node-version
+
+      - name: 🏗️ Build application
+        run: pnpm build
+
+      - name: 📦 Package for all platforms
+        run: |
+          echo "🔧 Building for all platforms..."
+
+          # macOS Universal (both Intel and Apple Silicon)
+          npx electron-builder --mac --x64 --arm64 --publish never
+
+          # Linux x64
+          npx electron-builder --linux --x64 --publish never
+
+          # Windows x64
+          npx electron-builder --win --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: 📂 Organize release assets
+        run: |
+          echo "🔍 Listing built artifacts:"
+          find release/ -type f -name "*" | sort
+
+          echo "📦 Organizing release assets..."
+          mkdir -p release-final/
+
+          # Copy all distribution files
+          find release/ -type f \( -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" -o -name "*.yml" -o -name "*.blockmap" \) -exec cp {} release-final/ \;
+
+          echo "📋 Final release assets:"
+          ls -la release-final/
+
+      - name: 📝 Generate release notes
+        run: |
+          cat > release-notes.md << EOF
+          ## 🚀 Personyx Release - ${{ inputs.release_name }}
+
+          **Release Information:**
+          - **Tag**: \`${{ inputs.tag_name }}\`
+          - **Commit**: \`${{ github.sha }}\`
+          - **Branch**: \`${{ github.ref_name }}\`
+          - **Build Date**: \`$(date -u +"%Y-%m-%d %H:%M:%S UTC")\`
+
+          **Platform Support:**
+          - 🍎 **macOS** - Universal DMG (Intel + Apple Silicon)
+          - 🐧 **Linux** - x64 AppImage
+          - 🪟 **Windows** - x64 NSIS Installer
+
+          **Key Features:**
+          - ✅ **Chat with Persona** - Interactive AI conversations with evidence-based insights
+          - ✅ **Hybrid AI Management** - Local OpenAI keys or managed Personyx Cloud
+          - ✅ **Secure File Ingestion** - Encrypted PRD processing and analysis
+          - ✅ **Evidence Scoring** - Automated persona-evidence matching
+          - ✅ **Cross-Platform** - Native desktop experience on all major platforms
+
+          **Installation Instructions:**
+
+          ### macOS
+          1. Download \`Personyx-*.dmg\`
+          2. Open the DMG and drag Personyx to Applications
+          3. Launch Personyx from Applications folder
+
+          ### Windows  
+          1. Download \`Personyx Setup *.exe\`
+          2. Run the installer as Administrator
+          3. Follow the installation wizard
+
+          ### Linux
+          1. Download \`Personyx-*.AppImage\`
+          2. Make executable: \`chmod +x Personyx-*.AppImage\`
+          3. Run: \`./Personyx-*.AppImage\`
+
+          **Getting Started:**
+          1. Configure your OpenAI API key in Settings, or choose Personyx Cloud
+          2. Import your first PRD using the file drop zone
+          3. Start chatting with personas to get evidence-based insights
+
+          ---
+
+          **Technical Details:**
+          - Built with Electron + React + TypeScript
+          - Secure local database with SQLite + Drizzle ORM
+          - AES-256-GCM encryption for API keys
+          - LangGraph integration for AI workflows
+          - Firebase Cloud Functions for managed AI service
+
+          EOF
+
+      - name: 🎉 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          name: ${{ inputs.release_name }}
+          body_path: release-notes.md
+          files: |
+            release-final/*.dmg
+            release-final/*.AppImage
+            release-final/*.exe
+            release-final/*.deb
+            release-final/*.rpm
+            release-final/*.zip
+            release-final/*.yml
+            release-final/*.blockmap
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ✅ Success Summary
+        run: |
+          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: \`${{ inputs.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Name**: ${{ inputs.release_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Draft**: ${{ inputs.draft }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pre-release**: ${{ inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Included Assets:" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS Universal DMG" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux x64 AppImage" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows x64 NSIS Installer" >> $GITHUB_STEP_SUMMARY
+          echo "- Auto-update metadata files" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[🔗 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag_name }})" >> $GITHUB_STEP_SUMMARY

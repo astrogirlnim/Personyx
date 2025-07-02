@@ -11,6 +11,7 @@ import { Logger } from '@main/utils/logger';
 
 // Input interface for create/update operations with proper array types
 interface PersonaInput {
+  id?: string; // Optional ID - if provided, use it instead of generating one
   name: string;
   description: string;
   primaryGoal: string;
@@ -51,10 +52,21 @@ export class PersonaRepo {
    */
   async create(data: PersonaInput): Promise<Persona> {
     try {
-      logger.info('➕ Creating new persona', { name: data.name });
+      logger.info('➕ Creating new persona', {
+        name: data.name,
+        providedId: data.id,
+      });
 
       const db = getDatabase();
-      const personaId = `persona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Use provided ID or generate a new one
+      const personaId =
+        data.id ||
+        `persona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      logger.info('🔑 Persona ID resolved', {
+        providedId: data.id,
+        finalId: personaId,
+      });
 
       const newPersona: NewPersona = {
         id: personaId,

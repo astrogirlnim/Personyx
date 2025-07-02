@@ -21,7 +21,7 @@ import { TrayManager } from './tray';
 import { Logger } from './utils/logger';
 import { AutoUpdater } from './utils/auto-updater';
 import { initDatabase, closeDatabase } from './db/connection';
-import { testTokenVault } from './security/tokenVault';
+import { testTokenVault, getToken } from './security/tokenVault';
 import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
 import { PersonaLoader } from './services/PersonaLoader';
 import { EmbeddingRetrievalService } from './services/EmbeddingRetrievalService';
@@ -36,6 +36,8 @@ import type {
   AIServiceProvider,
   AppSettings,
   AIServiceConfig,
+  Evidence,
+  Persona,
 } from '@shared/types';
 
 // Environment detection for main process
@@ -389,6 +391,9 @@ class PersonyxApp {
         this.logger.warn('⚠️ Token vault test failed - continuing anyway');
       }
 
+      // Load OpenAI API key from .env if not already in token vault
+      await this.loadEnvironmentAPIKeys();
+
       // Initialize settings service (Phase 2.5 - Feature 5.2)
       this.logger.info('⚙️ Initializing settings service...');
       this.settingsService = new SettingsService();
@@ -434,6 +439,9 @@ class PersonyxApp {
       const personaCount = await this.personaLoader.loadPersonas();
       this.logger.info(`✅ Loaded ${personaCount} personas from configuration`);
 
+      // Clean and reload personas to ensure correct YAML IDs
+      await this.cleanAndReloadPersonas();
+
       // Initialize embedding retrieval service (Phase 2.2)
       this.logger.info('🔍 Initializing embedding retrieval service...');
       this.embeddingRetrievalService = new EmbeddingRetrievalService();
@@ -443,6 +451,9 @@ class PersonyxApp {
       this.logger.info('📄 Initializing secure file ingest service...');
       this.secureFileIngestService = new SecureFileIngestService();
       this.logger.info('✅ Secure file ingest service initialized');
+
+      // Clean and reload personas to ensure correct YAML IDs
+      await this.cleanAndReloadPersonas();
 
       this.logger.info('✅ Core services initialized with hybrid AI support');
     } catch (error) {
@@ -563,19 +574,276 @@ class PersonyxApp {
         `💬 Processing chat: ${data.personaId} - ${data.message}`
       );
 
-      // TODO: Implement LangGraph RAG chat (Phase 4.1)
-      // For now, return a placeholder response
+      // Get the persona data
+      const personas = await this.handleGetPersonas();
+      const persona = personas.find((p: Persona) => p.id === data.personaId);
+
+      if (!persona) {
+        throw new Error(`Persona ${data.personaId} not found`);
+      }
+
+      this.logger.info(`🎭 Found persona: ${persona.name} (${persona.id})`);
+
+      // Try to use LangGraph service for AI-powered responses
+      let response = '';
+      let sources: Evidence[] = [];
+
+      if (this.langGraphService && (await this.isLangGraphServiceReady())) {
+        this.logger.info('🤖 Using LangGraph service for AI response');
+        try {
+          // Generate AI response using LangGraph service
+          response = await this.generateAIResponse(data.message, persona);
+
+          // Try to get relevant evidence sources (skip for very short queries)
+          if (
+            this.embeddingRetrievalService &&
+            data.message.trim().length > 10
+          ) {
+            this.logger.info(
+              '🔍 Searching for evidence sources to support response'
+            );
+            try {
+              const searchResult =
+                await this.embeddingRetrievalService.searchSimilar({
+                  query: data.message,
+                  personaId: data.personaId,
+                  topN: 3,
+                  minSimilarity: 0.6,
+                });
+              sources = searchResult.results.map(r => r.evidence).slice(0, 3);
+              this.logger.info(
+                `📚 Found ${sources.length} relevant evidence sources`
+              );
+            } catch (error) {
+              this.logger.warn(
+                '⚠️ Evidence search failed, continuing without sources',
+                error
+              );
+            }
+          } else {
+            this.logger.info('🔍 Skipping evidence search for short query');
+          }
+        } catch (error) {
+          this.logger.warn(
+            '⚠️ AI response failed, falling back to template',
+            error
+          );
+          response = this.generateTemplateResponse(data.message, persona);
+        }
+      } else {
+        this.logger.info(
+          '💡 LangGraph service not ready, using template response'
+        );
+        response = this.generateTemplateResponse(data.message, persona);
+      }
 
       return {
-        message: `Hello! This is a placeholder response for persona ${data.personaId}`,
-        sources: [],
-        persona: null,
+        message: response,
+        sources,
+        persona,
         timestamp: new Date(),
       };
     } catch (error) {
       this.logger.error('❌ Chat failed', error);
       throw error;
     }
+  }
+
+  /**
+   * Check if LangGraph service is ready for AI responses
+   */
+  private async isLangGraphServiceReady(): Promise<boolean> {
+    if (!this.langGraphService) {
+      return false;
+    }
+
+    try {
+      // Check if we have an API key available
+      const hasOpenAIKey = await getToken('openai');
+      return !!hasOpenAIKey;
+    } catch (error) {
+      this.logger.debug('🔑 No OpenAI API key available');
+      return false;
+    }
+  }
+
+  /**
+   * Generate AI-powered response using OpenAI
+   */
+  private async generateAIResponse(
+    message: string,
+    persona: Persona
+  ): Promise<string> {
+    const openaiKey = await getToken('openai');
+    if (!openaiKey) {
+      throw new Error('No OpenAI API key available');
+    }
+
+    // Initialize OpenAI client for chat
+    const OpenAI = await import('openai');
+    const openai = new OpenAI.default({
+      apiKey: openaiKey,
+    });
+
+    const systemPrompt = `You are ${persona.name}, a ${persona.description}
+
+Your primary goal is: ${persona.primaryGoal}
+Your main pain point is: ${persona.mainPainPoint}
+
+Key characteristics and interests: ${persona.keywords?.join(', ') || 'N/A'}
+
+Respond as this persona would, drawing from their specific perspective, goals, and challenges. Keep your response conversational, helpful, and authentic to the persona's voice. Aim for 2-3 paragraphs that provide valuable insights based on the persona's experience.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: message,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    const aiResponse = response.choices[0]?.message?.content;
+    if (!aiResponse) {
+      throw new Error('Empty response from OpenAI');
+    }
+
+    this.logger.info('✅ Generated AI response using OpenAI');
+    return aiResponse;
+  }
+
+  /**
+   * Generate template response as fallback
+   */
+  private generateTemplateResponse(message: string, persona: Persona): string {
+    // Use the original template logic as fallback
+    if (
+      persona.id === 'solo_founder' ||
+      persona.name?.toLowerCase().includes('solo founder')
+    ) {
+      return this.generateSoloFounderResponse(message, persona);
+    } else if (
+      persona.id === 'agency_marketer' ||
+      persona.name?.toLowerCase().includes('agency marketer')
+    ) {
+      return this.generateAgencyMarketerResponse(message, persona);
+    } else {
+      return `Hi! I'm ${persona.name}. ${persona.description} 
+
+My main goal is: ${persona.primaryGoal}
+My biggest pain point: ${persona.mainPainPoint}
+
+Regarding your question: "${message}"
+
+I'd be happy to share insights based on my experience. What specific aspect would you like to explore further?`;
+    }
+  }
+
+  /**
+   * Generate contextual response for Solo Founder persona
+   */
+  private generateSoloFounderResponse(
+    message: string,
+    persona: Persona
+  ): string {
+    const lowerMessage = message.toLowerCase();
+
+    if (lowerMessage.includes('feature') || lowerMessage.includes('build')) {
+      return `As a ${persona.name}, I'm always thinking about ROI and speed to market. 
+
+When considering new features, I ask myself:
+- Will this move the needle on my core metrics?
+- Can I validate this with minimal investment?
+- Does this align with my users' most critical pain points?
+
+For your question about "${message}", I'd recommend starting with the simplest version that proves value. Remember, as a solo founder, every hour counts - focus on features that directly impact user retention or revenue.
+
+What's the specific outcome you're hoping to achieve with this feature?`;
+    }
+
+    if (lowerMessage.includes('user') || lowerMessage.includes('feedback')) {
+      return `User feedback is gold for me as a ${persona.name}. I've learned that users often ask for features, but what they really need is solutions to their problems.
+
+My approach:
+- Listen for the pain point behind the feature request
+- Look for patterns across multiple user conversations
+- Validate with quick experiments before building
+
+Regarding "${message}" - have you noticed multiple users mentioning similar pain points? That's usually my signal that something is worth exploring.
+
+What patterns are you seeing in your user feedback?`;
+    }
+
+    return `Hi! I'm a ${persona.name} - ${persona.description}
+
+My biggest challenge is ${persona.mainPainPoint}, and I'm constantly focused on ${persona.primaryGoal}.
+
+About your question: "${message}"
+
+From my experience bootstrapping products, I've learned that every decision needs to be weighed against limited time and resources. I prioritize ruthlessly and always ask "What's the minimum viable version of this?"
+
+What specific challenge are you trying to solve? I'd love to share what's worked (and what hasn't) in my journey.`;
+  }
+
+  /**
+   * Generate contextual response for Agency Marketer persona
+   */
+  private generateAgencyMarketerResponse(
+    message: string,
+    persona: Persona
+  ): string {
+    const lowerMessage = message.toLowerCase();
+
+    if (
+      lowerMessage.includes('campaign') ||
+      lowerMessage.includes('marketing')
+    ) {
+      return `As an ${persona.name}, I'm all about measurable results and client satisfaction. 
+
+When planning campaigns, I focus on:
+- Clear KPIs that align with client business goals
+- Multi-channel strategies that reinforce each other
+- Regular testing and optimization
+- Transparent reporting to build trust
+
+For your question about "${message}", I'd want to understand:
+- What's the primary business objective?
+- Who's the target audience?
+- What channels are already performing well?
+
+Data-driven decisions are what separate good agencies from great ones. What metrics are you currently tracking?`;
+    }
+
+    if (lowerMessage.includes('client') || lowerMessage.includes('report')) {
+      return `Client relationships are everything in my world as an ${persona.name}. 
+
+My approach to client success:
+- Set clear expectations upfront
+- Provide regular, transparent updates
+- Focus on business impact, not just vanity metrics
+- Proactively suggest optimizations
+
+Regarding "${message}" - client communication is often about translating marketing performance into business language. They want to know how our work impacts their bottom line.
+
+How are you currently measuring and communicating campaign success to stakeholders?`;
+    }
+
+    return `Hey! I'm an ${persona.name} - ${persona.description}
+
+My main focus is ${persona.primaryGoal}, and my biggest frustration is ${persona.mainPainPoint}.
+
+About your question: "${message}"
+
+In my agency work, I've learned that success comes from understanding both the marketing mechanics AND the client's business goals. Every campaign needs to be tied to measurable business outcomes.
+
+I'd love to help you think through this from both a strategic and tactical perspective. What's the bigger picture you're trying to achieve?`;
   }
 
   /**
@@ -884,6 +1152,90 @@ class PersonyxApp {
    */
   public getAutoUpdater(): AutoUpdater | null {
     return this.autoUpdater;
+  }
+
+  /**
+   * Load OpenAI API key from .env if not already in token vault
+   */
+  private async loadEnvironmentAPIKeys(): Promise<void> {
+    try {
+      // Import token vault functions
+      const { getToken, storeToken } = await import('./security/tokenVault');
+
+      // Check if OpenAI API key already exists in token vault
+      const existingToken = await getToken('openai');
+      if (existingToken) {
+        this.logger.info('✅ OpenAI API key already exists in token vault');
+        return;
+      }
+
+      // Check for OpenAI API key in environment variables
+      const envApiKey = process.env.OPENAI_API_KEY;
+      if (envApiKey && envApiKey.trim() !== '') {
+        this.logger.info(
+          '🔑 Loading OpenAI API key from .env into token vault'
+        );
+        await storeToken('openai', envApiKey.trim());
+        this.logger.info('✅ OpenAI API key loaded successfully from .env');
+      } else {
+        this.logger.info(
+          'ℹ️ No OpenAI API key found in .env - user will need to configure manually'
+        );
+      }
+    } catch (error) {
+      this.logger.error('❌ Failed to load environment API keys', error);
+      // Don't fail startup for this - just log the error
+    }
+  }
+
+  /**
+   * Clean and reload personas to ensure correct YAML IDs
+   */
+  private async cleanAndReloadPersonas(): Promise<void> {
+    try {
+      this.logger.info(
+        '🧹 Cleaning and reloading personas to ensure correct IDs'
+      );
+
+      // Import PersonaRepo
+      const { PersonaRepo } = await import('./db/repositories/PersonaRepo');
+      const personaRepo = new PersonaRepo();
+
+      // Get current personas to check for issues
+      const currentPersonas = await personaRepo.list();
+      const hasRandomIds = currentPersonas.some(
+        p => p.id.includes('persona-') && p.id.includes('-')
+      );
+
+      if (hasRandomIds) {
+        this.logger.info(
+          '🔧 Found personas with random IDs, cleaning database'
+        );
+
+        // Clear all personas from database
+        const { getDatabase } = await import('./db/connection');
+        const db = getDatabase();
+        const { personas } = await import('./db/schema');
+        await db.delete(personas);
+
+        this.logger.info('🗑️ Cleared persona table');
+
+        // Reload personas from YAML (this will use correct IDs)
+        if (this.personaLoader) {
+          const reloadedCount = await this.personaLoader.loadPersonas();
+          this.logger.info(
+            `✅ Reloaded ${reloadedCount} personas with correct YAML IDs`
+          );
+        }
+      } else {
+        this.logger.info(
+          '✅ Personas already have correct IDs, no cleanup needed'
+        );
+      }
+    } catch (error) {
+      this.logger.error('❌ Failed to clean and reload personas', error);
+      // Don't fail startup - just log the error
+    }
   }
 }
 

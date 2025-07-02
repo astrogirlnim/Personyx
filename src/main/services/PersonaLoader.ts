@@ -66,7 +66,7 @@ export class PersonaLoader {
       let loadedCount = 0;
       for (const personaYaml of config.personas) {
         try {
-          // Check if persona already exists
+          // Check if persona already exists by YAML ID
           const existing = await this.personaRepo.findById(personaYaml.id);
 
           if (existing) {
@@ -78,17 +78,41 @@ export class PersonaLoader {
               mainPainPoint: personaYaml.mainPainPoint,
               keywords: personaYaml.keywords || [],
             });
-            logger.debug(`🔄 Updated existing persona: ${personaYaml.name}`);
+            logger.debug(
+              `🔄 Updated existing persona: ${personaYaml.name} (${personaYaml.id})`
+            );
           } else {
-            // Create new persona
-            await this.personaRepo.create({
+            // CRITICAL: Check if persona with same name but different ID exists
+            const allPersonas = await this.personaRepo.list();
+            const duplicateByName = allPersonas.find(
+              p => p.name === personaYaml.name && p.id !== personaYaml.id
+            );
+
+            if (duplicateByName) {
+              logger.warn(
+                `⚠️ Skipping duplicate persona by name: ${personaYaml.name} (existing ID: ${duplicateByName.id}, YAML ID: ${personaYaml.id})`
+              );
+              continue;
+            }
+
+            // Create new persona with YAML ID
+            const createData = {
+              id: personaYaml.id, // Use the YAML ID instead of generating a random one
               name: personaYaml.name,
               description: personaYaml.description,
               primaryGoal: personaYaml.primaryGoal,
               mainPainPoint: personaYaml.mainPainPoint,
               keywords: personaYaml.keywords || [],
+            };
+
+            logger.info(`🎯 Creating persona with data:`, {
+              id: createData.id,
+              name: createData.name,
             });
-            logger.debug(`➕ Created new persona: ${personaYaml.name}`);
+            await this.personaRepo.create(createData);
+            logger.debug(
+              `➕ Created new persona: ${personaYaml.name} (${personaYaml.id})`
+            );
           }
 
           loadedCount++;

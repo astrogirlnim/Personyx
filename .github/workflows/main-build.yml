@@ -325,31 +325,119 @@ jobs:
 
   # ---------- Release Summary ----------
   release:
-    name: 🎉 Release Summary
+    name: 🎉 Create Release
     needs: [validate, package, security]
     runs-on: ubuntu-latest
-    if: always()
+    if: github.ref == 'refs/heads/main' && needs.validate.result == 'success' && needs.package.result == 'success'
+    permissions:
+      contents: write
 
     steps:
-      - name: 📊 Generate build summary
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📥 Download all platform packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*-${{ github.sha }}
+          path: release-artifacts/
+          merge-multiple: true
+
+      - name: 📂 Organize release assets
         run: |
-          echo "## 🎯 Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 Listing downloaded artifacts:"
+          find release-artifacts/ -type f -name "*" | head -20
+
+          # Create release directory structure
+          mkdir -p release/
+
+          # Move all artifacts to release directory
+          find release-artifacts/ -type f \( -name "*.dmg" -o -name "*.AppImage" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" -o -name "*.yml" -o -name "*.blockmap" \) -exec cp {} release/ \;
+
+          echo "📦 Final release assets:"
+          ls -la release/
+
+      - name: 🏷️ Generate release tag
+        id: tag
+        run: |
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          TAG="dev-${GITHUB_SHA:0:8}-$TIMESTAMP"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "📋 Generated tag: $TAG"
+
+      - name: 📝 Generate release notes
+        id: notes
+        run: |
+          cat > release-notes.md << 'EOF'
+          ## 🚀 Personyx Development Build
+
+          **Build Information:**
+          - **Commit**: `${{ github.sha }}`
+          - **Branch**: `${{ github.ref_name }}`
+          - **Timestamp**: `$(date -u +"%Y-%m-%d %H:%M:%S UTC")`
+
+          **Platform Support:**
+          - 🍎 **macOS** - Universal (Intel + Apple Silicon) DMG
+          - 🐧 **Linux** - x64 AppImage
+          - 🪟 **Windows** - x64 NSIS Installer
+
+          **Features in this build:**
+          - ✅ Phase 3.1.1 Chat with Persona feature
+          - ✅ Hybrid AI key management (local + cloud)
+          - ✅ Evidence-based persona insights
+          - ✅ Secure file ingestion
+          - ✅ Cross-platform desktop support
+
+          **Installation:**
+          1. Download the appropriate installer for your platform
+          2. Run the installer and follow the setup wizard
+          3. Configure your OpenAI API key or use Personyx Cloud
+
+          ---
+          ⚠️ **Development Build Notice**: This is an automated development build for testing purposes.
+          EOF
+
+          echo "Generated release notes"
+
+      - name: 🎉 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: 'Personyx Dev Build - ${{ steps.tag.outputs.tag }}'
+          body_path: release-notes.md
+          files: |
+            release/*.dmg
+            release/*.AppImage
+            release/*.exe
+            release/*.deb
+            release/*.rpm
+            release/*.zip
+            release/*.yml
+            release/*.blockmap
+          draft: false
+          prerelease: true
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Release Summary
+        run: |
+          echo "## 🎯 Release Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Validation | ${{ needs.validate.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Packaging | ${{ needs.package.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security | ${{ needs.security.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release | ✅ Success |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.package.result }}" == "success" ]]; then
-            echo "🎉 **Build completed successfully!**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📦 Available Artifacts:" >> $GITHUB_STEP_SUMMARY
-            echo "- macOS DMG (Apple Silicon - ARM64)" >> $GITHUB_STEP_SUMMARY
-            echo "- macOS DMG (Intel - x64)" >> $GITHUB_STEP_SUMMARY  
-            echo "- Linux AppImage (x64)" >> $GITHUB_STEP_SUMMARY
-            echo "- Windows NSIS Installer (x64)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Build had issues. Check job logs for details.**" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "🎉 **Release created successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Release Tag: \`${{ steps.tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Available Downloads:" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS DMG (Universal - Intel + Apple Silicon)" >> $GITHUB_STEP_SUMMARY  
+          echo "- Linux AppImage (x64)" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows NSIS Installer (x64)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[🔗 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }})" >> $GITHUB_STEP_SUMMARY
