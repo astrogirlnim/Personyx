@@ -179,15 +179,19 @@ jobs:
       - name: 📋 Install dependencies (clean)
         run: pnpm install --frozen-lockfile
 
+      - name: 🧹 Clean node_gyp_bins to prevent symlink conflicts
+        run: |
+          find node_modules -type d -name 'node_gyp_bins' -exec rm -rf {} + 2>/dev/null || true
+          echo "🧹 Cleaned node_gyp_bins directories"
+
       # ---------- Download Build ----------
       - name: 📥 Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-${{ github.sha }}
-          path:
-            dist/
+          path: dist/
 
-            # ---------- Native Module Rebuild ----------
+      # ---------- Native Module Rebuild ----------
       - name: 🔧 Rebuild native modules for Electron
         run: |
           echo "🔧 Rebuilding native modules for Electron on ${{ matrix.platform }} (${{ matrix.arch }})..."
