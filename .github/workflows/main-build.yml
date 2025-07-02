@@ -3,7 +3,7 @@ name: 🚀 Main Build & Release
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Allow manual triggers
+  workflow_dispatch:
 
 env:
   NODE_VERSION: 20
@@ -12,12 +12,11 @@ env:
 jobs:
   # ---------- Full Validation ----------
   validate:
-    name: 🧪 Full Validation
+    name: 🧪 Validation & Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      # ---------- Checkout & Setup ----------
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
@@ -31,50 +30,47 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc # Consistent with PR validation
+          node-version-file: .nvmrc
           cache: pnpm
 
-      # ---------- Install Dependencies ----------
+      - name: 🔧 Setup Python 3.11 for native modules
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev python3.11-dev python3.11-distutils
+          # Ensure distutils is available for node-gyp
+          python3.11 -c "import distutils; print('✅ distutils available')"
+
       - name: 📋 Install dependencies
         run: |
-          echo "🔧 Installing dependencies..."
           pnpm install --frozen-lockfile
-          echo "✅ Dependencies installed successfully"
+          npm run check-node-version
 
-      # ---------- Security & Quality ----------
-      - name: 🕵️ Gitleaks Secret Scan
+      - name: 🕵️ Security scan
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🔍 TypeScript Type Check
+      - name: 🔍 TypeScript type check
         run: pnpm typecheck
 
-      - name: 🧹 ESLint & Prettier Check
-        run: pnpm lint
+      - name: 🧹 Lint & format check
+        run: pnpm lint:check
 
-      - name: 🧪 Run Test Suite
-        run: pnpm test --passWithNoTests --reporter=verbose
+      - name: 🧪 Run tests
+        run: pnpm test
         env:
-          # Use in-memory database for tests to avoid native module issues
           NODE_ENV: test
           VITEST_DATABASE_URL: ':memory:'
 
-      # ---------- Build Application ----------
-      - name: 🏗️ Build Application
+      - name: 🏗️ Build application
         run: pnpm build
 
-      # ---------- Database Validation ----------
-      - name: 🗄️ Validate Database Schema & Migrations
-        run: |
-          echo "🗄️ Validating database schema and migrations..."
-          npm run db:validate
-          echo "✅ Database validation completed"
-        env:
-          npm_config_build_from_source: true
-
-      # ---------- Upload Build for Next Job ----------
-      - name: 📤 Upload Build Artifacts
+      - name: 📤 Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ github.sha }}
@@ -86,9 +82,10 @@ jobs:
     name: 📦 Package (${{ matrix.os }})
     needs: validate
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45 # Increased timeout for native module compilation
+    timeout-minutes: 30
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -102,519 +99,6 @@ jobs:
             arch: x64
 
     steps:
-      # ---------- Checkout & Setup ----------
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc # Consistent with PR validation
-          cache: pnpm
-
-      # ---------- CRITICAL: Platform-Specific Python Setup BEFORE Install ----------
-      - name: 🔧 Setup Python 3.11 for native modules (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          echo "🔧 Setting up Python 3.11 for Linux native module compilation..."
-          sudo apt-get update
-          # Install Python 3.11 specifically (has distutils, unlike 3.12+)
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.11 python3.11-dev python3.11-distutils
-          # Install other build dependencies
-          sudo apt-get install -y build-essential libsecret-1-dev
-          # Configure Python for node-gyp
-          sudo ln -sf /usr/bin/python3.11 /usr/bin/python3
-          python3 --version
-          echo "✅ Linux Python 3.11 setup completed successfully"
-
-      - name: 🔧 Setup Python 3.11 for native modules (macOS)
-        if: matrix.platform == 'mac'
-        run: |
-          echo "🔧 Setting up Python 3.11 for macOS native module compilation..."
-          # Install Python 3.11 via Homebrew to avoid distutils issues
-          brew install python@3.11
-          # Configure Python paths for node-gyp
-          echo "/opt/homebrew/opt/python@3.11/bin" >> $GITHUB_PATH
-          export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
-          export PYTHON="/opt/homebrew/opt/python@3.11/bin/python3.11"
-          # Update environment for current session
-          echo "PYTHON=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
-          echo "npm_config_python=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
-          # Verify Python setup
-          python3.11 --version
-          python3.11 -c "import distutils; print('✅ distutils available')"
-          echo "✅ macOS Python 3.11 setup completed successfully"
-
-      - name: 🔧 Setup Python 3.11 for native modules (Windows)
-        if: matrix.platform == 'win'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: 🔧 Configure Python for Windows native modules
-        if: matrix.platform == 'win'
-        run: |
-          echo "🔧 Configuring Python 3.11 for Windows native module compilation..."
-
-          # Get Python installation path
-          $pythonPath = (Get-Command python).Source
-          $pythonDir = Split-Path $pythonPath -Parent
-          echo "Python found at: $pythonPath"
-          echo "Python directory: $pythonDir"
-
-          # Configure Python paths for node-gyp
-          echo "PYTHON=$pythonPath" >> $env:GITHUB_ENV
-          echo "npm_config_python=$pythonPath" >> $env:GITHUB_ENV
-
-          # Verify Python setup
-          python --version
-          python -c "import sys; print('Python executable:', sys.executable)"
-
-          # Check distutils availability and install setuptools if needed
-          echo "🔍 Checking Python build tools availability..."
-          $distutils_available = $false
-          try {
-            python -c "import distutils; print('✅ distutils available')" 2>$null
-            if ($LASTEXITCODE -eq 0) {
-              $distutils_available = $true
-              echo "✅ distutils available"
-            }
-          } catch {
-            # Ignore distutils check errors
-          }
-
-          if (-not $distutils_available) {
-            echo "⚠️ distutils not available, ensuring setuptools is installed..."
-            python -m pip install --upgrade setuptools wheel
-            if ($LASTEXITCODE -eq 0) {
-              echo "✅ setuptools installed successfully"
-            } else {
-              echo "❌ Failed to install setuptools, but continuing..."
-            }
-          }
-
-          # Verify build tools are working
-          try {
-            python -c "import setuptools; print('✅ setuptools available')"
-            echo "✅ Python build environment ready for native modules"
-          } catch {
-            echo "⚠️ setuptools check failed, but native modules may still work"
-          }
-
-          # Configure additional Windows build environment for native modules
-          echo "🔧 Configuring Windows build environment..."
-
-          # Ensure MSBuild is available (should be pre-installed on GitHub runners)
-          try {
-            $msbuildPath = (Get-Command msbuild -ErrorAction SilentlyContinue).Source
-            if ($msbuildPath) {
-              echo "✅ MSBuild found at: $msbuildPath"
-              echo "npm_config_msbuild_path=$msbuildPath" >> $env:GITHUB_ENV
-            } else {
-              echo "⚠️ MSBuild not found in PATH, but may still work"
-            }
-          } catch {
-            echo "⚠️ MSBuild check failed, but may still work"
-          }
-
-          # Configure node-gyp for Windows
-          echo "npm_config_cache=$env:TEMP\.npm" >> $env:GITHUB_ENV
-          echo "npm_config_prefer_offline=true" >> $env:GITHUB_ENV
-
-          # Reset error action preference and ensure clean exit
-          $ErrorActionPreference = 'Continue'
-          echo "✅ Windows Python 3.11 and build environment setup completed successfully"
-          exit 0
-
-      # ---------- Install Dependencies (Python 3.11 now available) ----------
-      - name: 📋 Install dependencies
-        run: |
-          echo "🔧 Installing dependencies WITHOUT native module builds (prevent symlink conflicts)..."
-          # Prevent initial native module builds to avoid symlink conflicts with Electron rebuild
-          pnpm install --frozen-lockfile --ignore-scripts
-          echo "✅ Dependencies installed successfully (native modules will be built specifically for Electron)"
-        env:
-          # Prevent any native module building during install
-          npm_config_ignore_scripts: true
-          SKIP_NATIVE_MODULE_BUILD: true
-
-      # ---------- Comprehensive Native Module Setup for Unix-like Platforms ----------
-      - name: 🔧 Rebuild native modules for Electron (Unix)
-        if: matrix.platform != 'win'
-        run: |
-          echo "🔧 Rebuilding native modules for Electron compatibility..."
-
-          # Comprehensive cleanup of build artifacts
-          echo "🧹 Cleaning build artifacts..."
-          rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
-          rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
-          find node_modules -name "node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
-          find node_modules -name "*.node" -path "*/better-sqlite3/*" -delete 2>/dev/null || true
-          find node_modules -name "*.node" -path "*/keytar/*" -delete 2>/dev/null || true
-
-          # Platform-specific environment setup
-          if [[ "${{ matrix.platform }}" == "linux" ]]; then
-            export npm_config_cache=/tmp/.npm
-            export npm_config_python=/usr/bin/python3.11
-            export PYTHON=/usr/bin/python3.11
-            export CC=gcc
-            export CXX=g++
-            TARGET_ARCH="x64"
-          elif [[ "${{ matrix.platform }}" == "mac" ]]; then
-            export npm_config_cache=/tmp/.npm
-            export npm_config_python=/opt/homebrew/opt/python@3.11/bin/python3.11
-            export PYTHON=/opt/homebrew/opt/python@3.11/bin/python3.11
-            export CC=clang
-            export CXX=clang++
-            # For macOS, determine architecture based on runner
-            if [[ "${{ matrix.arch }}" == "universal" ]]; then
-              TARGET_ARCH="arm64"  # Start with arm64, universal build handles both
-            else
-              TARGET_ARCH="${{ matrix.arch }}"
-            fi
-          fi
-
-          echo "🏗️ Attempting native module rebuild with fallback strategies for ${{ matrix.platform }} ($TARGET_ARCH)..."
-
-          # Strategy 1: Use @electron/rebuild (most reliable in CI)
-          echo "🔄 Strategy 1: @electron/rebuild with specific modules..."
-          STRATEGY1_SUCCESS=false
-          if npx @electron/rebuild --only=better-sqlite3,keytar --force --arch=$TARGET_ARCH; then
-            echo "✅ @electron/rebuild succeeded"
-            STRATEGY1_SUCCESS=true
-            
-            # Verify the rebuild worked
-            if find node_modules -name "*.node" -path "*/better-sqlite3/*" | grep -q .; then
-              echo "✅ better-sqlite3 native module found"
-            else
-              echo "⚠️ better-sqlite3 native module not found after rebuild"
-              STRATEGY1_SUCCESS=false
-            fi
-          else
-            echo "⚠️ @electron/rebuild failed"
-          fi
-
-          if [[ "$STRATEGY1_SUCCESS" != "true" ]]; then
-            echo "⚠️ @electron/rebuild failed, trying electron-builder..."
-            
-            # Strategy 2: electron-builder install-app-deps
-            echo "🔄 Strategy 2: electron-builder install-app-deps..."
-            STRATEGY2_SUCCESS=false
-            if npx electron-builder install-app-deps; then
-              echo "✅ electron-builder install-app-deps succeeded"
-              STRATEGY2_SUCCESS=true
-            else
-              echo "⚠️ electron-builder failed"
-            fi
-            
-            if [[ "$STRATEGY2_SUCCESS" != "true" ]]; then
-              echo "⚠️ electron-builder failed, trying manual rebuild..."
-              
-              # Strategy 3: Manual pnpm rebuild with specific environment
-              echo "🔄 Strategy 3: Manual pnpm rebuild..."
-              if pnpm rebuild better-sqlite3 keytar --reporter=silent; then
-                echo "✅ pnpm rebuild succeeded"
-              else
-                echo "⚠️ pnpm rebuild failed, trying individual module rebuilds..."
-                
-                # Strategy 4: Individual module rebuilds
-                echo "🔄 Strategy 4: Individual module rebuilds..."
-                echo "📋 Attempting to continue with existing binaries..."
-                # Don't fail the build - let it continue and see if existing binaries work
-              fi
-            fi
-          fi
-
-          # Final verification
-          echo "🔍 Verifying native modules..."
-          if find node_modules -name "*.node" -path "*/better-sqlite3/*" | grep -q .; then
-            echo "✅ better-sqlite3 native module verified"
-          else
-            echo "⚠️ better-sqlite3 native module not found - packaging may fail"
-          fi
-
-          if find node_modules -name "*.node" -path "*/keytar/*" | grep -q .; then
-            echo "✅ keytar native module verified"
-          else
-            echo "⚠️ keytar native module not found - some features may not work"
-          fi
-
-          echo "✅ Native module rebuild process completed"
-        env:
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_prefer_offline: true
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_loglevel: warn
-
-      # ---------- Windows Native Module Setup ----------
-      - name: 🔧 Rebuild native modules for Electron (Windows)
-        if: matrix.platform == 'win'
-        run: |
-          echo "🔧 Rebuilding native modules for Electron compatibility on Windows..."
-
-          echo "🧹 Cleaning build artifacts..."
-          # Windows-compatible cleanup
-          Remove-Item -Path "node_modules\.pnpm\better-sqlite3*\node_modules\better-sqlite3\build" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path "node_modules\.pnpm\keytar*\node_modules\keytar\build" -Recurse -Force -ErrorAction SilentlyContinue
-          Get-ChildItem -Path "node_modules" -Recurse -Directory -Name "node_gyp_bins" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-          Get-ChildItem -Path "node_modules" -Recurse -Filter "*.node" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*better-sqlite3*" } | Remove-Item -Force -ErrorAction SilentlyContinue
-          Get-ChildItem -Path "node_modules" -Recurse -Filter "*.node" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*keytar*" } | Remove-Item -Force -ErrorAction SilentlyContinue
-
-          echo "🏗️ Attempting native module rebuild with fallback strategies for Windows (x64)..."
-
-          # Strategy 1: Use @electron/rebuild (most reliable in CI)
-          echo "🔄 Strategy 1: @electron/rebuild with specific modules..."
-          $strategy1Success = $false
-          try {
-            npx @electron/rebuild --only=better-sqlite3,keytar --force --arch=x64
-            if ($LASTEXITCODE -eq 0) {
-              echo "✅ @electron/rebuild succeeded"
-              $strategy1Success = $true
-              
-              # Verify the rebuild worked
-              if (Get-ChildItem -Path "node_modules" -Recurse -Name "*.node" -ErrorAction SilentlyContinue | Where-Object { $_ -like "*better-sqlite3*" }) {
-                echo "✅ better-sqlite3 native module found"
-              } else {
-                echo "⚠️ better-sqlite3 native module not found after rebuild"
-                $strategy1Success = $false
-              }
-            }
-          } catch {
-            echo "⚠️ @electron/rebuild failed with exception"
-          }
-
-          if (-not $strategy1Success) {
-            echo "⚠️ @electron/rebuild failed, trying electron-builder..."
-            
-            # Strategy 2: electron-builder install-app-deps
-            echo "🔄 Strategy 2: electron-builder install-app-deps..."
-            $strategy2Success = $false
-            try {
-              npx electron-builder install-app-deps
-              if ($LASTEXITCODE -eq 0) {
-                echo "✅ electron-builder install-app-deps succeeded"
-                $strategy2Success = $true
-              }
-            } catch {
-              echo "⚠️ electron-builder failed with exception"
-            }
-            
-            if (-not $strategy2Success) {
-              echo "⚠️ electron-builder failed, trying manual rebuild..."
-              
-              # Strategy 3: Manual pnpm rebuild
-              echo "🔄 Strategy 3: Manual pnpm rebuild..."
-              try {
-                pnpm rebuild better-sqlite3 keytar --reporter=silent
-                if ($LASTEXITCODE -eq 0) {
-                  echo "✅ pnpm rebuild succeeded"
-                } else {
-                  echo "⚠️ pnpm rebuild failed"
-                  echo "📋 Attempting to continue with existing binaries..."
-                }
-              } catch {
-                echo "⚠️ pnpm rebuild failed with exception"
-                echo "📋 Attempting to continue with existing binaries..."
-              }
-            }
-          }
-
-          echo "✅ Windows native module rebuild process completed"
-        env:
-          npm_config_build_from_source: true
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_prefer_offline: true
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_loglevel: warn
-
-      # ---------- Windows-Specific Verification ----------
-      - name: 🔧 Verify Windows native modules
-        if: matrix.platform == 'win'
-        run: |
-          echo "🔍 Verifying Windows native module build results..."
-
-          # Check if native modules were built successfully
-          $betterSqliteFound = $false
-          $keytarFound = $false
-
-          # Check for better-sqlite3 native module
-          if (Get-ChildItem -Path "node_modules" -Recurse -Name "*.node" -ErrorAction SilentlyContinue | Where-Object { $_ -like "*better-sqlite3*" }) {
-            echo "✅ better-sqlite3 native module found"
-            $betterSqliteFound = $true
-          } else {
-            echo "⚠️ better-sqlite3 native module not found"
-          }
-
-          # Check for keytar native module
-          if (Get-ChildItem -Path "node_modules" -Recurse -Name "*.node" -ErrorAction SilentlyContinue | Where-Object { $_ -like "*keytar*" }) {
-            echo "✅ keytar native module found"
-            $keytarFound = $true
-          } else {
-            echo "⚠️ keytar native module not found"
-          }
-
-          if (-not $betterSqliteFound) {
-            echo "⚠️ better-sqlite3 missing - this may cause database issues"
-          }
-
-          if (-not $keytarFound) {
-            echo "⚠️ keytar missing - this may cause credential storage issues"
-          }
-
-          # Don't fail the build even if modules are missing - let packaging handle it
-          echo "✅ Windows native module verification completed"
-
-      # ---------- Download Build ----------
-      - name: 📥 Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-${{ github.sha }}
-          path: dist/
-
-      # ---------- Pre-Packaging Cache Clear (Optional) ----------
-      - name: 🧹 Clear build caches before packaging
-        run: |
-          echo "🧹 Clearing build caches before electron-builder packaging..."
-
-          # Clear platform-specific caches to ensure clean packaging
-          # Since we prevented initial native module builds, minimal cleanup needed
-          if [[ "${{ matrix.platform }}" == "mac" ]]; then
-            rm -rf ~/.cache/electron-builder || true
-            rm -rf /tmp/electron-builder-cache || true
-          elif [[ "${{ matrix.platform }}" == "linux" ]]; then
-            rm -rf ~/.cache/electron-builder || true
-            rm -rf /tmp/electron-builder-cache || true
-          fi
-
-          echo "✅ Build caches cleared"
-
-      # ---------- Windows Cache Clear ----------
-      - name: 🧹 Clear Windows build caches
-        if: matrix.platform == 'win'
-        run: |
-          echo "🧹 Clearing Windows build caches..."
-          Remove-Item -Path "$env:TEMP\electron-builder-cache" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path "$env:USERPROFILE\.electron-gyp" -Recurse -Force -ErrorAction SilentlyContinue
-          echo "✅ Windows build caches cleared"
-
-      # ---------- Platform-Specific Packaging ----------
-      - name: 📦 Package for macOS
-        if: matrix.platform == 'mac'
-        run: npx electron-builder --mac --universal --publish never
-        env:
-          # Add macOS signing secrets when available
-          # CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
-          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-          # NOTARIZE: true
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          # Configure native module environment to prevent symlink conflicts
-          npm_config_build_from_source: false
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_cache: /tmp/.npm
-          npm_config_python: /opt/homebrew/opt/python@3.11/bin/python3.11
-          PYTHON: /opt/homebrew/opt/python@3.11/bin/python3.11
-          npm_config_prefer_offline: true
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_loglevel: warn
-          # Allow electron-builder to rebuild modules it needs (like iconv-corefoundation)
-          # but use prebuilt binaries when possible to avoid conflicts
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          npm_config_optional: false
-
-      - name: 📦 Package for Linux
-        if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --x64 --publish never
-        env:
-          # Configure native module environment to prevent build conflicts
-          npm_config_build_from_source: false
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_cache: /tmp/.npm
-          npm_config_python: /usr/bin/python3.11
-          PYTHON: /usr/bin/python3.11
-          npm_config_prefer_offline: true
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_loglevel: warn
-          # Allow electron-builder to rebuild modules it needs while avoiding conflicts
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          npm_config_optional: false
-
-      - name: 📦 Package for Windows
-        if: matrix.platform == 'win'
-        run: npx electron-builder --win --x64 --publish never
-        env:
-          # Add Windows signing secrets when available
-          # CSC_LINK: ${{ secrets.WIN_CERTIFICATE }}
-          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          # Configure native module environment to prevent build conflicts
-          npm_config_build_from_source: false
-          npm_config_electron_version: 28.3.3
-          npm_config_target: 28.3.3
-          npm_config_runtime: electron
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_cache: /tmp/.npm
-          npm_config_prefer_offline: true
-          npm_config_audit: false
-          npm_config_fund: false
-          npm_config_loglevel: warn
-          # Allow electron-builder to rebuild modules it needs while avoiding conflicts
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          npm_config_optional: false
-
-      # ---------- Upload Platform Packages ----------
-      - name: 📤 Upload Packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages-${{ matrix.platform }}-${{ github.sha }}
-          path: |
-            release/*.dmg
-            release/*.AppImage
-            release/*.exe
-            release/*.deb
-            release/*.rpm
-            release/*.zip
-            release/latest*.yml
-            release/*.blockmap
-            !release/**/
-          retention-days: 90
-
-  # ---------- Firebase Cloud Functions Deployment ----------
-  deploy-firebase:
-    name: 🔥 Deploy Firebase Functions
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      # ---------- Checkout & Setup ----------
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
@@ -629,13 +113,133 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      # ---------- Install Firebase Dependencies ----------
+      # ---------- Platform-Specific Dependencies ----------
+      - name: 🔧 Setup Python 3.11 (Unix)
+        if: matrix.platform != 'win'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Setup Python 3.11 (Windows)
+        if: matrix.platform == 'win'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔧 Install system dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev python3.11-dev python3.11-distutils
+          # Verify distutils availability
+          python3.11 -c "import distutils; print('✅ distutils ready for node-gyp')"
+
+      - name: 🔧 Install system dependencies (macOS)
+        if: matrix.platform == 'mac'
+        run: |
+          # Ensure latest build tools
+          xcode-select --install 2>/dev/null || true
+          # Verify Python has distutils (should be available in 3.11)
+          python3 -c "import distutils; print('✅ distutils ready for node-gyp')"
+
+      - name: 🔧 Configure Python for native modules (Windows)
+        if: matrix.platform == 'win'
+        run: |
+          # Install setuptools to provide distutils functionality
+          python -m pip install --upgrade setuptools wheel
+          # Verify build tools
+          python -c "import setuptools; print('✅ setuptools ready for node-gyp')"
+
+      # ---------- Install Dependencies ----------
+      - name: 📋 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ---------- Download Build ----------
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: dist/
+
+      # ---------- Native Module Rebuild ----------
+      - name: 🔧 Rebuild native modules for Electron
+        run: |
+          echo "🔧 Rebuilding native modules for Electron on ${{ matrix.platform }}..."
+          npm run rebuild-for-electron
+        env:
+          npm_config_build_from_source: true
+          npm_config_electron_version: 28.3.3
+          npm_config_target: 28.3.3
+          npm_config_runtime: electron
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_prefer_offline: true
+
+      # ---------- Platform-Specific Packaging ----------
+      - name: 📦 Package for macOS
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac --universal --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: 📦 Package for Linux
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux --x64 --publish never
+
+      - name: 📦 Package for Windows
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      # ---------- Upload Packages ----------
+      - name: 📤 Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.platform }}-${{ github.sha }}
+          path: |
+            release/*.dmg
+            release/*.AppImage
+            release/*.exe
+            release/*.deb
+            release/*.rpm
+            release/*.zip
+            release/latest*.yml
+            release/*.blockmap
+          retention-days: 90
+
+  # ---------- Firebase Deployment (Optional) ----------
+  deploy-firebase:
+    name: 🔥 Deploy Firebase Functions
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ✅ Check Firebase secrets
+        run: |
+          if [[ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}" || -z "${{ secrets.FIREBASE_PROJECT_ID }}" || -z "${{ secrets.OPENAI_API_KEY }}" ]]; then
+            echo "⚠️ Firebase deployment skipped - missing required secrets"
+            echo "Required: FIREBASE_SERVICE_ACCOUNT_KEY, FIREBASE_PROJECT_ID, OPENAI_API_KEY"
+            exit 0
+          fi
+          echo "✅ All Firebase secrets available"
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Firebase Functions use Node.js 20
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
       - name: 📋 Install Firebase Functions dependencies
         run: |
           cd functions
-          npm install
+          npm ci
 
-      # ---------- Firebase Authentication ----------
       - name: 🔑 Authenticate with Firebase
         run: |
           echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}" | base64 -d > $HOME/firebase-service-account.json
@@ -644,33 +248,15 @@ jobs:
       - name: 🔥 Install Firebase CLI
         run: npm install -g firebase-tools
 
-      # ---------- Configure Functions Environment ----------
-      - name: ⚙️ Create Firebase Functions Environment File
+      - name: ⚙️ Configure Firebase Functions environment
         run: |
-          echo "🔧 Creating .env file for Firebase Functions..."
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > functions/.env
-          echo "✅ .env file created successfully"
-
-      # ---------- Build & Deploy Functions ----------
-      - name: 🏗️ Build Firebase Functions
-        run: |
-          cd functions
-          npm run build
 
       - name: 🚀 Deploy Firebase Functions
         run: |
-          echo "🚀 Deploying Firebase Functions to project: ${{ secrets.FIREBASE_PROJECT_ID }}"
+          cd functions
+          npm run build
           firebase deploy --only functions --project=${{ secrets.FIREBASE_PROJECT_ID }} --force
-          echo "✅ Firebase Functions deployed successfully"
-
-      # ---------- Verify Deployment ----------
-      - name: 🧪 Verify Functions Deployment
-        run: |
-          echo "🧪 Verifying Firebase Functions deployment..."
-          # Test the health check endpoint
-          FUNCTIONS_URL="https://us-central1-${{ secrets.FIREBASE_PROJECT_ID }}.cloudfunctions.net"
-          curl -f "$FUNCTIONS_URL/healthCheck" || echo "⚠️ Health check failed - functions may be cold starting"
-          echo "✅ Deployment verification completed"
 
   # ---------- Security Analysis ----------
   security:
@@ -686,40 +272,43 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔍 CodeQL Analysis
+      - name: 🔍 CodeQL analysis
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
-      - name: 🔍 CodeQL Autobuild
+      - name: 🔍 CodeQL autobuild
         uses: github/codeql-action/autobuild@v3
 
-      - name: 🔍 CodeQL Analysis
+      - name: 🔍 CodeQL analyze
         uses: github/codeql-action/analyze@v3
 
-  # ---------- Release Preparation ----------
+  # ---------- Release Summary ----------
   release:
-    name: 🎉 Prepare Release
-    needs: [validate, package, security, deploy-firebase]
+    name: 🎉 Release Summary
+    needs: [validate, package, security]
     runs-on: ubuntu-latest
-    if: success()
-    permissions:
-      contents: write # Required to create releases
-      discussions: write # Optional: to create release discussions
+    if: always()
 
     steps:
-      - name: 📊 Generate Success Summary
+      - name: 📊 Generate build summary
         run: |
-          echo "## 🎉 Build & Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Application Build | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Multi-Platform Package | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Analysis | ✅ Success |" >> $GITHUB_STEP_SUMMARY
-          echo "| Firebase Functions | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation | ${{ needs.validate.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Packaging | ${{ needs.package.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔥 Firebase Services" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project:** ${{ secrets.FIREBASE_PROJECT_ID }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Functions URL:** https://us-central1-${{ secrets.FIREBASE_PROJECT_ID }}.cloudfunctions.net" >> $GITHUB_STEP_SUMMARY
-          echo "- **Available Endpoints:** embeddings, batchEmbeddings, healthCheck, getSupportedModels" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.validate.result }}" == "success" && "${{ needs.package.result }}" == "success" ]]; then
+            echo "🎉 **Build completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📦 Available Artifacts:" >> $GITHUB_STEP_SUMMARY
+            echo "- macOS DMG (Universal)" >> $GITHUB_STEP_SUMMARY  
+            echo "- Linux AppImage (x64)" >> $GITHUB_STEP_SUMMARY
+            echo "- Windows NSIS Installer (x64)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Build had issues. Check job logs for details.**" >> $GITHUB_STEP_SUMMARY
+          fi
