@@ -148,13 +148,26 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
 
-      - name: 🧹 Clean node_modules and build artifacts
+      - name: 🧹 Clean node_modules and build artifacts (Unix)
+        if: runner.os != 'Windows'
         run: |
           echo "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
           npx rimraf node_modules
           npx rimraf ~/.npm ~/.electron-gyp ~/.pnpm-store 2>/dev/null || true
           # Clean pnpm cache
           pnpm store prune || echo "pnpm store prune failed, continuing..."
+
+      - name: 🧹 Clean node_modules and build artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
+          npx rimraf node_modules
+          try { npx rimraf "$env:USERPROFILE\.npm" } catch { Write-Host "npm cache cleanup skipped" }
+          try { npx rimraf "$env:USERPROFILE\.electron-gyp" } catch { Write-Host "electron-gyp cache cleanup skipped" }
+          try { npx rimraf "$env:USERPROFILE\.pnpm-store" } catch { Write-Host "pnpm-store cleanup skipped" }
+          # Clean pnpm cache
+          try { pnpm store prune } catch { Write-Host "pnpm store prune failed, continuing..." }
 
       - name: 📋 Install dependencies (clean)
         run: pnpm install --frozen-lockfile
