@@ -8,7 +8,12 @@
  */
 
 import {setGlobalOptions} from "firebase-functions";
-import {onCall, HttpsError, onRequest} from "firebase-functions/v2/https";
+import {
+  onCall,
+  HttpsError,
+  onRequest,
+  CallableRequest,
+} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import cors from "cors";
 import OpenAI from "openai";
@@ -61,10 +66,12 @@ const MAX_BATCH_SIZE = 50;
 
 /**
  * Helper function to validate authentication
- * @param {any} request - Firebase callable function request
- * @return {any} The authenticated user context
+ * @param {CallableRequest} request - Firebase callable function request
+ * @return {object} The authenticated user context
  */
-function validateAuth(request: any): any {
+function validateAuth(
+  request: CallableRequest,
+): NonNullable<CallableRequest["auth"]> {
   if (!request.auth) {
     logger.warn("Unauthenticated request to embedding function");
     throw new HttpsError("unauthenticated", "Authentication required");

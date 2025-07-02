@@ -27,5 +27,6 @@ module.exports = {
     quotes: ["error", "double"],
     "import/no-unresolved": 0,
     "prettier/prettier": "error",
+    "@typescript-eslint/no-explicit-any": "warn",
   },
 };
