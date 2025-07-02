@@ -141,8 +141,10 @@ jobs:
 
       - name: 🔧 Configure Python for native modules (Windows)
         if: matrix.platform == 'win'
+        shell: pwsh
         run: |
-          chcp 65001
+          # Set UTF-8 encoding for consistent character handling
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           python -m pip install --upgrade setuptools wheel
           python -c "import setuptools; print('setuptools ready for node-gyp')"
         env:
@@ -175,8 +177,12 @@ jobs:
 
       - name: 📋 Install dependencies (clean) (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
-        run: pnpm install --frozen-lockfile
+        shell: pwsh
+        run: |
+          # Ensure UTF-8 encoding
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          # Install dependencies
+          pnpm install --frozen-lockfile
 
       - name: 📥 Download build artifacts
         uses: actions/download-artifact@v4

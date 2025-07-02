@@ -154,9 +154,10 @@ jobs:
 
       - name: 🔧 Configure Python for native modules (Windows)
         if: matrix.platform == 'win'
+        shell: pwsh
         run: |
-          # Force UTF-8 console encoding to prevent Unicode errors
-          chcp 65001
+          # Set UTF-8 encoding for consistent character handling
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           # Install setuptools to provide distutils functionality
           python -m pip install --upgrade setuptools wheel
           # Verify build tools
@@ -193,8 +194,12 @@ jobs:
 
       - name: 📋 Install dependencies (clean) (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
-        run: pnpm install --frozen-lockfile
+        shell: pwsh
+        run: |
+          # Ensure UTF-8 encoding
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          # Install dependencies
+          pnpm install --frozen-lockfile
 
       # ---------- Download Build ----------
       - name: 📥 Download build artifacts
