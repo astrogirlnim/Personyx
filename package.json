@@ -124,7 +124,6 @@
     ],
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
-    "nativeRebuilder": "sequential",
     "icon": "build/icon.png",
     "publish": null,
     "generateUpdatesFilesForAllChannels": false,

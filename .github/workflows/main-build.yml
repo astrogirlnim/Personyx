@@ -566,11 +566,11 @@ jobs:
         run: npm install -g firebase-tools
 
       # ---------- Configure Functions Environment ----------
-      - name: ⚙️ Configure Firebase Functions Environment
+      - name: ⚙️ Create Firebase Functions Environment File
         run: |
-          echo "🔧 Setting Firebase Functions environment variables..."
-          firebase functions:config:set openai.api_key="${{ secrets.OPENAI_API_KEY }}" --project=${{ secrets.FIREBASE_PROJECT_ID }}
-          echo "✅ Firebase Functions environment configured"
+          echo "🔧 Creating .env file for Firebase Functions..."
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > functions/.env
+          echo "✅ .env file created successfully"
 
       # ---------- Build & Deploy Functions ----------
       - name: 🏗️ Build Firebase Functions
