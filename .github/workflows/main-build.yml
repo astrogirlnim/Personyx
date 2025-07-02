@@ -487,35 +487,54 @@ jobs:
             # ---------- Pre-Packaging Cleanup (Critical for symlink conflicts) ----------
       - name: 🧹 Clean native module artifacts before packaging
         run: |
-          echo "🧹 Performing targeted cleanup before electron-builder packaging..."
+          echo "🧹 Performing comprehensive cleanup before electron-builder packaging..."
 
           # Platform-specific cleanup approach
           if [[ "${{ matrix.platform }}" == "mac" ]]; then
             echo "🔧 macOS-specific cleanup for symlink conflicts..."
             
-            # ONLY clean better-sqlite3 and keytar to prevent symlink conflicts
-            # Leave other native modules (like iconv-corefoundation) that electron-builder needs
+            # Comprehensive cleanup of better-sqlite3 and keytar build artifacts
+            # This addresses the EEXIST symlink conflict issue
+            
+            # Remove all node_gyp_bins directories and their symlinks (most critical)
             find node_modules -path "*/better-sqlite3*/build/node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
             find node_modules -path "*/keytar*/build/node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
+            find node_modules -name "node_gyp_bins" -path "*/better-sqlite3/*" -exec rm -rf {} + 2>/dev/null || true
+            find node_modules -name "node_gyp_bins" -path "*/keytar/*" -exec rm -rf {} + 2>/dev/null || true
+            
+            # Remove specific Python symlinks that cause EEXIST errors
+            find node_modules -path "*/better-sqlite3*/build" -name "python*" -type l -delete 2>/dev/null || true
+            find node_modules -path "*/keytar*/build" -name "python*" -type l -delete 2>/dev/null || true
+            
+            # Remove entire build directories for these modules
             find node_modules -name "build" -type d -path "*/better-sqlite3/*" -exec rm -rf {} + 2>/dev/null || true
             find node_modules -name "build" -type d -path "*/keytar/*" -exec rm -rf {} + 2>/dev/null || true
             
-            # Clear electron-builder cache that might contain conflicting builds
+            # Clear electron-builder and gyp caches
             rm -rf /tmp/electron-builder-cache || true
             rm -rf ~/.electron-gyp || true
             rm -rf ~/.cache/electron-builder || true
+            rm -rf ~/.node-gyp || true
             
-            # ONLY remove .node files from better-sqlite3 and keytar (preserve others like iconv-corefoundation)
+            # Remove .node files (but preserve other native modules like iconv-corefoundation)
             find node_modules -name "*.node" -path "*/better-sqlite3/*" -delete 2>/dev/null || true
             find node_modules -name "*.node" -path "*/keytar/*" -delete 2>/dev/null || true
+            
+            # Additional cleanup for pnpm structure
+            rm -rf node_modules/.pnpm/better-sqlite3*/node_modules/better-sqlite3/build || true
+            rm -rf node_modules/.pnpm/keytar*/node_modules/keytar/build || true
             
           elif [[ "${{ matrix.platform }}" == "linux" ]]; then
             echo "🔧 Linux-specific cleanup..."
             find node_modules -path "*/better-sqlite3*/build/node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
             find node_modules -path "*/keytar*/build/node_gyp_bins" -type d -exec rm -rf {} + 2>/dev/null || true
+            find node_modules -name "node_gyp_bins" -path "*/better-sqlite3/*" -exec rm -rf {} + 2>/dev/null || true
+            find node_modules -name "node_gyp_bins" -path "*/keytar/*" -exec rm -rf {} + 2>/dev/null || true
             find node_modules -name "build" -type d -path "*/better-sqlite3/*" -exec rm -rf {} + 2>/dev/null || true
             find node_modules -name "build" -type d -path "*/keytar/*" -exec rm -rf {} + 2>/dev/null || true
             rm -rf /tmp/electron-builder-cache || true
+            rm -rf ~/.electron-gyp || true
+            rm -rf ~/.node-gyp || true
             
           elif [[ "${{ matrix.platform }}" == "win" ]]; then
             echo "🔧 Windows-specific cleanup..."
@@ -529,26 +548,62 @@ jobs:
           find node_modules -name "*.node" -path "*/better-sqlite3/*" -delete 2>/dev/null || true
           find node_modules -name "*.node" -path "*/keytar/*" -delete 2>/dev/null || true
 
-          echo "✅ Targeted pre-packaging cleanup completed successfully"
+          # Final verification - ensure no symlinks remain
+          echo "🔍 Verifying cleanup completed..."
+          if find node_modules -path "*/better-sqlite3*/build/node_gyp_bins" -type d 2>/dev/null | grep -q .; then
+            echo "⚠️ Warning: Some better-sqlite3 node_gyp_bins directories still exist"
+          else
+            echo "✅ better-sqlite3 node_gyp_bins cleanup verified"
+          fi
+
+          echo "✅ Comprehensive pre-packaging cleanup completed successfully"
 
             # ---------- Windows-Specific Pre-Packaging Cleanup ----------
       - name: 🧹 Windows native module cleanup before packaging
         if: matrix.platform == 'win'
         run: |
-          echo "🧹 Performing Windows-specific targeted cleanup before electron-builder packaging..."
+          echo "🧹 Performing Windows-specific comprehensive cleanup before electron-builder packaging..."
 
-          # ONLY remove node_gyp_bins directories from better-sqlite3 and keytar
+          # Comprehensive cleanup of better-sqlite3 and keytar build artifacts
+          # This addresses potential symlink and build conflicts on Windows
+
+          # Remove all node_gyp_bins directories and their contents (most critical)
+          echo "🔧 Removing node_gyp_bins directories..."
           Get-ChildItem -Path "node_modules" -Recurse -Directory -Name "node_gyp_bins" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*better-sqlite3*" -or $_.FullName -like "*keytar*" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-          # Remove build directories (ONLY better-sqlite3 and keytar)
+          # Remove specific Python symlinks and executables that could cause conflicts
+          echo "🔧 Removing Python symlinks and executables..."
+          Get-ChildItem -Path "node_modules" -Recurse -Name "python*" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*better-sqlite3*build*" -or $_.FullName -like "*keytar*build*" } | Remove-Item -Force -ErrorAction SilentlyContinue
+
+          # Remove entire build directories for these modules
+          echo "🔧 Removing build directories..."
           Remove-Item -Path "node_modules\.pnpm\better-sqlite3*\node_modules\better-sqlite3\build" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "node_modules\.pnpm\keytar*\node_modules\keytar\build" -Recurse -Force -ErrorAction SilentlyContinue
 
+          # Additional cleanup for direct node_modules structure
+          Get-ChildItem -Path "node_modules" -Recurse -Directory -Name "build" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*better-sqlite3*" -or $_.FullName -like "*keytar*" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          # Clear Windows-specific caches
+          echo "🔧 Clearing build caches..."
+          Remove-Item -Path "$env:TEMP\electron-builder-cache" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "$env:USERPROFILE\.electron-gyp" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "$env:USERPROFILE\.node-gyp" -Recurse -Force -ErrorAction SilentlyContinue
+
           # Remove .node files (ONLY better-sqlite3 and keytar, preserve others for electron-builder)
+          echo "🔧 Removing .node files..."
           Get-ChildItem -Path "node_modules" -Recurse -Filter "*.node" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*better-sqlite3*" } | Remove-Item -Force -ErrorAction SilentlyContinue
           Get-ChildItem -Path "node_modules" -Recurse -Filter "*.node" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*keytar*" } | Remove-Item -Force -ErrorAction SilentlyContinue
 
-          echo "✅ Windows targeted pre-packaging cleanup completed successfully"
+          # Final verification
+          echo "🔍 Verifying Windows cleanup completed..."
+          $betterSqliteBuildDirs = Get-ChildItem -Path "node_modules" -Recurse -Directory -Name "build" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*better-sqlite3*" }
+          if ($betterSqliteBuildDirs) {
+            echo "⚠️ Warning: Some better-sqlite3 build directories still exist"
+          } else {
+            echo "✅ better-sqlite3 build cleanup verified"
+          }
+
+          echo "✅ Windows comprehensive pre-packaging cleanup completed successfully"
 
       # ---------- Platform-Specific Packaging ----------
       - name: 📦 Package for macOS
