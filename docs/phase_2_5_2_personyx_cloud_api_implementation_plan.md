@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document outlines the implementation plan for integrating Firebase Authentication and Cloud Functions as an alternative to direct OpenAI embedding API calls. This enables users who prefer not to manage their own API keys to use a managed cloud service with authentication. **This is an MVP approach using Firebase instead of building a custom Personyx Cloud API.**
+This document outlines the implementation plan for integrating Firebase Authentication and Cloud Functions as an alternative to direct OpenAI embedding API calls. This enables users who prefer not to manage their own API keys to use a managed cloud service with authentication. **This is an MVP approach using Firebase instead of building a custom Firebase Cloud API.**
 
 ## Current Architecture Analysis
 
@@ -401,5 +401,5 @@ OPENAI_API_KEY=xxx (managed in Firebase Functions)
 This Firebase approach provides a clear migration path:
 
 1. **MVP**: Firebase Auth + Cloud Functions
-2. **Future**: Custom Personyx Cloud API with OAuth 2.0
+2. **Future**: Custom Firebase Cloud API with OAuth 2.0
 3. **Migration**: Provider interface remains the same

@@ -1,6 +1,6 @@
 /**
  * Embedding Provider Manager
- * Orchestrates between different embedding providers (OpenAI, Personyx Cloud)
+ * Orchestrates between different embedding providers (OpenAI, Firebase Cloud)
  * Phase 2.5.2 - Hybrid AI Key Management & Cloud Option
  */
 

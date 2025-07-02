@@ -350,7 +350,7 @@ export class SettingsService {
           return { success: false, error: 'Empty response from OpenAI API' };
         }
       } else if (provider === 'cloud') {
-        // Test Personyx Cloud API key (simulated for now)
+        // Test Firebase Cloud API key (simulated for now)
         const keyToTest = apiKey || (await getToken('firebase-cloud'));
         if (!keyToTest) {
           return { success: false, error: 'No API key provided' };

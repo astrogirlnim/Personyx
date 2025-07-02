@@ -395,10 +395,10 @@ class PersonyxApp {
       await this.settingsService.initialize();
       this.logger.info('✅ Settings service initialized');
 
-      // Initialize Personyx Cloud service (Phase 2.5 - Feature 5.3)
-      this.logger.info('☁️ Initializing Personyx Cloud service...');
+      // Initialize Firebase Cloud service (Phase 2.5 - Feature 5.3)
+      this.logger.info('☁️ Initializing Firebase Cloud service...');
       this.cloudService = new PersonyxCloudService();
-      this.logger.info('✅ Personyx Cloud service initialized');
+      this.logger.info('✅ Firebase Cloud service initialized');
 
       // Initialize LangGraph service with hybrid AI support (Phase 2.5 - Feature 5.4)
       this.logger.info(
@@ -768,7 +768,7 @@ class PersonyxApp {
       this.logger.info('📊 Fetching cloud subscription information');
 
       if (!this.cloudService) {
-        this.logger.warn('⚠️ PersonyxCloudService not initialized');
+        this.logger.warn('⚠️ FirebaseCloudService not initialized');
         throw new Error('Cloud service not available');
       }
 

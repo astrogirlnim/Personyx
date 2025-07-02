@@ -1,6 +1,6 @@
 /**
  * Embedding Provider Interface
- * Abstraction layer for different embedding services (OpenAI, Personyx Cloud)
+ * Abstraction layer for different embedding services (OpenAI, Firebase Cloud)
  * Phase 2.5.2 - Hybrid AI Key Management & Cloud Option
  */
 

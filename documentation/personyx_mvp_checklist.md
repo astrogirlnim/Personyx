@@ -132,7 +132,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 
 [ ] **Feature 5 – Settings & Management**
 
-- [ ] **5.1** Implement "AI Service" settings modal (enter OpenAI key, select Personyx Cloud).
+- [ ] **5.1** Implement "AI Service" settings modal (enter OpenAI key, select Firebase Cloud).
 - [ ] **5.2** Validate & encrypt keys via TokenVault; surface missing-key warnings.
 - [ ] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart).
 - [ ] **5.4** Persist dark / light theme toggle to local prefs.

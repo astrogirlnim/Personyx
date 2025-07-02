@@ -8,7 +8,7 @@ import axios, { AxiosInstance } from 'axios';
 import { Logger } from '@main/utils/logger';
 import { API } from '@shared/constants';
 
-const logger = new Logger('personyx-cloud-service');
+const logger = new Logger('firebase-cloud-service');
 
 interface MockCloudResponse {
   success: boolean;
