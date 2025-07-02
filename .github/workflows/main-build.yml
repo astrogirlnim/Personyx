@@ -177,7 +177,7 @@ jobs:
 
       # ---------- Install Dependencies ----------
       - name: 📋 Install dependencies (clean)
-        run: pnpm install --frozen-lockfile --no-optional
+        run: pnpm install --frozen-lockfile
 
       # ---------- Download Build ----------
       - name: 📥 Download build artifacts
