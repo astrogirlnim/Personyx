@@ -102,7 +102,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 
 [ ] **Feature 1 – Tray UI Core Screens**
 
-- [ ] **1.1** Build "Chat with Persona" window (single persona dropdown).
+- [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [ ] **1.2** Add "Import PRD" modal with drag-&-drop and progress bar.
 - [ ] **1.3** Display real-time Evidence Score banner after import.
 - [ ] **1.4** Show global error toast for failed ingest events.

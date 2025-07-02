@@ -163,8 +163,9 @@ export interface AppSettings {
 export interface ChatResponse {
   message: string;
   sources: Evidence[];
-  persona: Persona;
+  persona: Persona | null; // Allow null for user messages
   timestamp: Date;
+  isUser?: boolean; // Optional flag to distinguish user vs persona messages
 }
 
 export interface ImportResult {
@@ -203,6 +204,7 @@ export type IPCEventCallback<T extends keyof IPCEvents> = (
 export type TrayAction =
   | 'show-window'
   | 'import-prd'
+  | 'chat-persona'
   | 'view-scores'
   | 'open-settings'
   | 'check-updates'

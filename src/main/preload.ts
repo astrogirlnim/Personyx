@@ -32,6 +32,7 @@ interface ElectronAPI {
   onPRDImported: (callback: (data: unknown) => void) => void;
   onAppReady: (callback: () => void) => void;
   onError: (callback: (error: unknown) => void) => void;
+  onOpenChatWindow: (callback: () => void) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;
@@ -107,6 +108,10 @@ const electronAPI: ElectronAPI = {
 
   onError: (callback: (error: unknown) => void) => {
     ipcRenderer.on('error', (_, error) => callback(error));
+  },
+
+  onOpenChatWindow: (callback: () => void) => {
+    ipcRenderer.on('open-chat-window', () => callback());
   },
 
   // Cleanup

@@ -138,6 +138,11 @@ export class TrayManager {
         click: () => this.handleAction('import-prd'),
       },
       {
+        label: 'Chat with Persona...',
+        accelerator: 'CmdOrCtrl+K',
+        click: () => this.handleAction('chat-persona'),
+      },
+      {
         label: 'View Evidence Scores',
         click: () => this.handleAction('view-scores'),
       },
@@ -262,6 +267,18 @@ export class TrayManager {
           await this.handleImportPRD();
           this.logger.info('✅ import-prd completed');
           break;
+
+        case 'chat-persona': {
+          this.logger.debug('🔧 Executing: chat-persona');
+          personyxApp.createMainWindow();
+          // Send a message to the renderer to open the chat window
+          const mainWindow = personyxApp.getMainWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('open-chat-window');
+          }
+          this.logger.info('✅ chat-persona completed');
+          break;
+        }
 
         case 'view-scores':
           this.logger.debug('🔧 Executing: view-scores');
