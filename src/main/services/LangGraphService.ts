@@ -130,7 +130,7 @@ export class LangGraphService {
     logger.debug('🔧 Initializing Personyx Cloud provider...');
 
     // Get Personyx Cloud API key from secure token vault
-    const apiKey = await getToken('personyx-cloud');
+    const apiKey = await getToken('firebase-cloud');
 
     if (!apiKey) {
       logger.warn(

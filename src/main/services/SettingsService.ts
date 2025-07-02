@@ -257,7 +257,7 @@ export class SettingsService {
         };
       } else if (config.provider === 'cloud' && config.cloudSubscription) {
         // Store cloud API key in token vault
-        await storeToken('personyx-cloud', config.cloudSubscription.apiKey);
+        await storeToken('firebase-cloud', config.cloudSubscription.apiKey);
         logger.debug('🔐 Cloud API key stored in token vault');
 
         // Update configuration (without storing the actual key)
@@ -299,7 +299,7 @@ export class SettingsService {
         config.provider === 'cloud' &&
         config.cloudSubscription?.apiKey === 'stored-in-vault'
       ) {
-        const apiKey = await getToken('personyx-cloud');
+        const apiKey = await getToken('firebase-cloud');
         if (config.cloudSubscription && apiKey) {
           config.cloudSubscription.apiKey = apiKey;
         }
@@ -351,7 +351,7 @@ export class SettingsService {
         }
       } else if (provider === 'cloud') {
         // Test Personyx Cloud API key (simulated for now)
-        const keyToTest = apiKey || (await getToken('personyx-cloud'));
+        const keyToTest = apiKey || (await getToken('firebase-cloud'));
         if (!keyToTest) {
           return { success: false, error: 'No API key provided' };
         }
@@ -390,7 +390,7 @@ export class SettingsService {
         await removeToken('openai');
         this.settings.aiService.localApiKey = undefined;
       } else if (provider === 'cloud') {
-        await removeToken('personyx-cloud');
+        await removeToken('firebase-cloud');
         this.settings.aiService.cloudSubscription = undefined;
       }
 
