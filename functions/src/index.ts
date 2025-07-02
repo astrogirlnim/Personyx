@@ -61,15 +61,15 @@ const MAX_BATCH_SIZE = 50;
 
 /**
  * Helper function to validate authentication
- * @param {any} context - Firebase callable function context
+ * @param {any} request - Firebase callable function request
  * @return {any} The authenticated user context
  */
-function validateAuth(context: any): any {
-  if (!context.auth) {
+function validateAuth(request: any): any {
+  if (!request.auth) {
     logger.warn("Unauthenticated request to embedding function");
     throw new HttpsError("unauthenticated", "Authentication required");
   }
-  return context.auth;
+  return request.auth;
 }
 
 /**
@@ -152,19 +152,28 @@ export const embeddings = onCall(
         },
         processing_time: processingTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       logger.error("Embedding generation failed", {
-        error: error.message,
-        stack: error.stack,
+        error: errorMessage,
+        stack: errorStack,
         userId: request.auth?.uid,
       });
 
       // Handle specific OpenAI errors
-      if (error.code === "insufficient_quota") {
-        throw new HttpsError("resource-exhausted", "OpenAI API quota exceeded");
-      }
-      if (error.code === "rate_limit_exceeded") {
-        throw new HttpsError("resource-exhausted", "Rate limit exceeded");
+      if (error && typeof error === "object" && "code" in error) {
+        if (error.code === "insufficient_quota") {
+          throw new HttpsError(
+            "resource-exhausted",
+            "OpenAI API quota exceeded",
+          );
+        }
+        if (error.code === "rate_limit_exceeded") {
+          throw new HttpsError("resource-exhausted", "Rate limit exceeded");
+        }
       }
       if (error instanceof HttpsError) {
         throw error;
@@ -250,19 +259,28 @@ export const batchEmbeddings = onCall(
         total_tokens: response.usage?.total_tokens || 0,
         processing_time: processingTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       logger.error("Batch embedding generation failed", {
-        error: error.message,
-        stack: error.stack,
+        error: errorMessage,
+        stack: errorStack,
         userId: request.auth?.uid,
       });
 
       // Handle specific OpenAI errors
-      if (error.code === "insufficient_quota") {
-        throw new HttpsError("resource-exhausted", "OpenAI API quota exceeded");
-      }
-      if (error.code === "rate_limit_exceeded") {
-        throw new HttpsError("resource-exhausted", "Rate limit exceeded");
+      if (error && typeof error === "object" && "code" in error) {
+        if (error.code === "insufficient_quota") {
+          throw new HttpsError(
+            "resource-exhausted",
+            "OpenAI API quota exceeded",
+          );
+        }
+        if (error.code === "rate_limit_exceeded") {
+          throw new HttpsError("resource-exhausted", "Rate limit exceeded");
+        }
       }
       if (error instanceof HttpsError) {
         throw error;
@@ -331,9 +349,12 @@ export const getSupportedModels = onCall(
         default_model: EMBEDDING_MODEL,
         max_batch_size: MAX_BATCH_SIZE,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
       logger.error("Get supported models failed", {
-        error: error.message,
+        error: errorMessage,
         userId: request.auth?.uid,
       });
 

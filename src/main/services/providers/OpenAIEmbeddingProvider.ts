@@ -194,12 +194,12 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   private async retryWithBackoff<T>(operation: () => Promise<T>): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
         return await operation();
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
 
         if (attempt === this.MAX_RETRIES) {
@@ -209,8 +209,10 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
         // Check if error is retryable
         if (this.isRetryableError(error)) {
           const delay = this.RETRY_DELAY * Math.pow(2, attempt - 1);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           logger.warn(`⚠️ Attempt ${attempt} failed, retrying in ${delay}ms`, {
-            error: error.message,
+            error: errorMessage,
           });
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
@@ -223,25 +225,41 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     throw lastError;
   }
 
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     // Retry on network errors, rate limits, and temporary server errors
     const retryableErrors = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'];
     const retryableHttpCodes = [429, 500, 502, 503, 504];
 
-    if (error.code && retryableErrors.includes(error.code)) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof error.code === 'string' &&
+      retryableErrors.includes(error.code)
+    ) {
       return true;
     }
 
-    if (error.status && retryableHttpCodes.includes(error.status)) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'status' in error &&
+      typeof error.status === 'number' &&
+      retryableHttpCodes.includes(error.status)
+    ) {
       return true;
     }
 
     return false;
   }
 
-  private updateRateLimit(response: any): void {
+  private updateRateLimit(response: unknown): void {
     // Extract rate limit information from response headers if available
-    const headers = response.headers || {};
+    if (!response || typeof response !== 'object' || !('headers' in response)) {
+      return;
+    }
+
+    const headers = (response.headers as Record<string, string>) || {};
 
     if (headers['x-ratelimit-remaining']) {
       this.rateLimit.remaining = parseInt(headers['x-ratelimit-remaining'], 10);

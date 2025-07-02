@@ -163,7 +163,7 @@ export class EmbeddingProviderManager {
    * Get status of all providers
    */
   getProviderStatus(): Record<EmbeddingProviderType, ProviderStatus> {
-    const status: Record<EmbeddingProviderType, ProviderStatus> = {} as any;
+    const status = {} as Record<EmbeddingProviderType, ProviderStatus>;
 
     for (const [type, provider] of this.providers) {
       status[type] = provider.getStatus();
@@ -236,7 +236,7 @@ export class EmbeddingProviderManager {
    * Test connectivity for all providers
    */
   async testAllProviders(): Promise<Record<EmbeddingProviderType, boolean>> {
-    const results: Record<EmbeddingProviderType, boolean> = {} as any;
+    const results = {} as Record<EmbeddingProviderType, boolean>;
 
     for (const [type, provider] of this.providers) {
       try {
@@ -312,14 +312,17 @@ export class EmbeddingProviderManager {
   }
 
   private createEmbeddingError(
-    originalError: any,
+    originalError: unknown,
     providerName: string
   ): EmbeddingErrorInfo {
     let errorCode: EmbeddingError = 'NETWORK_ERROR';
     let retryable = false;
 
     // Classify the error
-    const errorMessage = String(originalError.message || originalError);
+    const errorMessage =
+      originalError instanceof Error
+        ? originalError.message
+        : String(originalError);
 
     if (
       errorMessage.includes('API key') ||

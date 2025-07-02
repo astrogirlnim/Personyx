@@ -31,6 +31,7 @@ module.exports = {
     'release/',
     'node_modules/',
     'scripts/',
+    'functions/', // Firebase Functions has its own ESLint config
     '*.config.js',
   ],
 };
