@@ -151,10 +151,8 @@ jobs:
       - name: 🧹 Clean node_modules and build artifacts
         run: |
           echo "🧹 Cleaning node_modules and caches to prevent symlink conflicts..."
-          rm -rf node_modules
-          rm -rf ~/.npm
-          rm -rf ~/.electron-gyp
-          rm -rf ~/.pnpm-store
+          npx rimraf node_modules
+          npx rimraf ~/.npm ~/.electron-gyp ~/.pnpm-store 2>/dev/null || true
           # Clean pnpm cache
           pnpm store prune || echo "pnpm store prune failed, continuing..."
 
