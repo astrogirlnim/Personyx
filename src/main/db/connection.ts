@@ -57,17 +57,17 @@ function tablesExist(): boolean {
   if (!dbInstance) return false;
 
   try {
-    // Check if all required tables exist (including embeddings)
+    // Check if all required tables exist (including embeddings and activity_log)
     const tableCheck = dbInstance.prepare(`
       SELECT COUNT(*) as count 
       FROM sqlite_master 
-      WHERE type='table' AND name IN ('personas', 'evidence', 'product_documents', 'evidence_scores', 'api_tokens', 'embeddings')
+      WHERE type='table' AND name IN ('personas', 'evidence', 'product_documents', 'evidence_scores', 'api_tokens', 'embeddings', 'activity_log')
     `);
 
     const result = tableCheck.get() as { count: number };
     logger.debug('🔍 Table check result', { tablesFound: result.count });
 
-    return result.count >= 6; // All 6 main tables should exist (including embeddings)
+    return result.count >= 7; // All 7 main tables should exist (including activity_log)
   } catch (error) {
     logger.error('❌ Error checking tables', error);
     return false;
@@ -105,14 +105,16 @@ function applyMigrationSQL(): void {
       'product_documents',
     ];
     const migration0001Tables = ['embeddings'];
+    const migration0002Tables = ['activity_log'];
 
-    // Check if we need to run migration 0000
+    // Check if we need to run each migration
     const needsMigration0000 = migration0000Tables.some(
       table => !existingTables.includes(table)
     );
-
-    // Check if we need to run migration 0001
     const needsMigration0001 = migration0001Tables.some(
+      table => !existingTables.includes(table)
+    );
+    const needsMigration0002 = migration0002Tables.some(
       table => !existingTables.includes(table)
     );
 
@@ -134,6 +136,15 @@ function applyMigrationSQL(): void {
       );
     }
 
+    // Run migration 0002 if needed (Activity Log)
+    if (needsMigration0002) {
+      totalStatements += runSingleMigration('0002_activity_log_table.sql');
+    } else {
+      logger.info(
+        '⏭️ Migration 0002 skipped - activity_log table already exists'
+      );
+    }
+
     if (totalStatements === 0 && existingTables.length === 0) {
       // If no tables exist at all and no migrations ran, create manually
       logger.info(
@@ -146,6 +157,7 @@ function applyMigrationSQL(): void {
         existingTables: existingTables.length,
         needsMigration0000,
         needsMigration0001,
+        needsMigration0002,
       });
     }
   } catch (error) {
@@ -282,6 +294,22 @@ function createTablesManually(): void {
         created_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON UPDATE no action ON DELETE no action
       );
+
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id text PRIMARY KEY NOT NULL,
+        type text NOT NULL,
+        title text NOT NULL,
+        description text,
+        source text NOT NULL,
+        metadata text,
+        timestamp integer NOT NULL,
+        created_at integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+      );
+
+      -- Create indexes for activity_log performance
+      CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log (timestamp);
+      CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log (type);
+      CREATE INDEX IF NOT EXISTS idx_activity_log_source ON activity_log (source);
     `;
 
     logger.info('🔧 Creating tables manually');

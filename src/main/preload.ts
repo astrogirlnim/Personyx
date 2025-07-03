@@ -32,6 +32,28 @@ interface ElectronAPI {
     minSimilarity?: number
   ) => Promise<unknown>;
 
+  // Phase 3.1.6: Activity log operations
+  getActivityLog: (options?: {
+    page?: number;
+    limit?: number;
+    filter?: unknown;
+  }) => Promise<unknown>;
+  getActivityLogStats: () => Promise<unknown>;
+  clearActivityLog: () => Promise<unknown>;
+  exportActivityLog: (
+    format: 'csv' | 'json',
+    filter?: unknown
+  ) => Promise<unknown>;
+
+  // Phase 3.1.6: Log general activity
+  logGeneralActivity: (data: {
+    type: string;
+    title: string;
+    description?: string;
+    source: string;
+    metadata?: unknown;
+  }) => Promise<unknown>;
+
   // Event listeners
   onEvidenceScoreUpdated: (callback: (data: unknown) => void) => void;
   onTranscriptIngested: (callback: (data: unknown) => void) => void;
@@ -42,6 +64,8 @@ interface ElectronAPI {
   onGlobalError: (callback: (error: unknown) => void) => void;
   // Phase 3.1.7: Success toast listener
   onTranscriptSuccessToast: (callback: (data: unknown) => void) => void;
+  // Phase 3.1.6: Activity log listener
+  onActivityLogUpdated: (callback: (data: unknown) => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (
     callback: (data: { filePath: string }) => void
@@ -134,6 +158,43 @@ const electronAPI: ElectronAPI = {
     });
   },
 
+  // Phase 3.1.6: Activity log operations
+  getActivityLog: (options?: {
+    page?: number;
+    limit?: number;
+    filter?: unknown;
+  }) => {
+    console.log('📋 Getting activity log');
+    return ipcRenderer.invoke('get-activity-log', options || {});
+  },
+
+  getActivityLogStats: () => {
+    console.log('📊 Getting activity log stats');
+    return ipcRenderer.invoke('activity-log-stats');
+  },
+
+  clearActivityLog: () => {
+    console.log('🗑️ Clearing activity log');
+    return ipcRenderer.invoke('clear-activity-log');
+  },
+
+  exportActivityLog: (format: 'csv' | 'json', filter?: unknown) => {
+    console.log('📤 Exporting activity log');
+    return ipcRenderer.invoke('export-activity-log', { format, filter });
+  },
+
+  // Phase 3.1.6: Log general activity
+  logGeneralActivity: (data: {
+    type: string;
+    title: string;
+    description?: string;
+    source: string;
+    metadata?: unknown;
+  }) => {
+    console.log('📤 Logging general activity');
+    return ipcRenderer.invoke('log-general-activity', data);
+  },
+
   // Event listeners
   onEvidenceScoreUpdated: (callback: (data: unknown) => void) => {
     ipcRenderer.on('evidence-score-updated', (_, data) => callback(data));
@@ -163,6 +224,11 @@ const electronAPI: ElectronAPI = {
   // Phase 3.1.7: Success toast listener
   onTranscriptSuccessToast: (callback: (data: unknown) => void) => {
     ipcRenderer.on('transcript-success-toast', (_, data) => callback(data));
+  },
+
+  // Phase 3.1.6: Activity log listener
+  onActivityLogUpdated: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('activity-log-updated', (_, data) => callback(data));
   },
 
   onOpenChatWindow: (callback: () => void) => {

@@ -32,6 +32,7 @@ import { SecureFileIngestService } from './services/SecureFileIngestService';
 import { SettingsService } from './services/SettingsService';
 import { PersonyxCloudService } from './services/PersonyxCloudService';
 import { LangGraphService } from './services/LangGraphService';
+import { ActivityLogService } from './services/ActivityLogService';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type {
   IPCEvents,
@@ -41,6 +42,7 @@ import type {
   AIServiceConfig,
   Evidence,
   Persona,
+  ActivityLogMetadata,
 } from '@shared/types';
 
 // Environment detection for main process
@@ -58,6 +60,7 @@ class PersonyxApp {
   private settingsService: SettingsService | null = null;
   private cloudService: PersonyxCloudService | null = null;
   private langGraphService: LangGraphService | null = null;
+  private activityLogService: ActivityLogService | null = null;
   private logger: Logger;
   private isAppReady = false;
   private fileToImportOnReady: {
@@ -179,6 +182,16 @@ class PersonyxApp {
         // Set main window for secure file ingest service event emission
         if (this.secureFileIngestService) {
           this.secureFileIngestService.setMainWindow(this.mainWindow);
+        }
+
+        // Initialize activity log service with main window (Phase 3.1.6)
+        if (this.activityLogService) {
+          this.activityLogService.initialize(this.mainWindow).catch(error => {
+            this.logger.error(
+              '❌ Failed to initialize activity log service with main window',
+              error
+            );
+          });
         }
 
         // If a file was dropped on the tray, send it to the modal now
@@ -536,6 +549,38 @@ class PersonyxApp {
       this.logger.info('📊 Get cloud subscription info request');
       return await this.handleGetCloudSubscriptionInfo();
     });
+
+    // Phase 3.1.6: Activity log IPC handlers
+    ipcMain.handle(
+      IPC_CHANNELS.GET_ACTIVITY_LOG,
+      async (_, data: IPCEvents['get-activity-log']) => {
+        this.logger.info('📋 Get activity log request');
+        return await this.handleGetActivityLog(data);
+      }
+    );
+
+    ipcMain.handle(IPC_CHANNELS.ACTIVITY_LOG_STATS, async () => {
+      this.logger.info('📊 Get activity log stats request');
+      return await this.handleGetActivityLogStats();
+    });
+
+    ipcMain.handle(IPC_CHANNELS.CLEAR_ACTIVITY_LOG, async () => {
+      this.logger.info('🗑️ Clear activity log request');
+      return await this.handleClearActivityLog();
+    });
+
+    ipcMain.handle(
+      IPC_CHANNELS.EXPORT_ACTIVITY_LOG,
+      async (_, data: IPCEvents['export-activity-log']) => {
+        this.logger.info('📤 Export activity log request');
+        return await this.handleExportActivityLog(data);
+      }
+    );
+
+    // Phase 3.1.6: Log general activity IPC handler
+    ipcMain.handle(IPC_CHANNELS.LOG_GENERAL_ACTIVITY, async (_, data) => {
+      return this.handleLogGeneralActivity(data);
+    });
   }
 
   /**
@@ -629,6 +674,11 @@ class PersonyxApp {
       this.logger.info('📄 Initializing secure file ingest service...');
       this.secureFileIngestService = new SecureFileIngestService();
       this.logger.info('✅ Secure file ingest service initialized');
+
+      // Initialize activity log service (Phase 3.1.6)
+      this.logger.info('📝 Initializing activity log service...');
+      this.activityLogService = new ActivityLogService();
+      this.logger.info('✅ Activity log service initialized');
 
       // Clean and reload personas to ensure correct YAML IDs
       await this.cleanAndReloadPersonas();
@@ -807,6 +857,22 @@ class PersonyxApp {
           evidenceScoresCount: ingestResult.evidenceScores?.length || 0,
         });
 
+        // Phase 3.1.6: Log PRD import success to activity log
+        if (this.activityLogService) {
+          this.activityLogService
+            .logPRDImportSuccess(
+              ingestResult.fileName || 'Unknown PRD',
+              ingestResult.documentId || '',
+              ingestResult.processingTimeMs
+            )
+            .catch(error => {
+              this.logger.warn(
+                '⚠️ Failed to log PRD import success activity',
+                error
+              );
+            });
+        }
+
         return {
           success: true,
           documentId: ingestResult.documentId,
@@ -828,6 +894,22 @@ class PersonyxApp {
           autoDismissMs: 7000,
         });
 
+        // Phase 3.1.6: Log PRD import error to activity log
+        if (this.activityLogService) {
+          this.activityLogService
+            .logPRDImportError(
+              ingestResult.fileName || 'Unknown PRD',
+              ingestResult.error || 'File ingest failed',
+              'prd-import'
+            )
+            .catch(error => {
+              this.logger.warn(
+                '⚠️ Failed to log PRD import error activity',
+                error
+              );
+            });
+        }
+
         return {
           success: false,
           error: ingestResult.error || 'File ingest failed',
@@ -845,6 +927,22 @@ class PersonyxApp {
         timestamp: new Date(),
         autoDismissMs: 7000,
       });
+
+      // Phase 3.1.6: Log PRD import exception to activity log
+      if (this.activityLogService) {
+        this.activityLogService
+          .logPRDImportError(
+            'Unknown PRD',
+            error instanceof Error ? error.message : 'Unknown error',
+            'prd-import'
+          )
+          .catch(logError => {
+            this.logger.warn(
+              '⚠️ Failed to log PRD import exception activity',
+              logError
+            );
+          });
+      }
 
       return {
         success: false,
@@ -889,6 +987,25 @@ class PersonyxApp {
           contentLength: result.result?.contentLength,
         });
 
+        // Phase 3.1.6: Log transcript import success to activity log
+        // Note: Using basic information from result since detailed pipeline info
+        // is logged separately by WorkflowOrchestrator
+        if (this.activityLogService && result.result) {
+          this.activityLogService
+            .logTranscriptImportSuccess(
+              result.result.fileName || 'Unknown Transcript',
+              0, // Evidence count will be logged by the pipeline
+              [], // Personas affected will be logged by the pipeline
+              undefined // Processing time will be available from pipeline
+            )
+            .catch(error => {
+              this.logger.warn(
+                '⚠️ Failed to log transcript import success activity',
+                error
+              );
+            });
+        }
+
         return {
           success: true,
           result: result.result,
@@ -908,6 +1025,22 @@ class PersonyxApp {
           autoDismissMs: 7000,
         });
 
+        // Phase 3.1.6: Log transcript import error to activity log
+        if (this.activityLogService) {
+          this.activityLogService
+            .logTranscriptImportError(
+              'Unknown Transcript',
+              result.error || 'Transcript import failed',
+              'transcript-import'
+            )
+            .catch(error => {
+              this.logger.warn(
+                '⚠️ Failed to log transcript import error activity',
+                error
+              );
+            });
+        }
+
         return {
           success: false,
           error: result.error || 'Transcript import failed',
@@ -925,6 +1058,22 @@ class PersonyxApp {
         timestamp: new Date(),
         autoDismissMs: 7000,
       });
+
+      // Phase 3.1.6: Log transcript import exception to activity log
+      if (this.activityLogService) {
+        this.activityLogService
+          .logTranscriptImportError(
+            'Unknown Transcript',
+            error instanceof Error ? error.message : 'Unknown error',
+            'transcript-import'
+          )
+          .catch(logError => {
+            this.logger.warn(
+              '⚠️ Failed to log transcript import exception activity',
+              logError
+            );
+          });
+      }
 
       return {
         success: false,
@@ -1465,6 +1614,147 @@ I'd love to help you think through this from both a strategic and tactical persp
   }
 
   /**
+   * Handle get activity log request (Phase 3.1.6)
+   */
+  private async handleGetActivityLog(data: IPCEvents['get-activity-log']) {
+    try {
+      this.logger.info('📋 Fetching activity log entries');
+
+      if (!this.activityLogService) {
+        this.logger.warn('⚠️ ActivityLogService not initialized');
+        throw new Error('Activity log service not available');
+      }
+
+      const result = await this.activityLogService.getActivityLog({
+        page: data.page,
+        limit: data.limit,
+        filter: data.filter,
+      });
+
+      this.logger.debug('✅ Activity log entries retrieved', {
+        count: result.entries.length,
+        totalCount: result.totalCount,
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('❌ Failed to get activity log entries', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle get activity log stats request (Phase 3.1.6)
+   */
+  private async handleGetActivityLogStats() {
+    try {
+      this.logger.info('📊 Fetching activity log statistics');
+
+      if (!this.activityLogService) {
+        this.logger.warn('⚠️ ActivityLogService not initialized');
+        throw new Error('Activity log service not available');
+      }
+
+      const stats = await this.activityLogService.getActivityStats();
+
+      this.logger.debug('✅ Activity log statistics retrieved', stats);
+      return stats;
+    } catch (error) {
+      this.logger.error('❌ Failed to get activity log statistics', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle clear activity log request (Phase 3.1.6)
+   */
+  private async handleClearActivityLog() {
+    try {
+      this.logger.info('🗑️ Clearing activity log');
+
+      if (!this.activityLogService) {
+        this.logger.warn('⚠️ ActivityLogService not initialized');
+        throw new Error('Activity log service not available');
+      }
+
+      const deletedCount = await this.activityLogService.clearActivityLog();
+
+      this.logger.info('✅ Activity log cleared', { deletedCount });
+      return { success: true, deletedCount };
+    } catch (error) {
+      this.logger.error('❌ Failed to clear activity log', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle export activity log request
+   */
+  private async handleExportActivityLog(
+    data: IPCEvents['export-activity-log']
+  ) {
+    try {
+      this.logger.info('📤 Exporting activity log', { format: data.format });
+
+      if (!this.activityLogService) {
+        this.logger.warn('⚠️ ActivityLogService not initialized');
+        return { success: false, error: 'Activity log service not available' };
+      }
+
+      const exportData = await this.activityLogService.exportActivityLog(
+        data.format,
+        data.filter
+      );
+
+      this.logger.info('✅ Activity log exported', {
+        format: data.format,
+        recordCount: exportData.length,
+      });
+
+      return { success: true, data: exportData };
+    } catch (error) {
+      this.logger.error('❌ Failed to export activity log', error);
+      return { success: false, error: 'Failed to export activity log' };
+    }
+  }
+
+  /**
+   * Handle log general activity request
+   */
+  private async handleLogGeneralActivity(data: {
+    type: string;
+    title: string;
+    description?: string;
+    source: string;
+    metadata?: unknown;
+  }) {
+    try {
+      this.logger.info('📝 Logging general activity', {
+        type: data.type,
+        title: data.title,
+        source: data.source,
+      });
+
+      if (!this.activityLogService) {
+        this.logger.warn('⚠️ ActivityLogService not initialized');
+        return { success: false, error: 'Activity log service not available' };
+      }
+
+      await this.activityLogService.logGeneralActivity(
+        data.title,
+        data.description,
+        data.metadata as ActivityLogMetadata
+      );
+
+      this.logger.info('✅ General activity logged successfully');
+      return { success: true };
+    } catch (error) {
+      this.logger.error('❌ Failed to log general activity', error);
+      return { success: false, error: 'Failed to log general activity' };
+    }
+  }
+
+  /**
    * Handle application errors
    */
   private handleError(message: string, error: unknown): void {
@@ -1539,6 +1829,17 @@ I'd love to help you think through this from both a strategic and tactical persp
         this.logger.info('✅ Workflow orchestrator stopped');
       } catch (error) {
         this.logger.error('❌ Failed to stop workflow orchestrator', error);
+      }
+    }
+
+    // Shutdown activity log service (Phase 3.1.6)
+    if (this.activityLogService) {
+      try {
+        await this.activityLogService.shutdown();
+        this.activityLogService = null;
+        this.logger.info('✅ Activity log service shutdown');
+      } catch (error) {
+        this.logger.error('❌ Failed to shutdown activity log service', error);
       }
     }
   }
