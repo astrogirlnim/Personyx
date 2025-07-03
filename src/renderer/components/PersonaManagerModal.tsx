@@ -535,10 +535,13 @@ function VisualEditor({
   };
 
   // Calculate available height for scrollable content
-  // 75vh modal height - header (120px) - tab nav (53px) - footer (73px) - padding (24px)
-  const availableHeight = 'calc(75vh - 270px)';
+  // 75vh modal height - header (120px) - tab nav (53px) - footer+clearance (100px) - padding (27px)
+  const availableHeight = 'calc(75vh - 300px)';
 
-  console.log('🎯 VisualEditor: Calculated available height:', availableHeight);
+  console.log(
+    '🎯 VisualEditor: Calculated available height with footer clearance:',
+    availableHeight
+  );
 
   return (
     <div className="h-full flex flex-col">
