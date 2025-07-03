@@ -622,3 +622,208 @@ If useEffect issues persist, implement direct prop-to-state synchronization with
 **Next Action**: Implement Step 1 & 2 immediately to force useEffect execution and gather detailed debugging data.
 
 ---
+
+# Debugging Log - PersonaManagerModal Scrolling Issue
+
+## Current Status: SCROLLING STILL BROKEN 🚨
+
+**Date**: 2025-01-03  
+**Issue**: PersonaManagerModal Visual Editor content not scrollable despite layout fixes  
+**Component**: PersonaManagerModal.tsx  
+**Phase**: 3.5.3 Persona Manager - SCROLLING BLOCKED
+
+## Bug Analysis Summary
+
+### ✅ What's Working
+
+1. **Modal structure**: Modal opens and displays correctly
+2. **Layout hierarchy**: Fixed header, content area, fixed footer structure is correct
+3. **Visual editor**: Persona cards render and display properly
+4. **Content overflow**: Content does exceed the available height when multiple personas exist
+
+### ❌ What's Broken
+
+1. **Scrolling behavior**: Content area does not scroll even when content exceeds container height
+2. **Fixed approach failed**: Removing `overflow-hidden` from content container did not resolve issue
+3. **User interaction**: Cannot access persona cards that are below the visible area
+
+## Attempted Fix Analysis
+
+### Fix Attempted: Remove overflow-hidden
+
+**Change Made:**
+
+```tsx
+// Before
+<div className="flex-1 min-h-0 overflow-hidden">
+
+// After
+<div className="flex-1 min-h-0">
+```
+
+**Expected Result**: Child components should handle their own scrolling
+
+**Actual Result**: Still no scrolling behavior
+
+## Current Layout Structure
+
+```tsx
+<div className="max-h-[75vh] overflow-hidden flex flex-col">
+  {' '}
+  // Modal container
+  <div className="flex items-center justify-between p-6 border-b">
+    {' '}
+    // Header (fixed) // Header content
+  </div>
+  <div className="flex border-b"> // Tab navigation (fixed) // Tab buttons</div>
+  <div className="flex-1 min-h-0">
+    {' '}
+    // Content area (should scroll)
+    <VisualEditor /> // Child component
+  </div>
+  <div className="flex items-center justify-between p-6 border-t">
+    {' '}
+    // Footer (fixed) // Footer content
+  </div>
+</div>
+```
+
+### VisualEditor Internal Structure
+
+```tsx
+<div className="h-full flex flex-col">
+  <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b">
+    {' '}
+    // Fixed header // "Personas (2)" + "Add Persona" button
+  </div>
+
+  <div className="flex-1 overflow-y-auto">
+    {' '}
+    // Should scroll
+    <div className="p-6 pt-4">
+      <div className="space-y-4">// Persona cards that should scroll</div>
+    </div>
+  </div>
+</div>
+```
+
+## Potential Root Causes
+
+### 1. Modal Container Height Constraint
+
+- `max-h-[75vh]` might be preventing proper flex behavior
+- Modal container `overflow-hidden` might still be interfering
+
+### 2. Flex Layout Issues
+
+- `min-h-0` might not be sufficient for flex child to allow scrolling
+- `flex-1` might not be calculating correct height
+
+### 3. CSS Cascade Issues
+
+- Parent styles might be overriding child scrolling behavior
+- Global styles might be interfering with overflow properties
+
+### 4. Height Calculation Problems
+
+- `h-full` in VisualEditor might not be calculating correctly
+- Flex container might not be providing definite height to child
+
+## Investigation Steps Needed
+
+### Step 1: Add Height Debugging
+
+Add console logs to check actual computed heights:
+
+```tsx
+const contentRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  if (contentRef.current) {
+    console.log('🔍 Content area dimensions:', {
+      scrollHeight: contentRef.current.scrollHeight,
+      clientHeight: contentRef.current.clientHeight,
+      offsetHeight: contentRef.current.offsetHeight,
+      scrollTop: contentRef.current.scrollTop,
+    });
+  }
+}, [personas]);
+```
+
+### Step 2: Test Direct Overflow Styling
+
+Try explicit overflow styling on content area:
+
+```tsx
+<div className="flex-1 min-h-0 overflow-y-auto max-h-full">
+```
+
+### Step 3: Check Browser Dev Tools
+
+- Inspect computed styles for all container elements
+- Check if any element has `overflow: hidden` or `height: 0`
+- Verify flex calculations are working correctly
+
+### Step 4: Simplified Layout Test
+
+Create minimal reproduction with just scrollable content:
+
+```tsx
+<div style={{ height: '400px', overflow: 'auto' }}>
+  {Array.from({ length: 50 }, (_, i) => (
+    <div key={i} style={{ height: '60px', border: '1px solid red' }}>
+      Item {i}
+    </div>
+  ))}
+</div>
+```
+
+## Alternative Approaches to Try
+
+### 1. Absolute Positioning
+
+```tsx
+<div className="absolute inset-0 overflow-y-auto">// Content</div>
+```
+
+### 2. Grid Layout
+
+```tsx
+<div className="grid grid-rows-[auto_1fr_auto] h-full">
+  <div>Header</div>
+  <div className="overflow-y-auto">Content</div>
+  <div>Footer</div>
+</div>
+```
+
+### 3. Fixed Heights
+
+```tsx
+<div style={{ height: 'calc(75vh - 200px)', overflow: 'auto' }}>// Content</div>
+```
+
+## Success Criteria
+
+- [ ] Visual editor content scrolls when personas exceed container height
+- [ ] All persona cards are accessible via scrolling
+- [ ] Header and footer remain fixed in position
+- [ ] Scrolling works smoothly without layout jumps
+
+## Files to Investigate
+
+1. `src/renderer/components/PersonaManagerModal.tsx` - Primary issue location
+2. `src/renderer/styles/index.css` - Global styles that might interfere
+3. `tailwind.config.js` - Tailwind configuration that might affect flex/scroll behavior
+
+## User Report
+
+**User Observation**: "Still not scrollable. Is it because the bottom 'Save configuration' navbar is overlaid with the persona card box, rather than placed directly beneath it?"
+
+**Initial Diagnosis**: User suspected footer overlay issue
+**Actual Finding**: Footer is positioned correctly, but content area still doesn't scroll
+
+---
+
+**Next Action**: Implement Step 1 & 2 immediately to debug height calculations and try explicit overflow styling.
+
+---

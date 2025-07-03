@@ -2,7 +2,74 @@
 
 _Current focus & immediate tasks_
 
-## 🎯 LATEST ACHIEVEMENT: Phase 3.5.2 Third-Party Token Management (COMPLETE)
+## 🚨 CURRENT ISSUE: Phase 3.5.3 Persona Manager - Scrolling UX Problem
+
+**Date: 2025-01-03**  
+**Status: ⚠️ 95% COMPLETE - BLOCKED BY SCROLLING ISSUE**
+
+### 🎯 ISSUE SUMMARY
+
+Phase 3.5.3 Persona Manager implementation is functionally complete but has a critical UX issue:
+
+**✅ What's Working:**
+
+- Modal opens and displays correctly
+- Visual editor shows persona cards properly
+- YAML editor functionality complete
+- All CRUD operations (add, edit, delete) working
+- Bi-directional sync between Visual and YAML editors
+- Save/reload functionality operational
+- Evidence score recalculation integration working
+- Comprehensive validation and error handling
+
+**❌ Critical UX Issue:**
+
+- **PersonaManagerModal Visual Editor content area is NOT SCROLLABLE**
+- Users cannot access persona cards below the visible area when content exceeds height
+- Prevents access to personas in environments with multiple persona configurations
+
+### 🔍 INVESTIGATION STATUS
+
+**Attempted Fix**: Removed `overflow-hidden` from content container
+**Result**: Failed - still no scrolling behavior
+
+**Next Investigation Required:**
+
+1. Debug height calculations and CSS flexbox behavior
+2. Check for interfering global styles or Tailwind configurations
+3. Test alternative layout approaches (grid, absolute positioning, fixed heights)
+4. Investigate modal container height constraints
+
+**Files Involved:**
+
+- `src/renderer/components/PersonaManagerModal.tsx` (primary issue)
+- CSS/Tailwind layout interactions
+
+### 📊 COMPLETION STATUS
+
+**✅ BACKEND (100% COMPLETE):**
+
+- PersonaManagerService with YAML I/O operations
+- IPC handlers for get/save/reload operations
+- Activity logging integration
+- Evidence score recalculation on persona changes
+
+**✅ FRONTEND LOGIC (100% COMPLETE):**
+
+- usePersonas hook with full state management
+- Modal state and lifecycle management
+- Visual editor CRUD operations
+- YAML editor with syntax validation
+- Error handling and user feedback
+
+**⚠️ FRONTEND UX (BLOCKED):**
+
+- Scrolling behavior not functional
+- Content accessibility limited
+
+## 🎯 PREVIOUS ACHIEVEMENT: Phase 3.5.2 Third-Party Token Management (COMPLETE)
+
+**Status: ✅ BACKEND AND UI BOTH COMPLETE**
 
 **Date: 2025-01-20**  
 **Status: ✅ BACKEND FOUNDATION COMPLETE - Ready for UI Implementation**

@@ -10,7 +10,7 @@
  * - Hot-reloading persona data
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { usePersonas, validateYamlFormat } from '../hooks/usePersonas';
 import * as yaml from 'js-yaml';
 
@@ -486,6 +486,22 @@ function VisualEditor({
   loading: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Debug logging for height calculations
+  useEffect(() => {
+    if (contentRef.current) {
+      const rect = contentRef.current.getBoundingClientRect();
+      console.log('🔍 VisualEditor content dimensions:', {
+        scrollHeight: contentRef.current.scrollHeight,
+        clientHeight: contentRef.current.clientHeight,
+        offsetHeight: contentRef.current.offsetHeight,
+        boundingHeight: rect.height,
+        scrollTop: contentRef.current.scrollTop,
+        personaCount: personas.length,
+      });
+    }
+  }, [personas]);
 
   const handleAddPersona = () => {
     const newPersona: PersonaEditorProps = {
@@ -504,24 +520,25 @@ function VisualEditor({
     id: string,
     updates: Partial<PersonaEditorProps>
   ) => {
-    const updated = personas.map(persona =>
-      persona.id === id ? { ...persona, ...updates } : persona
-    );
-    onChange(updated);
+    onChange(personas.map(p => (p.id === id ? { ...p, ...updates } : p)));
   };
 
   const handleDeletePersona = (id: string) => {
-    if (confirm('Are you sure you want to delete this persona?')) {
-      onChange(personas.filter(persona => persona.id !== id));
-      if (editingId === id) {
-        setEditingId(null);
-      }
+    onChange(personas.filter(p => p.id !== id));
+    if (editingId === id) {
+      setEditingId(null);
     }
   };
 
   const handleKeywordChange = (id: string, keywords: string[]) => {
     handleUpdatePersona(id, { keywords });
   };
+
+  // Calculate available height for scrollable content
+  // 75vh modal height - header (120px) - tab nav (53px) - footer (73px) - padding (24px)
+  const availableHeight = 'calc(75vh - 270px)';
+
+  console.log('🎯 VisualEditor: Calculated available height:', availableHeight);
 
   return (
     <div className="h-full flex flex-col">
@@ -541,8 +558,12 @@ function VisualEditor({
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Scrollable Content with Fixed Height */}
+      <div
+        ref={contentRef}
+        className="overflow-y-auto"
+        style={{ height: availableHeight }}
+      >
         <div className="p-6 pt-4">
           {/* Personas List */}
           <div className="space-y-4">
