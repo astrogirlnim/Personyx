@@ -874,7 +874,7 @@ export function AIServiceSettingsModal({
                 Third-Party Integrations
               </h3>
               <span className="text-caption text-steel dark:text-steel-dark">
-                {tokenStatus.filter(status => status.exists).length} of{' '}
+                {(tokenStatus || []).filter(status => status.exists).length} of{' '}
                 {THIRD_PARTY_SERVICES.length} configured
               </span>
             </div>
@@ -1130,8 +1130,10 @@ export function AIServiceSettingsModal({
                           )}
                           <span className="text-caption">
                             {lastThirdPartyTestResult.success
-                              ? lastThirdPartyTestResult.details?.message ||
-                                'Token validation successful'
+                              ? typeof lastThirdPartyTestResult.details
+                                  ?.message === 'string'
+                                ? lastThirdPartyTestResult.details.message
+                                : 'Token validation successful'
                               : lastThirdPartyTestResult.error ||
                                 'Token validation failed'}
                           </span>

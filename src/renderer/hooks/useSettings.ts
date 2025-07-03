@@ -349,7 +349,8 @@ export function useSettings(): SettingsState & SettingsActions {
     // Phase 3.5.2: Listen for third-party token events
     const handleTokenStatusUpdated = (data: unknown) => {
       console.log('📢 Token status updated event received:', data);
-      const statusData = data as TokenStatus[];
+      // Extract the status array from the event data object
+      const statusData = (data as { status: TokenStatus[] }).status;
       setState(prevState => ({
         ...prevState,
         tokenStatus: statusData,
@@ -522,12 +523,15 @@ export function useSettings(): SettingsState & SettingsActions {
   const refreshTokenStatus = useCallback(async () => {
     try {
       console.log('📊 Refreshing token status...');
-      const status = await window.electronAPI.getTokenStatus();
+      const response = await window.electronAPI.getTokenStatus();
+
+      // Extract the status array from the response object
+      const status = (response as { status: TokenStatus[] }).status;
 
       console.log('✅ Token status refreshed:', status);
       setState(prev => ({
         ...prev,
-        tokenStatus: status as TokenStatus[],
+        tokenStatus: status,
       }));
     } catch (err) {
       console.error('❌ Failed to refresh token status:', err);
@@ -538,12 +542,15 @@ export function useSettings(): SettingsState & SettingsActions {
   const loadMissingTokenWarnings = useCallback(async () => {
     try {
       console.log('⚠️ Loading missing token warnings...');
-      const warnings = await window.electronAPI.getMissingTokenWarnings();
+      const response = await window.electronAPI.getMissingTokenWarnings();
+
+      // Extract the warnings array from the response object
+      const warnings = (response as { warnings: string[] }).warnings;
 
       console.log('✅ Missing token warnings loaded:', warnings);
       setState(prev => ({
         ...prev,
-        missingTokenWarnings: warnings as string[],
+        missingTokenWarnings: warnings,
       }));
     } catch (err) {
       console.error('❌ Failed to load missing token warnings:', err);
