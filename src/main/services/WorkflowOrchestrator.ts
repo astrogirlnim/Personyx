@@ -15,6 +15,7 @@ import {
 import { LangGraphService } from './LangGraphService';
 import { TranscriptIngestService } from './TranscriptIngestService';
 import { PersonaConfigLoader } from './PersonaConfigLoader';
+import type { TranscriptIngestResult } from './TranscriptIngestService';
 import type { IPCEvents } from '@shared/types';
 
 const logger = new Logger('workflow-orchestrator');
@@ -371,10 +372,7 @@ export class WorkflowOrchestrator extends EventEmitter {
 
       // Calculate evidence counts by persona
       const evidenceCountByPersona =
-        await this.calculateEvidenceCountsByPersona(
-          ingestResult.evidenceCreated,
-          ingestResult.personasAffected
-        );
+        await this.calculateEvidenceCountsByPersona(ingestResult);
 
       logger.info('✅ Manual transcript processing completed successfully', {
         fileName: transcriptEvent.fileName,
@@ -409,16 +407,30 @@ export class WorkflowOrchestrator extends EventEmitter {
 
   /**
    * Phase 3.1.8: Calculate evidence counts by persona
+   * Updated to get persona counts directly from TranscriptIngestResult to avoid timing issues
    */
   private async calculateEvidenceCountsByPersona(
-    evidenceIds: string[],
-    personasAffected: string[]
+    ingestResult: TranscriptIngestResult
   ): Promise<Record<string, number>> {
     try {
-      logger.debug('🔢 Calculating evidence counts by persona', {
-        evidenceIds: evidenceIds.length,
-        personasAffected: personasAffected.length,
-      });
+      logger.debug(
+        '🔢 Calculating evidence counts by persona from ingest result',
+        {
+          evidenceCreated: ingestResult.evidenceCreated.length,
+          personasAffected: ingestResult.personasAffected.length,
+        }
+      );
+
+      const evidenceCountByPersona: Record<string, number> = {};
+
+      // Initialize counts for all affected personas
+      for (const personaId of ingestResult.personasAffected) {
+        evidenceCountByPersona[personaId] = 0;
+      }
+
+      // Get the evidence-to-persona mapping from TranscriptIngestService
+      // Since evidence creation might still be in progress, we'll wait a short time
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
 
       // Import the EvidenceRepo to query evidence
       const { EvidenceRepo } = await import(
@@ -426,36 +438,58 @@ export class WorkflowOrchestrator extends EventEmitter {
       );
       const evidenceRepo = new EvidenceRepo();
 
-      const evidenceCountByPersona: Record<string, number> = {};
+      // Count evidence for each persona with retry logic
+      for (const evidenceId of ingestResult.evidenceCreated) {
+        let evidence = null;
+        let retries = 3;
 
-      // Initialize counts for all affected personas
-      for (const personaId of personasAffected) {
-        evidenceCountByPersona[personaId] = 0;
-      }
-
-      // Count evidence for each persona
-      for (const evidenceId of evidenceIds) {
-        try {
-          const evidence = await evidenceRepo.findById(evidenceId);
-          if (evidence && evidence.personaId) {
-            evidenceCountByPersona[evidence.personaId] =
-              (evidenceCountByPersona[evidence.personaId] || 0) + 1;
+        while (retries > 0 && !evidence) {
+          try {
+            evidence = await evidenceRepo.findById(evidenceId);
+            if (!evidence) {
+              logger.debug('⏳ Evidence not found, retrying...', {
+                evidenceId,
+                retries,
+              });
+              await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+              retries--;
+            }
+          } catch (error) {
+            logger.warn(
+              '⚠️ Failed to fetch evidence for counting, retrying...',
+              {
+                evidenceId,
+                retries,
+                error: error instanceof Error ? error.message : String(error),
+              }
+            );
+            retries--;
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+            }
           }
-        } catch (error) {
-          logger.warn('⚠️ Failed to fetch evidence for counting', {
+        }
+
+        if (evidence && evidence.personaId) {
+          evidenceCountByPersona[evidence.personaId] =
+            (evidenceCountByPersona[evidence.personaId] || 0) + 1;
+        } else {
+          logger.warn('⚠️ Could not find evidence after retries', {
             evidenceId,
-            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
 
-      logger.debug('✅ Evidence counts calculated', evidenceCountByPersona);
+      logger.info(
+        '✅ Evidence counts calculated successfully',
+        evidenceCountByPersona
+      );
       return evidenceCountByPersona;
     } catch (error) {
       logger.error('❌ Failed to calculate evidence counts by persona', error);
       // Return empty counts as fallback
       const fallbackCounts: Record<string, number> = {};
-      for (const personaId of personasAffected) {
+      for (const personaId of ingestResult.personasAffected || []) {
         fallbackCounts[personaId] = 0;
       }
       return fallbackCounts;
