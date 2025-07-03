@@ -371,6 +371,11 @@ export class WorkflowOrchestrator extends EventEmitter {
         await this.transcriptIngestService.processTranscript(transcriptEvent);
 
       // Calculate evidence counts by persona
+      logger.info('🔢 About to calculate evidence counts by persona', {
+        evidenceCreated: ingestResult.evidenceCreated.length,
+        personasAffected: ingestResult.personasAffected.length,
+      });
+
       const evidenceCountByPersona =
         await this.calculateEvidenceCountsByPersona(ingestResult);
 
@@ -378,7 +383,25 @@ export class WorkflowOrchestrator extends EventEmitter {
         fileName: transcriptEvent.fileName,
         evidenceCreated: ingestResult.evidenceCreated.length,
         personasAffected: ingestResult.personasAffected.length,
+        evidenceCountByPersona,
         processingTime: ingestResult.processingTime,
+      });
+
+      // Phase 3.1.7 + 3.1.8: Emit success toast event for enhanced transcript processing
+      logger.info(
+        '🎉 Emitting success toast for enhanced transcript processing'
+      );
+      this.emitToRenderer('transcript-success-toast', {
+        type: 'transcript-success' as const,
+        title: 'Transcript Analysed',
+        message: `Evidence added • ${ingestResult.evidenceCreated.length} items • ${ingestResult.personasAffected.length} personas affected`,
+        fileName: ingestResult.transcriptFileName,
+        evidenceCount: ingestResult.evidenceCreated.length,
+        personasAffected: ingestResult.personasAffected,
+        processingTime: ingestResult.processingTime,
+        timestamp: new Date(),
+        dismissible: true,
+        autoDismissMs: 6000, // 6 seconds for transcript success
       });
 
       return {
