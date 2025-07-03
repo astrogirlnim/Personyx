@@ -6,10 +6,10 @@
 
 ## 0 · Foundation & Verification
 
-- [ ] 0.1 **Read-only verification** – Confirm existing modules compile & tests pass (`pnpm type-check && pnpm test`).
-- [ ] 0.2 **Schema review** – Validate current `personas` table, `Personas.yml`, and `PersonaLoader` sync logic.
-- [ ] 0.3 **Edge-case inventory** – List transcripts that previously caused classification errors or NaN evidence scores.
-- [ ] 0.4 **Baseline snapshot** – Dump existing personas to `backup/personas_YYYYMMDD.json` for rollback.
+- [x] 0.1 **Read-only verification** – Confirm existing modules compile & tests pass (`pnpm type-check && pnpm test`). ✅ COMPLETE
+- [x] 0.2 **Schema review** – Validate current `personas` table, `Personas.yml`, and `PersonaLoader` sync logic. ✅ COMPLETE
+- [x] 0.3 **Edge-case inventory** – List transcripts that previously caused classification errors or NaN evidence scores. ✅ COMPLETE
+- [x] 0.4 **Baseline snapshot** – Dump existing personas to `backup/personas_YYYYMMDD.json` for rollback. ✅ COMPLETE
 
 ---
 
@@ -46,7 +46,7 @@
 
 ### 3.1 Database Migration
 
-- [ ] 3.1.1 Create migration **`0003_persona_history_table.sql`** with:
+- [x] 3.1.1 Create migration **`0003_persona_history_table.sql`** with: ✅ COMPLETE
   - `history_id` PK (text)
   - `persona_id` FK → `personas.id`
   - `previous_data` JSON
@@ -54,62 +54,62 @@
   - `change_type` text (`"update" \| "create"`)
   - `confidence` real (0-1)
   - `timestamp` integer (Unix)
-- [ ] 3.1.2 Generate Drizzle model & **`PersonaHistoryRepo.ts`**.
+- [x] 3.1.2 Generate Drizzle model & **`PersonaHistoryRepo.ts`**. ✅ COMPLETE
 
 ### 3.2 Delta Analysis Engine
 
-- [ ] 3.2.1 Create **`DeltaAnalyzer.ts`** (pure functions):
+- [x] 3.2.1 Create **`DeltaAnalyzer.ts`** (pure functions): ✅ COMPLETE
   - `extractKeyPhrases(content: string): string[]` (LLM via `LangGraphService`)
   - `computeDiff(persona: Persona, phrases: string[]): DeltaResult`
   - Returns additive/removal sets + confidence score.
-- [ ] 3.2.2 Unit-test edge cases (empty diff, low confidence, large input).
+- [x] 3.2.2 Unit-test edge cases (empty diff, low confidence, large input). ✅ COMPLETE
 
 ### 3.3 `PersonaEvolutionService` (NEW)
 
-- [ ] 3.3.1 Instantiate in **`WorkflowOrchestrator`** after `TranscriptIngestService`.
-- [ ] 3.3.2 Public `evolveFromTranscript(result: TranscriptIngestResult): Promise<EvolutionOutcome>`.
-- [ ] 3.3.3 Uses `DeltaAnalyzer` to aggregate chunk-level deltas per persona.
-- [ ] 3.3.4 Decision tree:
+- [x] 3.3.1 Instantiate in **`WorkflowOrchestrator`** after `TranscriptIngestService`. ✅ COMPLETE
+- [x] 3.3.2 Public `evolveFromTranscript(result: TranscriptIngestResult): Promise<EvolutionOutcome>`. ✅ COMPLETE
+- [x] 3.3.3 Uses `DeltaAnalyzer` to aggregate chunk-level deltas per persona. ✅ COMPLETE
+- [x] 3.3.4 Decision tree: ✅ COMPLETE
   1. **Update existing** if `delta.confidence ≥ deltaThreshold`.
   2. **Create new** if unmatched persona confidence ≥ `newPersonaThreshold`.
   3. **No-op** otherwise (log for analytics).
-- [ ] 3.3.5 Record all changes in `persona_history` + emit IPC event.
-- [ ] 3.3.6 On mutation, call `PersonaManagerService.reload()` → triggers Evidence Score recalculation.
+- [x] 3.3.5 Record all changes in `persona_history` + emit IPC event. ✅ COMPLETE
+- [x] 3.3.6 On mutation, call `PersonaManagerService.reload()` → triggers Evidence Score recalculation. ✅ COMPLETE
 
 ### 3.4 Pipeline Integration
 
-- [ ] 3.4.1 Modify **`TranscriptIngestService.persistEvidenceAndEmbeddings()`** to return per-chunk persona deltas.
-- [ ] 3.4.2 After evidence save, invoke `PersonaEvolutionService.evolveFromTranscript()`.
-- [ ] 3.4.3 Emit `persona-evolved` IPC event with payload `{ personaId, changeType, fieldsChanged }`.
-- [ ] 3.4.4 Log activity via `ActivityLogService.logPersonaEvolved()`.
+- [x] 3.4.1 Modify **`TranscriptIngestService.persistEvidenceAndEmbeddings()`** to return per-chunk persona deltas. ✅ COMPLETE
+- [x] 3.4.2 After evidence save, invoke `PersonaEvolutionService.evolveFromTranscript()`. ✅ COMPLETE
+- [x] 3.4.3 Emit `persona-evolved` IPC event with payload `{ personaId, changeType, fieldsChanged }`. ✅ COMPLETE
+- [x] 3.4.4 Log activity via `ActivityLogService.logPersonaEvolved()`. ✅ COMPLETE
 
 ### 3.5 Renderer Updates
 
-- [ ] 3.5.1 Update **`usePersonas`** hook to subscribe to `persona-evolved` IPC and hot-reload state.
-- [ ] 3.5.2 Show toast "Persona updated ✓" using `GlobalSuccessToast`.
-- [ ] 3.5.3 If new persona, prompt user to review in **`PersonaManagerModal`** (highlight badge).
+- [x] 3.5.1 Update **`usePersonas`** hook to subscribe to `persona-evolved` IPC and hot-reload state. ✅ COMPLETE
+- [x] 3.5.2 Show toast "Persona updated ✓" using `GlobalSuccessToast`. ✅ COMPLETE
+- [x] 3.5.3 If new persona, prompt user to review in **`PersonaManagerModal`** (highlight badge). ✅ COMPLETE
 
 ### 3.6 Firebase / Cloud Option
 
-- [ ] 3.6.1 Add Cloud Function **`suggestPersonaEvolution`** that mirrors `DeltaAnalyzer` for off-device heavy workloads.
-- [ ] 3.6.2 Extend **`PersonyxCloudService`** with `getEvolutionSuggestion()` fallback.
-- [ ] 3.6.3 Environment var `FIREBASE_PERSONA_EVOLUTION=enabled` toggles remote processing.
-- [ ] 3.6.4 Document deployment steps in `docs/firebase_functions_setup.md`.
+- [~] 3.6.1 Add Cloud Function **`suggestPersonaEvolution`** that mirrors `DeltaAnalyzer` for off-device heavy workloads. ⚠️ FUTURE SCOPE
+- [~] 3.6.2 Extend **`PersonyxCloudService`** with `getEvolutionSuggestion()` fallback. ⚠️ FUTURE SCOPE
+- [~] 3.6.3 Environment var `FIREBASE_PERSONA_EVOLUTION=enabled` toggles remote processing. ⚠️ FUTURE SCOPE
+- [~] 3.6.4 Document deployment steps in `docs/firebase_functions_setup.md`. ⚠️ FUTURE SCOPE
 
 ### 3.7 Testing & QA
 
-- [ ] 3.7.1 Unit tests for `DeltaAnalyzer` (10+ cases).
-- [ ] 3.7.2 Unit tests for `PersonaEvolutionService` decision logic.
-- [ ] 3.7.3 Integration test `test_phase_2_7_persona_evolution.mjs`:
+- [x] 3.7.1 Unit tests for `DeltaAnalyzer` (10+ cases). ✅ COMPLETE
+- [x] 3.7.2 Unit tests for `PersonaEvolutionService` decision logic. ✅ COMPLETE
+- [x] 3.7.3 Integration test `test_phase_2_7_persona_evolution.mjs`: ✅ COMPLETE
   - Import transcript → evidence → persona update → UI reload.
-- [ ] 3.7.4 Manual regression: verify Evidence Score recalculation accuracy.
+- [x] 3.7.4 Manual regression: verify Evidence Score recalculation accuracy. ✅ COMPLETE
 
 ### 3.8 Documentation & Cleanup
 
-- [ ] 3.8.1 Update `README.md` & `docs/file_structure.md` with new modules.
-- [ ] 3.8.2 Add ER-diagram entry for `persona_history`.
-- [ ] 3.8.3 Commit (`feat: implement automatic persona evolution`) – **no slashes**.
-- [ ] 3.8.4 Run `pnpm lint && pnpm type-check` before commit.
+- [x] 3.8.1 Update `README.md` & `docs/file_structure.md` with new modules. ✅ COMPLETE
+- [x] 3.8.2 Add ER-diagram entry for `persona_history`. ✅ COMPLETE
+- [x] 3.8.3 Commit (`feat: implement automatic persona evolution`) – **no slashes**. ✅ COMPLETE
+- [x] 3.8.4 Run `pnpm lint && pnpm type-check` before commit. ✅ COMPLETE
 
 ---
 
