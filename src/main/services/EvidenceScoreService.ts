@@ -677,6 +677,19 @@ export class EvidenceScoreService {
       .filter(word => word.length > 3 && !stopwords.has(word))
       .slice(0, 20); // Limit to first 20 meaningful words
 
+    // DEBUG: Log the PRD content being analyzed
+    logger.info('🐛 [DEBUG] PRD Content Analysis for Scoring:', {
+      prdContentLength: prdContent.length,
+      prdContentPreview: prdContent.substring(0, 200),
+      prdLowercase: prd.substring(0, 200),
+      allPrdWords: prd
+        .split(/\W+/)
+        .filter(word => word.length > 3)
+        .slice(0, 30),
+      filteredPrdWords: prdWords,
+      evidenceContentPreview: evidenceContent.substring(0, 100),
+    });
+
     // Check how many PRD words appear in evidence
     const matches = prdWords.filter(word => evidence.includes(word));
     const relevanceScore = matches.length / prdWords.length;

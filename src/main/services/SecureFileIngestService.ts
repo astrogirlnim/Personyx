@@ -270,6 +270,25 @@ export class SecureFileIngestService {
       logger.debug('✅ File content read successfully', {
         contentLength: content.length,
       });
+
+      // DEBUG: Log detailed content info to trace corruption
+      logger.info('🐛 [DEBUG] File content read from disk:', {
+        filePath: basename(filePath),
+        fullPath: filePath,
+        contentLength: content.length,
+        firstChars: content.substring(0, 150),
+        lastChars: content.substring(Math.max(0, content.length - 100)),
+        linesCount: content.split('\n').length,
+        containsSpecificWords: {
+          hasTest: content.toLowerCase().includes('test'),
+          hasEvidence: content.toLowerCase().includes('evidence'),
+          hasScore: content.toLowerCase().includes('score'),
+          hasAnalytics: content.toLowerCase().includes('analytics'),
+          hasCampaign: content.toLowerCase().includes('campaign'),
+          hasMarketing: content.toLowerCase().includes('marketing'),
+        },
+      });
+
       return content;
     } catch (error) {
       logger.error('❌ Failed to read file content', error);
@@ -282,6 +301,17 @@ export class SecureFileIngestService {
    */
   private extractPRDSections(content: string): PRDSection[] {
     logger.debug('📋 Extracting sections from PRD content');
+
+    // DEBUG: Log the content we're extracting from
+    logger.info('🐛 [DEBUG] Content being extracted:', {
+      contentLength: content.length,
+      contentPreview: content.substring(0, 300),
+      wordsExtracted: content
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(w => w.length > 2)
+        .slice(0, 20),
+    });
 
     const sections: PRDSection[] = [];
     const lines = content.split('\n');
@@ -336,6 +366,16 @@ export class SecureFileIngestService {
 
     logger.info(`📋 Extracted ${sections.length} sections from PRD`, {
       sectionTitles: sections.map(s => s.title),
+    });
+
+    // DEBUG: Log the sections we extracted
+    logger.info('🐛 [DEBUG] Sections extracted:', {
+      sectionsCount: sections.length,
+      sectionDetails: sections.map(s => ({
+        title: s.title,
+        contentLength: s.content.length,
+        contentPreview: s.content.substring(0, 100),
+      })),
     });
 
     return sections;

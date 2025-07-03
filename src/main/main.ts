@@ -623,6 +623,19 @@ class PersonyxApp {
     try {
       this.logger.info(`📥 Processing PRD import`);
 
+      // DEBUG: Log initial input to trace content corruption
+      this.logger.info(`🐛 [DEBUG] Initial input received:`, {
+        inputType: typeof filePathOrContent,
+        inputLength: filePathOrContent.length,
+        firstChars: filePathOrContent.substring(0, 100),
+        lastChars: filePathOrContent.substring(
+          Math.max(0, filePathOrContent.length - 100)
+        ),
+        hasNewlines: filePathOrContent.includes('\n'),
+        isLikelyPath:
+          !filePathOrContent.includes('\n') && filePathOrContent.length <= 500,
+      });
+
       if (!this.secureFileIngestService) {
         this.logger.warn('⚠️ SecureFileIngestService not initialized');
         throw new Error('Secure file ingest service not available');
@@ -634,6 +647,10 @@ class PersonyxApp {
       // Check if the input is a file path or file content
       if (filePathOrContent.includes('\n') || filePathOrContent.length > 500) {
         // Likely file content, create a temporary file
+        this.logger.info(
+          `🐛 [DEBUG] Detected as file content, creating temporary file`
+        );
+
         const fs = await import('fs');
         const path = await import('path');
         const os = await import('os');
@@ -642,13 +659,60 @@ class PersonyxApp {
         const tempFileName = `temp_prd_${Date.now()}.md`;
         filePath = path.join(tempDir, tempFileName);
 
+        // DEBUG: Log what we're writing to the temp file
+        this.logger.info(`🐛 [DEBUG] Writing content to temporary file:`, {
+          tempFilePath: filePath,
+          contentLength: filePathOrContent.length,
+          contentPreview:
+            filePathOrContent.substring(0, 200) +
+            (filePathOrContent.length > 200 ? '...' : ''),
+        });
+
         fs.writeFileSync(filePath, filePathOrContent, 'utf8');
         isTemporaryFile = true;
         this.logger.info(`📝 Created temporary file: ${filePath}`);
+
+        // DEBUG: Verify what we actually wrote to the file
+        try {
+          const verifyContent = fs.readFileSync(filePath, 'utf8');
+          this.logger.info(
+            `🐛 [DEBUG] Verification - content written to temp file:`,
+            {
+              writtenLength: verifyContent.length,
+              writtenPreview:
+                verifyContent.substring(0, 200) +
+                (verifyContent.length > 200 ? '...' : ''),
+              matches: verifyContent === filePathOrContent,
+            }
+          );
+        } catch (verifyError) {
+          this.logger.error(
+            `🐛 [DEBUG] Failed to verify temp file content:`,
+            verifyError
+          );
+        }
       } else {
         // Assume it's a file path
         filePath = filePathOrContent;
         this.logger.info(`📂 Using file path: ${filePath}`);
+
+        // DEBUG: If it's a file path, let's see what's in that file
+        try {
+          const fs = await import('fs');
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          this.logger.info(`🐛 [DEBUG] Content from provided file path:`, {
+            filePath,
+            contentLength: fileContent.length,
+            contentPreview:
+              fileContent.substring(0, 200) +
+              (fileContent.length > 200 ? '...' : ''),
+          });
+        } catch (readError) {
+          this.logger.error(
+            `🐛 [DEBUG] Failed to read provided file path:`,
+            readError
+          );
+        }
       }
 
       // Use the new secure file ingest service (Phase 2.3)
