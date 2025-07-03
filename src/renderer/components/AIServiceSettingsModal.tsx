@@ -40,6 +40,7 @@ export function AIServiceSettingsModal({
     testAPIKey,
     getCloudSubscriptionInfo,
     clearError,
+    setTestResult,
     logSettingsActivity,
   } = useSettings();
 
@@ -121,12 +122,12 @@ export function AIServiceSettingsModal({
   );
 
   const handleTestConnection = useCallback(async () => {
+    setIsValidatingKey(true);
+    clearError();
+
+    console.log('🧪 Testing connection for provider:', selectedProvider);
+
     try {
-      setIsValidatingKey(true);
-      clearError();
-
-      console.log('🧪 Testing connection for provider:', selectedProvider);
-
       if (selectedProvider === 'local') {
         if (!localApiKey.trim()) {
           throw new Error('Please enter an API key to test');
@@ -136,6 +137,7 @@ export function AIServiceSettingsModal({
             'Invalid API key format. OpenAI keys should start with "sk-" and be at least 40 characters'
           );
         }
+        // Let testAPIKey handle the actual API validation and error setting
         await testAPIKey('local', localApiKey.trim());
       } else if (selectedProvider === 'cloud') {
         await testAPIKey('cloud');
@@ -144,10 +146,26 @@ export function AIServiceSettingsModal({
       console.log('✅ Connection test completed');
     } catch (err) {
       console.error('❌ Connection test failed:', err);
+      // Handle validation errors by setting the test result directly
+      const errorMessage =
+        err instanceof Error ? err.message : 'Connection test failed';
+
+      setTestResult({
+        provider: selectedProvider,
+        success: false,
+        error: errorMessage,
+      });
     } finally {
       setIsValidatingKey(false);
     }
-  }, [selectedProvider, localApiKey, validateApiKey, testAPIKey, clearError]);
+  }, [
+    selectedProvider,
+    localApiKey,
+    validateApiKey,
+    testAPIKey,
+    clearError,
+    setTestResult,
+  ]);
 
   const handleSave = useCallback(async () => {
     try {

@@ -37,6 +37,12 @@ export interface SettingsActions {
   testAPIKey: (provider: AIServiceProvider, apiKey?: string) => Promise<void>;
   getCloudSubscriptionInfo: () => Promise<void>;
   clearError: () => void;
+  setTestResult: (result: {
+    provider: AIServiceProvider;
+    success: boolean;
+    error?: string;
+    usage?: { remaining: number; limit: number };
+  }) => void;
   logSettingsActivity: (
     description: string,
     metadata?: Record<string, unknown>
@@ -209,6 +215,21 @@ export function useSettings(): SettingsState & SettingsActions {
   }, []);
 
   /**
+   * Set test result manually (for frontend validation errors)
+   */
+  const setTestResult = useCallback(
+    (result: {
+      provider: AIServiceProvider;
+      success: boolean;
+      error?: string;
+      usage?: { remaining: number; limit: number };
+    }) => {
+      setLastTestResult(result);
+    },
+    []
+  );
+
+  /**
    * Log settings-related activity
    */
   const logSettingsActivity = useCallback(
@@ -300,6 +321,7 @@ export function useSettings(): SettingsState & SettingsActions {
     testAPIKey,
     getCloudSubscriptionInfo,
     clearError,
+    setTestResult,
     logSettingsActivity,
   };
 }
