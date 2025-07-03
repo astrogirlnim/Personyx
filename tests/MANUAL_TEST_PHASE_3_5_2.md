@@ -1,6 +1,26 @@
 # Manual Testing Guide: Phase 3.5.2 Third-Party Token Management
 
-**Scope**: VSCode, Slack, Apple Notes (future) + existing OpenAI and Firebase Cloud services
+**Status**: ✅ **COMPLETE** - UI implementation matches fully functional backend
+
+**Scope**: VSCode, Slack, Apple Notes token management integrated into AI Service Settings Modal
+
+## How to Access Third-Party Token Management
+
+1. **Build & Launch App**: `pnpm build && pnpm start`
+2. **Open Settings**: Either use `Ctrl+,` (Windows/Linux) or `Cmd+,` (Mac), or click the tray icon → Settings
+3. **Find Third-Party Integrations**: Scroll down in the AI Service Settings Modal to find the "Third-Party Integrations" section
+4. **Monitor Console**: Open Developer Tools (`Ctrl+Shift+I` or `Cmd+Option+I`) to watch logs
+
+## UI Implementation Overview
+
+The third-party token management is **fully integrated** into the existing AI Service Settings Modal. You'll see:
+
+- **Third-Party Integrations section** with VSCode 🔧, Slack 💬, and Apple Notes 📝
+- **Configuration status** showing "X of 3 configured" at the top
+- **Individual service cards** with icons, descriptions, and management controls
+- **Token input fields** with show/hide toggle and inline save buttons
+- **Test/Remove buttons** for configured services
+- **Add Token buttons** for unconfigured services
 
 ## Test Environment Setup
 
