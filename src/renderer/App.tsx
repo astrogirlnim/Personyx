@@ -1280,40 +1280,118 @@ export function App(): JSX.Element {
 
       // Listen for evidence score events
       window.electronAPI.onPRDImported((data: unknown) => {
-        console.log('📊 PRD imported with evidence scores:', data);
+        console.log(
+          '📊 PRD imported with evidence scores:',
+          JSON.stringify(data, null, 2)
+        );
         const typedData = data as {
           evidenceScores?: EvidenceScore[];
           documentId: string;
         };
         if (typedData.evidenceScores && typedData.evidenceScores.length > 0) {
+          console.log('🔄 Setting evidence scores from PRD import:', {
+            scoresCount: typedData.evidenceScores.length,
+            scores: typedData.evidenceScores.map(s => ({
+              documentId: s.documentId,
+              personaId: s.personaId,
+              score: s.score,
+            })),
+          });
           setCurrentEvidenceScores(typedData.evidenceScores);
         }
       });
 
       window.electronAPI.onEvidenceScoreUpdated((data: unknown) => {
-        console.log('📈 Evidence score updated:', data);
+        console.log(
+          '📈 Evidence score updated - RAW DATA:',
+          JSON.stringify(data, null, 2)
+        );
+
+        // Enhanced data validation and logging
         const typedData = data as {
           scores?: EvidenceScore[];
           documentId: string;
         };
+
+        console.log('📈 Evidence score updated - PARSED DATA:', {
+          hasScores: !!typedData.scores,
+          scoresLength: typedData.scores?.length || 0,
+          documentId: typedData.documentId,
+          scoresData: typedData.scores?.map(s => ({
+            id: s.id,
+            documentId: s.documentId,
+            personaId: s.personaId,
+            score: s.score,
+            evidenceCount: s.evidenceCount,
+          })),
+        });
+
         if (typedData.scores && typedData.scores.length > 0) {
+          console.log('🔄 BEFORE state update - Current evidence scores:', {
+            currentScoresCount: currentEvidenceScores.length,
+            currentScores: currentEvidenceScores.map(s => ({
+              documentId: s.documentId,
+              personaId: s.personaId,
+              score: s.score,
+            })),
+          });
+
           setCurrentEvidenceScores(prev => {
             // Replace scores for the same document/persona combinations
             const newScores = [...prev];
+
             typedData.scores!.forEach((newScore: EvidenceScore) => {
+              console.log('🔍 Processing new score:', {
+                newScoreId: newScore.id,
+                documentId: newScore.documentId,
+                personaId: newScore.personaId,
+                score: newScore.score,
+              });
+
               const existingIndex = newScores.findIndex(
                 score =>
                   score.documentId === newScore.documentId &&
                   score.personaId === newScore.personaId
               );
+
               if (existingIndex >= 0) {
+                console.log('🔄 UPDATING existing score at index:', {
+                  index: existingIndex,
+                  oldScore: newScores[existingIndex].score,
+                  newScore: newScore.score,
+                });
                 newScores[existingIndex] = newScore;
               } else {
+                console.log('➕ ADDING new score to array');
                 newScores.push(newScore);
               }
             });
+
+            console.log('🔄 AFTER state update - New evidence scores:', {
+              newScoresCount: newScores.length,
+              newScores: newScores.map(s => ({
+                documentId: s.documentId,
+                personaId: s.personaId,
+                score: s.score,
+              })),
+              maxScore:
+                newScores.length > 0
+                  ? Math.max(...newScores.map(s => s.score))
+                  : null,
+            });
+
             return newScores;
           });
+        } else {
+          console.warn(
+            '⚠️ Evidence score update event received but no valid scores found:',
+            {
+              rawData: data,
+              typedData,
+              hasScores: !!typedData.scores,
+              scoresLength: typedData.scores?.length,
+            }
+          );
         }
       });
     }
@@ -1323,6 +1401,24 @@ export function App(): JSX.Element {
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
   }, [isChatOpen, isImportModalOpen]);
+
+  // Debug evidence scores state changes
+  useEffect(() => {
+    console.log('🎯 Current Evidence Scores State Changed:', {
+      scoresCount: currentEvidenceScores.length,
+      scores: currentEvidenceScores.map(s => ({
+        id: s.id,
+        documentId: s.documentId,
+        personaId: s.personaId,
+        score: s.score,
+        lastCalculated: s.lastCalculated,
+      })),
+      maxScore:
+        currentEvidenceScores.length > 0
+          ? Math.max(...currentEvidenceScores.map(s => s.score))
+          : null,
+    });
+  }, [currentEvidenceScores]);
 
   // Handle drag and drop for the main import card
   const handleCardDragOver = useCallback((e: React.DragEvent) => {
@@ -1695,7 +1791,25 @@ export function App(): JSX.Element {
                 <EvidenceScoreGauge
                   score={
                     currentEvidenceScores.length > 0
-                      ? Math.max(...currentEvidenceScores.map(s => s.score))
+                      ? (() => {
+                          const maxScore = Math.max(
+                            ...currentEvidenceScores.map(s => s.score)
+                          );
+                          console.log(
+                            '🎯 Evidence Score Calculation for Gauge:',
+                            {
+                              currentEvidenceScoresCount:
+                                currentEvidenceScores.length,
+                              allScores: currentEvidenceScores.map(s => ({
+                                documentId: s.documentId,
+                                personaId: s.personaId,
+                                score: s.score,
+                              })),
+                              maxScore,
+                            }
+                          );
+                          return maxScore;
+                        })()
                       : null
                   }
                   className="mb-4"

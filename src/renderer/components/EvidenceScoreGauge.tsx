@@ -26,17 +26,37 @@ export function EvidenceScoreGauge({
   useEffect(() => {
     const prevScore = prevScoreRef.current;
 
+    console.log('🎯 EvidenceScoreGauge: Score update triggered', {
+      newScore: score,
+      prevScore,
+      displayScore,
+      shouldTriggerPulse:
+        score !== null && score !== prevScore && prevScore !== null,
+    });
+
     // Only trigger pulse on non-null score changes (not initial load)
     if (score !== null && score !== prevScore && prevScore !== null) {
+      console.log('🎯 EvidenceScoreGauge: Triggering pulse animation', {
+        from: prevScore,
+        to: score,
+      });
       setShouldPulse(true);
       // Remove pulse class after animation completes
-      const timer = setTimeout(() => setShouldPulse(false), 400);
+      const timer = setTimeout(() => {
+        setShouldPulse(false);
+        console.log('🎯 EvidenceScoreGauge: Pulse animation completed');
+      }, 400);
       return () => clearTimeout(timer);
     }
 
     prevScoreRef.current = score;
     setDisplayScore(score);
-  }, [score]);
+
+    console.log('🎯 EvidenceScoreGauge: Updated display score', {
+      displayScore: score,
+      prevScoreRef: prevScoreRef.current,
+    });
+  }, [score, displayScore]);
 
   // Determine score color class based on value
   const getScoreColorClass = (scoreValue: number | null): string => {
@@ -60,6 +80,14 @@ export function EvidenceScoreGauge({
   const respectsReducedMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
   ).matches;
+
+  console.log('🎯 EvidenceScoreGauge: Rendering', {
+    score,
+    displayScore,
+    shouldPulse,
+    strokeDashoffset,
+    colorClass: getScoreColorClass(displayScore),
+  });
 
   return (
     <div className={`relative ${className}`}>

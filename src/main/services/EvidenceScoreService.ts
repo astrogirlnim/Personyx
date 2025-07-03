@@ -71,6 +71,167 @@ export class EvidenceScoreService {
    * Convert database Evidence to shared Evidence type
    */
   private convertDbEvidence(dbEvidence: DbEvidence): Evidence {
+    let tags: string[] = [];
+
+    try {
+      // FIX: Handle both JSON array format and already-parsed array format
+      if (Array.isArray(dbEvidence.tags)) {
+        // Tags are already an array (common with newer data)
+        tags = dbEvidence.tags.filter(
+          tag => typeof tag === 'string' && tag.length > 0
+        );
+        logger.debug('✅ Tags already parsed as array', {
+          evidenceId: dbEvidence.id,
+          tagsArray: tags,
+          originalType: 'array',
+        });
+      } else if (typeof dbEvidence.tags === 'string') {
+        // Tags are a string (JSON or comma-separated)
+        if (dbEvidence.tags.startsWith('[')) {
+          // JSON array format
+          tags = JSON.parse(dbEvidence.tags);
+          logger.debug('✅ Parsed JSON tags', {
+            evidenceId: dbEvidence.id,
+            tagsArray: tags,
+            originalType: 'json-string',
+          });
+        } else {
+          // Legacy comma-separated format
+          tags = dbEvidence.tags
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0);
+          logger.debug('✅ Parsed comma-separated tags', {
+            evidenceId: dbEvidence.id,
+            tagsArray: tags,
+            originalType: 'comma-separated-string',
+          });
+        }
+      } else {
+        logger.warn('⚠️ Unknown tags format, using empty array', {
+          evidenceId: dbEvidence.id,
+          tagsValue: dbEvidence.tags,
+          tagsType: typeof dbEvidence.tags,
+        });
+        tags = [];
+      }
+    } catch (error) {
+      logger.warn('⚠️ Failed to parse evidence tags, using empty array', {
+        evidenceId: dbEvidence.id,
+        tagsValue: dbEvidence.tags,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      tags = [];
+    }
+
+    // FIX: Enhanced timestamp conversion with better validation and debugging
+    let timestamp: Date;
+    try {
+      logger.debug('🔍 Converting timestamp', {
+        evidenceId: dbEvidence.id,
+        originalTimestamp: dbEvidence.timestamp,
+        timestampType: typeof dbEvidence.timestamp,
+        isDate: dbEvidence.timestamp instanceof Date,
+        timestampConstructor: dbEvidence.timestamp?.constructor?.name,
+      });
+
+      // If dbEvidence.timestamp is already a Date object
+      if (dbEvidence.timestamp instanceof Date) {
+        // Check if it's a valid Date
+        if (!isNaN(dbEvidence.timestamp.getTime())) {
+          timestamp = dbEvidence.timestamp;
+          logger.debug('✅ Timestamp is valid Date object', {
+            evidenceId: dbEvidence.id,
+            timestamp: timestamp.toISOString(),
+            timestampMs: timestamp.getTime(),
+          });
+        } else {
+          // Invalid Date object - need to create new one
+          throw new Error('Date object is invalid (NaN getTime())');
+        }
+      } else if (typeof dbEvidence.timestamp === 'number') {
+        // Unix timestamp (seconds or milliseconds)
+        let timestampMs: number;
+        if (dbEvidence.timestamp > 1000000000000) {
+          // Already in milliseconds
+          timestampMs = dbEvidence.timestamp;
+        } else {
+          // In seconds, convert to milliseconds
+          timestampMs = dbEvidence.timestamp * 1000;
+        }
+
+        timestamp = new Date(timestampMs);
+        if (isNaN(timestamp.getTime())) {
+          throw new Error(`Invalid Unix timestamp: ${dbEvidence.timestamp}`);
+        }
+
+        logger.debug('✅ Converted Unix timestamp to Date', {
+          evidenceId: dbEvidence.id,
+          unixTimestamp: dbEvidence.timestamp,
+          timestampMs: timestampMs,
+          convertedDate: timestamp.toISOString(),
+        });
+      } else if (typeof dbEvidence.timestamp === 'string') {
+        // ISO date string
+        timestamp = new Date(dbEvidence.timestamp);
+        if (isNaN(timestamp.getTime())) {
+          throw new Error(`Invalid ISO date string: ${dbEvidence.timestamp}`);
+        }
+
+        logger.debug('✅ Parsed ISO date string to Date', {
+          evidenceId: dbEvidence.id,
+          isoString: dbEvidence.timestamp,
+          convertedDate: timestamp.toISOString(),
+        });
+      } else {
+        // Unknown format
+        throw new Error(
+          `Unknown timestamp format: ${typeof dbEvidence.timestamp} - ${dbEvidence.timestamp}`
+        );
+      }
+
+      // Final validation: ensure the Date object is valid and reasonable
+      if (isNaN(timestamp.getTime())) {
+        throw new Error('Final Date object validation failed (NaN)');
+      }
+
+      // Check if timestamp is reasonable (not too far in the past or future)
+      const now = new Date();
+      const minDate = new Date('2020-01-01'); // Reasonable minimum date
+      const maxDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year in future
+
+      if (timestamp < minDate || timestamp > maxDate) {
+        logger.warn(
+          '⚠️ Timestamp is outside reasonable range, but using it anyway',
+          {
+            evidenceId: dbEvidence.id,
+            timestamp: timestamp.toISOString(),
+            minDate: minDate.toISOString(),
+            maxDate: maxDate.toISOString(),
+          }
+        );
+      }
+    } catch (error) {
+      // Last resort fallback with detailed logging
+      const fallbackTimestamp = new Date();
+      logger.error(
+        '❌ Timestamp conversion failed, using current date as fallback',
+        {
+          evidenceId: dbEvidence.id,
+          originalTimestamp: dbEvidence.timestamp,
+          originalType: typeof dbEvidence.timestamp,
+          isDate: dbEvidence.timestamp instanceof Date,
+          dateGetTime:
+            dbEvidence.timestamp instanceof Date
+              ? dbEvidence.timestamp.getTime()
+              : 'N/A',
+          error: error instanceof Error ? error.message : String(error),
+          fallbackDate: fallbackTimestamp.toISOString(),
+        }
+      );
+      timestamp = fallbackTimestamp;
+    }
+
     return {
       id: dbEvidence.id,
       personaId: dbEvidence.personaId,
@@ -81,8 +242,8 @@ export class EvidenceScoreService {
         | 'prd'
         | 'feedback'
         | 'other',
-      timestamp: dbEvidence.timestamp,
-      tags: JSON.parse(dbEvidence.tags),
+      timestamp: timestamp,
+      tags,
       sentiment: dbEvidence.sentiment as
         | 'positive'
         | 'negative'
@@ -96,13 +257,35 @@ export class EvidenceScoreService {
    * Convert database Persona to shared Persona type
    */
   private convertDbPersona(dbPersona: DbPersona): Persona {
+    let keywords: string[] = [];
+
+    try {
+      // Handle both JSON array format and comma-separated string format
+      if (dbPersona.keywords.startsWith('[')) {
+        keywords = JSON.parse(dbPersona.keywords);
+      } else {
+        // Legacy format: comma-separated string
+        keywords = dbPersona.keywords
+          .split(',')
+          .map(kw => kw.trim())
+          .filter(kw => kw.length > 0);
+      }
+    } catch (error) {
+      logger.warn('⚠️ Failed to parse persona keywords, using empty array', {
+        personaId: dbPersona.id,
+        keywordsValue: dbPersona.keywords,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      keywords = [];
+    }
+
     return {
       id: dbPersona.id,
       name: dbPersona.name,
       description: dbPersona.description,
       primaryGoal: dbPersona.primaryGoal,
       mainPainPoint: dbPersona.mainPainPoint,
-      keywords: JSON.parse(dbPersona.keywords),
+      keywords,
       createdAt: dbPersona.createdAt,
       updatedAt: dbPersona.updatedAt,
     };
@@ -168,6 +351,20 @@ export class EvidenceScoreService {
         throw new Error(`Persona not found: ${personaId}`);
       }
 
+      logger.debug('📄 PRD Details', {
+        prdId,
+        title: document.title,
+        contentLength: document.content.length,
+        type: document.type,
+      });
+
+      logger.debug('👤 Persona Details', {
+        personaId,
+        name: persona.name,
+        keywords: persona.keywords,
+        primaryGoal: persona.primaryGoal,
+      });
+
       // Get relevant evidence for this persona and convert to shared types
       const dbEvidence = await this.evidenceRepo.findByPersonaId(personaId);
       const allEvidence = dbEvidence.map(e => this.convertDbEvidence(e));
@@ -176,6 +373,9 @@ export class EvidenceScoreService {
         {
           personaId,
           personaName: persona.name,
+          evidenceIds: allEvidence.map(e => e.id),
+          evidenceImportances: allEvidence.map(e => e.importance),
+          evidenceTypes: allEvidence.map(e => e.sourceType),
         }
       );
 
@@ -192,6 +392,8 @@ export class EvidenceScoreService {
         {
           prdId,
           personaId,
+          filteredEvidenceIds: relevantEvidence.map(e => e.id),
+          filteredImportances: relevantEvidence.map(e => e.importance),
         }
       );
 
@@ -225,6 +427,7 @@ export class EvidenceScoreService {
         score: result.score,
         evidenceCount: result.evidenceCount,
         breakdown: result.breakdown,
+        finalScoreBeforeRounding: finalScore,
       });
 
       return result;
@@ -348,9 +551,32 @@ export class EvidenceScoreService {
       k.toLowerCase()
     );
 
-    return allEvidence.filter(evidence => {
+    logger.debug('🔍 PERSONA KEYWORDS:', {
+      personaId: _persona.id,
+      keywords: personaKeywords,
+    });
+
+    // BUGFIX: Exclude PRD-sourced evidence from scoring calculation
+    // PRD content should be scored AGAINST existing evidence, not treated as evidence itself
+    const nonPRDEvidence = allEvidence.filter(
+      evidence => evidence.sourceType !== 'prd'
+    );
+
+    logger.debug(
+      `🔍 Filtering evidence: ${allEvidence.length} total, ${nonPRDEvidence.length} non-PRD evidence`,
+      {
+        totalEvidence: allEvidence.length,
+        nonPRDEvidence: nonPRDEvidence.length,
+        prdEvidenceFiltered: allEvidence.length - nonPRDEvidence.length,
+      }
+    );
+
+    const filteredEvidence = nonPRDEvidence.filter(evidence => {
       // Always include high-importance evidence (8+)
       if (evidence.importance >= 8) {
+        logger.debug(
+          `✅ Including high-importance evidence: ${evidence.id} (importance: ${evidence.importance})`
+        );
         return true;
       }
 
@@ -366,11 +592,31 @@ export class EvidenceScoreService {
         document.content
       );
 
-      // Include if it has keyword match OR content relevance AND importance >= 5
-      return (
-        (hasKeywordMatch || hasContentRelevance) && evidence.importance >= 5
-      );
+      const includeEvidence =
+        (hasKeywordMatch || hasContentRelevance) && evidence.importance >= 5;
+
+      logger.debug(`🔍 Evidence filtering: ${evidence.id}`, {
+        importance: evidence.importance,
+        hasKeywordMatch,
+        hasContentRelevance,
+        included: includeEvidence,
+        content: evidence.content.substring(0, 100) + '...',
+        tags: evidence.tags,
+      });
+
+      return includeEvidence;
     });
+
+    logger.debug(
+      `🎯 FINAL FILTERED EVIDENCE COUNT: ${filteredEvidence.length}`,
+      {
+        personaId: _persona.id,
+        evidenceIds: filteredEvidence.map(e => e.id),
+        evidenceImportances: filteredEvidence.map(e => e.importance),
+      }
+    );
+
+    return filteredEvidence;
   }
 
   /**
@@ -433,9 +679,18 @@ export class EvidenceScoreService {
 
     // Check how many PRD words appear in evidence
     const matches = prdWords.filter(word => evidence.includes(word));
+    const relevanceScore = matches.length / prdWords.length;
+    const isRelevant = relevanceScore >= 0.2;
 
-    // Relevant if at least 20% of key PRD words appear in evidence
-    return matches.length / prdWords.length >= 0.2;
+    logger.debug('🔍 Content relevance check:', {
+      prdWords: prdWords.slice(0, 10), // Show first 10 words
+      matches: matches.slice(0, 5), // Show first 5 matches
+      relevanceScore: Math.round(relevanceScore * 100) / 100,
+      isRelevant,
+      evidencePreview: evidence.substring(0, 100) + '...',
+    });
+
+    return isRelevant;
   }
 
   /**
@@ -464,35 +719,213 @@ export class EvidenceScoreService {
    * Calculate recency score (0-100) based on evidence age
    */
   private calculateRecencyScore(evidence: Evidence[]): number {
-    if (evidence.length === 0) return 0;
+    if (evidence.length === 0) {
+      logger.debug('🔍 RECENCY CALCULATION: No evidence provided, returning 0');
+      return 0;
+    }
 
     const now = new Date();
     const maxAge = EvidenceScoreService.THRESHOLDS.maxAgeForFullRecency;
 
-    const recencyScores = evidence.map(item => {
-      const ageInDays =
-        (now.getTime() - item.timestamp.getTime()) / (1000 * 60 * 60 * 24);
+    logger.debug('🔍 RECENCY CALCULATION START', {
+      evidenceCount: evidence.length,
+      now: now.toISOString(),
+      nowTimestamp: now.getTime(),
+      maxAgeThreshold: maxAge,
+      evidenceTimestamps: evidence.map(e => ({
+        id: e.id,
+        timestamp: e.timestamp,
+        timestampISO: e.timestamp.toISOString(),
+        timestampMs: e.timestamp.getTime(),
+        isValidDate: !isNaN(e.timestamp.getTime()),
+      })),
+    });
 
-      if (ageInDays <= maxAge) {
-        // Full score for fresh evidence
-        return 100;
-      } else {
-        // Decay score based on age (50% at 60 days, 25% at 90 days, etc.)
-        return Math.max(10, 100 * Math.exp(-ageInDays / maxAge));
+    const recencyScores = evidence.map(item => {
+      try {
+        // Enhanced timestamp validation before calculation
+        if (!item.timestamp) {
+          logger.error(`❌ Missing timestamp for evidence ${item.id}`, {
+            evidenceId: item.id,
+            timestamp: item.timestamp,
+          });
+          return 50; // Fallback score for missing timestamps
+        }
+
+        if (!(item.timestamp instanceof Date)) {
+          logger.error(`❌ Invalid timestamp object for evidence ${item.id}`, {
+            evidenceId: item.id,
+            timestamp: item.timestamp,
+            timestampType: typeof item.timestamp,
+            isDate: false,
+          });
+          return 50; // Fallback score for invalid timestamps
+        }
+
+        const itemTimeMs = item.timestamp.getTime();
+        const nowTimeMs = now.getTime();
+
+        if (isNaN(itemTimeMs) || isNaN(nowTimeMs)) {
+          logger.error(`❌ NaN timestamp detected for evidence ${item.id}`, {
+            evidenceId: item.id,
+            itemTimeMs: itemTimeMs,
+            nowTimeMs: nowTimeMs,
+            timestamp: item.timestamp,
+            timestampISO: item.timestamp.toISOString(),
+          });
+          return 50; // Fallback score for NaN timestamps
+        }
+
+        const timeDiffMs = nowTimeMs - itemTimeMs;
+        const ageInDays = timeDiffMs / (1000 * 60 * 60 * 24);
+
+        logger.debug(`🕐 Age calculation for evidence ${item.id}`, {
+          evidenceId: item.id,
+          nowTimeMs: nowTimeMs,
+          itemTimeMs: itemTimeMs,
+          timeDiffMs: timeDiffMs,
+          ageInDays: ageInDays,
+          isValidAgeInDays: !isNaN(ageInDays),
+          isPositiveAge: ageInDays >= 0,
+        });
+
+        if (isNaN(ageInDays)) {
+          logger.error(
+            `❌ NaN detected in ageInDays calculation for evidence ${item.id}`,
+            {
+              evidenceId: item.id,
+              timestamp: item.timestamp,
+              timestampISO: item.timestamp.toISOString(),
+              timestampGetTime: itemTimeMs,
+              nowGetTime: nowTimeMs,
+              nowISO: now.toISOString(),
+              timeDiff: timeDiffMs,
+            }
+          );
+          return 50; // Fallback score for invalid age calculations
+        }
+
+        // Handle negative age (future timestamps)
+        if (ageInDays < 0) {
+          logger.warn(`⚠️ Future timestamp detected for evidence ${item.id}`, {
+            evidenceId: item.id,
+            ageInDays: ageInDays,
+            timestamp: item.timestamp.toISOString(),
+            now: now.toISOString(),
+          });
+          return 100; // Treat future evidence as fresh
+        }
+
+        let score: number;
+        if (ageInDays <= maxAge) {
+          // Full score for fresh evidence
+          score = 100;
+          logger.debug(
+            `✅ Fresh evidence: ${item.id} (${ageInDays.toFixed(1)} days old) = 100 score`
+          );
+        } else {
+          // Decay score based on age (exponential decay)
+          score = Math.max(10, 100 * Math.exp(-ageInDays / maxAge));
+          logger.debug(
+            `📉 Aged evidence: ${item.id} (${ageInDays.toFixed(1)} days old) = ${score.toFixed(1)} score`
+          );
+        }
+
+        // Final score validation
+        if (isNaN(score) || score < 0 || score > 100) {
+          logger.error(`❌ Invalid score calculated for evidence ${item.id}`, {
+            evidenceId: item.id,
+            calculatedScore: score,
+            ageInDays: ageInDays,
+            maxAge: maxAge,
+          });
+          return 50; // Fallback score
+        }
+
+        return score;
+      } catch (error) {
+        logger.error(`❌ Error calculating recency for evidence ${item.id}`, {
+          evidenceId: item.id,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: item.timestamp,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        return 50; // Fallback score for errors
       }
     });
 
+    logger.debug('📊 Individual recency scores calculated', {
+      recencyScores: recencyScores.map((score, index) => ({
+        evidenceId: evidence[index].id,
+        recencyScore: score,
+        importance: evidence[index].importance,
+        isValidScore: !isNaN(score) && score >= 0 && score <= 100,
+      })),
+    });
+
     // Weight by importance and return average
-    const weightedScore = evidence.reduce((sum, item, index) => {
-      return sum + recencyScores[index] * item.importance;
-    }, 0);
+    let weightedScore = 0;
+    let totalWeight = 0;
 
-    const totalWeight = evidence.reduce(
-      (sum, item) => sum + item.importance,
-      0
-    );
+    evidence.forEach((item, index) => {
+      const score = recencyScores[index];
+      const importance = item.importance;
 
-    return totalWeight > 0 ? weightedScore / totalWeight : 0;
+      // Validate importance value
+      if (isNaN(importance) || importance <= 0) {
+        logger.warn(`⚠️ Invalid importance for evidence ${item.id}`, {
+          evidenceId: item.id,
+          importance: importance,
+          using: 1,
+        });
+        // Use importance of 1 as fallback
+        const weightedValue = score * 1;
+        weightedScore += weightedValue;
+        totalWeight += 1;
+        logger.debug(
+          `⚖️ Weighting (corrected): ${item.id} score=${score} * importance=1 = ${weightedValue}`
+        );
+      } else {
+        const weightedValue = score * importance;
+        weightedScore += weightedValue;
+        totalWeight += importance;
+        logger.debug(
+          `⚖️ Weighting: ${item.id} score=${score} * importance=${importance} = ${weightedValue}`
+        );
+      }
+    });
+
+    const finalRecencyScore = totalWeight > 0 ? weightedScore / totalWeight : 0;
+
+    logger.debug('🔍 RECENCY CALCULATION COMPLETE', {
+      weightedScore,
+      totalWeight,
+      finalRecencyScore,
+      isValidFinalScore:
+        !isNaN(finalRecencyScore) &&
+        finalRecencyScore >= 0 &&
+        finalRecencyScore <= 100,
+      evidenceCount: evidence.length,
+    });
+
+    // Final validation and fallback
+    if (
+      isNaN(finalRecencyScore) ||
+      finalRecencyScore < 0 ||
+      finalRecencyScore > 100
+    ) {
+      logger.error('❌ CRITICAL: Final recency score is invalid!', {
+        finalRecencyScore,
+        weightedScore,
+        totalWeight,
+        evidenceCount: evidence.length,
+        recencyScores,
+        evidenceImportances: evidence.map(e => e.importance),
+      });
+      return 0; // Safe fallback to prevent NaN propagation
+    }
+
+    return finalRecencyScore;
   }
 
   /**

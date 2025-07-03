@@ -650,3 +650,68 @@ The fix involved refactoring the IPC handling logic in `src/main/main.ts` to mak
 - **Issue**: Fully resolved.
 - **Core Functionality**: The tray drop zone feature is now working as expected, unblocking Phase 3.1.2 completion.
 - **Commit**: `fix(ipc): resolve tray drop race condition with event-driven logic` (Example commit message)
+
+# Personyx Debugging Log
+
+## 2025-01-02 - Evidence Score Banner NaN Bug
+
+### Issue
+
+Evidence scores are not being generated. PRD import completes but no scores appear in UI.
+
+### Root Cause Analysis
+
+1. **UI Layer**: ✅ WORKING - EvidenceScoreGauge component renders correctly, IPC events fire properly
+2. **Evidence Data**: ✅ WORKING - 12 evidence items loaded (6 per persona), tags parsing fixed with error handling
+3. **Evidence Filtering**: ✅ WORKING - Finds 5-6 relevant evidence items per persona based on keywords/importance
+4. **Score Components**:
+   - Coverage: ✅ WORKING (90%)
+   - Relevance: ✅ WORKING (39-43%)
+   - **Recency: ❌ BROKEN (returns NaN)**
+5. **Database**: ❌ FAILING - NOT NULL constraint on evidence_scores.score field
+
+### Technical Details
+
+```javascript
+// Score breakdown from logs
+{
+  recency: NaN,           // ← ROOT CAUSE
+  coverage: 90,           // ✅ Working
+  relevance: 43.14,       // ✅ Working
+  evidenceCount: 5        // ✅ Working
+}
+
+// Final calculation fails
+finalScore = (recency * 0.4) + (coverage * 0.3) + (relevance * 0.3)
+           = (NaN * 0.4) + (90 * 0.3) + (43.14 * 0.3)
+           = NaN  // ← Causes database constraint failure
+```
+
+### Evidence Processing Flow
+
+1. ✅ Evidence retrieved from database (6 items per persona)
+2. ✅ Tags parsing with error handling (array vs string format handled)
+3. ✅ Evidence filtering by keywords and importance (5-6 items selected)
+4. ✅ Content relevance analysis (scoring 39-43%)
+5. ✅ Coverage calculation (90% based on evidence count)
+6. ❌ Recency calculation fails → returns NaN
+7. ❌ Final weighted score becomes NaN
+8. ❌ Database insert fails due to NOT NULL constraint
+
+### Next Steps (For Future Implementation)
+
+1. Debug recency calculation in EvidenceScoreService
+2. Check timestamp parsing and date handling logic
+3. Add fallback values for recency calculation
+4. Ensure all score components return valid numbers before final calculation
+
+### Files Involved
+
+- `src/main/services/EvidenceScoreService.ts` - Contains broken recency calculation
+- `src/main/db/repositories/EvidenceScoreRepo.ts` - Database constraint failure
+- `src/renderer/components/EvidenceScoreGauge.tsx` - UI working correctly
+- `scripts/seed-test-data.sql` - Test data loaded successfully
+
+### Status
+
+Phase 3.1.3 Evidence Score Banner UI is production-ready. Scoring algorithm needs recency calculation fix to be functional.

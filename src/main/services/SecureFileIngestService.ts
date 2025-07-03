@@ -522,57 +522,28 @@ export class SecureFileIngestService {
   ): Promise<void> {
     logger.debug('💾 Storing evidence and embeddings');
 
-    // Get all personas for evidence association
-    const personas = await this.personaRepo.list();
+    // BUGFIX: Do not create evidence entries from PRD content
+    // PRD content should be scored AGAINST existing evidence, not treated as evidence itself
+    // The original logic incorrectly created evidence entries for each persona from PRD chunks
+    // This caused all personas to have identical evidence, resulting in identical scores (74)
 
-    for (const chunk of chunks) {
-      // Find corresponding embedding
-      const embeddingData = embeddings.find(e => e.chunkIndex === chunk.index);
-      if (!embeddingData) {
-        logger.warn(`⚠️ No embedding found for chunk ${chunk.index}`);
-        continue;
-      }
+    logger.info(
+      '📝 PRD content stored as document only - not creating evidence entries from PRD chunks'
+    );
+    logger.debug(
+      '🔍 Evidence scoring will use existing interview/feedback evidence against this PRD'
+    );
 
-      // Create evidence entry for each persona (PRD is relevant to all personas)
-      for (const persona of personas) {
-        try {
-          const evidence = await this.evidenceRepo.create({
-            personaId: persona.id,
-            content: chunk.content,
-            source: document.title,
-            sourceType: 'prd',
-            timestamp: new Date(),
-            tags: JSON.stringify([
-              'prd',
-              'requirements',
-              chunk.section.toLowerCase(),
-            ]),
-            importance: 8, // PRD content is high importance
-          });
+    // Skip storing PRD embeddings since they're not used in current scoring algorithm
+    // PRD embeddings would require evidence entries due to foreign key constraints
+    // Future enhancement: Create separate prd_embeddings table if PRD similarity search is needed
 
-          // Store embedding linked to evidence
-          await this.embeddingRepo.create({
-            evidenceId: evidence.id,
-            embedding: JSON.stringify(embeddingData.embedding),
-            model: 'text-embedding-3-small',
-            dimensions: embeddingData.embedding.length,
-            chunkIndex: chunk.index,
-            chunkCount: chunk.totalChunks,
-          });
-
-          logger.debug(
-            `💾 Stored evidence and embedding for persona ${persona.name}, chunk ${chunk.index}`
-          );
-        } catch (error) {
-          logger.error(
-            `❌ Failed to store evidence/embedding for persona ${persona.id}, chunk ${chunk.index}`,
-            error
-          );
-        }
-      }
-    }
-
-    logger.info('✅ Evidence and embeddings stored successfully');
+    logger.info(
+      '✅ PRD processed without creating evidence entries or embeddings (prevents foreign key constraint errors)'
+    );
+    logger.debug(
+      `🧠 Generated ${embeddings.length} embeddings from ${chunks.length} chunks (not persisted)`
+    );
   }
 
   /**
