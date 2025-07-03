@@ -14,6 +14,7 @@ import type {
 } from '../shared/types';
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
 import { TranscriptImportModal } from './components/TranscriptImportModal';
+import { AIServiceSettingsModal } from './components/AIServiceSettingsModal';
 import { GlobalErrorToast, ErrorToast } from './components/GlobalErrorToast';
 import {
   GlobalSuccessToast,
@@ -1259,6 +1260,7 @@ export function App(): JSX.Element {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false); // Phase 3.1.6: Activity log panel state
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); // Phase 3.5.1: Settings modal state
   const [isCardDragging, setIsCardDragging] = useState(false);
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
   const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
@@ -1384,6 +1386,11 @@ export function App(): JSX.Element {
         e.preventDefault();
         setIsActivityLogOpen(true);
       }
+      // Ctrl/Cmd + , to open settings modal (Phase 3.5.1)
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setIsSettingsModalOpen(true);
+      }
       // Escape to close modals
       if (e.key === 'Escape') {
         if (isChatOpen) {
@@ -1394,6 +1401,8 @@ export function App(): JSX.Element {
           setIsTranscriptModalOpen(false);
         } else if (isActivityLogOpen) {
           setIsActivityLogOpen(false);
+        } else if (isSettingsModalOpen) {
+          setIsSettingsModalOpen(false);
         }
       }
     };
@@ -1401,6 +1410,12 @@ export function App(): JSX.Element {
     // Listen for tray-triggered events
     const handleOpenChatWindow = () => {
       setIsChatOpen(true);
+    };
+
+    // Phase 3.5.1: Handle settings modal opening from tray
+    const handleOpenSettingsWindow = () => {
+      console.log('🔧 Opening settings modal from tray');
+      setIsSettingsModalOpen(true);
     };
 
     // TODO: Use this handler when tray import functionality is added
@@ -1414,6 +1429,7 @@ export function App(): JSX.Element {
     // Set up IPC listeners for opening windows from tray
     if (window.electronAPI) {
       window.electronAPI.onOpenChatWindow(handleOpenChatWindow);
+      window.electronAPI.onOpenSettingsWindow(handleOpenSettingsWindow); // Phase 3.5.1
       window.electronAPI.onOpenImportModalWithFile(data => {
         console.log(
           '🗂️ Opening import modal from tray file drop:',
@@ -1993,6 +2009,32 @@ export function App(): JSX.Element {
                   />
                 </svg>
               </button>
+              {/* Settings Button */}
+              <button
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="p-2 rounded-full hover:bg-graphite/20 dark:hover:bg-graphite-dark/20 transition-colors"
+                title="Settings (Ctrl+,)"
+              >
+                <svg
+                  className="w-6 h-6 text-slate dark:text-slate-dark"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
               {/* Chat Button */}
               <button
                 onClick={() => setIsChatOpen(true)}
@@ -2255,6 +2297,12 @@ export function App(): JSX.Element {
       <ActivityLogPanel
         isOpen={isActivityLogOpen}
         onClose={() => setIsActivityLogOpen(false)}
+      />
+
+      {/* Phase 3.5.1: AI Service Settings Modal */}
+      <AIServiceSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
 
       {/* Phase 3.1.4: Global Error Toast */}
