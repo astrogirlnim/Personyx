@@ -1585,7 +1585,7 @@ export function App(): JSX.Element {
       window.removeEventListener('keydown', handleKeyDown);
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
-  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen]);
+  }, []); // Remove modal dependencies to prevent re-registering event listeners
 
   // Debug evidence scores state changes
   useEffect(() => {
