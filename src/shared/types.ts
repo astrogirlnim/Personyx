@@ -154,6 +154,20 @@ export interface IPCEvents {
     subscription?: AIServiceConfig['cloudSubscription'];
     error?: string;
   };
+  // Phase 3.5.2: Third-party token management events
+  'token-status-updated': {
+    status: Array<{
+      service: string;
+      exists: boolean;
+      lastUpdated?: Date;
+    }>;
+  };
+  'third-party-token-test-result': {
+    service: string;
+    success: boolean;
+    error?: string;
+    details?: Record<string, unknown>;
+  };
   error: {
     message: string;
     details?: unknown;
@@ -224,6 +238,20 @@ export interface IPCEvents {
     apiKey?: string;
   };
   'get-cloud-subscription-info': Record<string, never>;
+  // Phase 3.5.2: Third-party token management
+  'set-third-party-token': {
+    service: string;
+    token: string;
+  };
+  'get-token-status': Record<string, never>;
+  'test-third-party-token': {
+    service: string;
+    token?: string;
+  };
+  'remove-third-party-token': {
+    service: string;
+  };
+  'get-missing-token-warnings': Record<string, never>;
   'app-quit': Record<string, never>;
   // Phase 3.1.6: Activity log requests
   'get-activity-log': {

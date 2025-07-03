@@ -1,6 +1,6 @@
 # System Patterns – The "How"
 
-_Last updated: 2025-01-13_
+_Last updated: 2025-01-20_
 
 ## High‑Level Architecture (Current Implementation)
 
@@ -23,6 +23,17 @@ Slack Bot / Linear Labeler ◄─── Hybrid AI Provider ────┘
                              Firebase Auth            Direct API
                              Cloud Functions         (User Keys)
                              (Managed Service)
+                                     ▲
+                                     │
+                          Third-Party Token Management
+                                     │
+                                     ▼
+                          [VSCode] [Slack] [Apple Notes]
+                              │       │         │
+                              ▼       ▼         ▼
+                         GitHub PAT  Bot Token  Future API
+                         (ghp_*/     (xoxb-*)   (Placeholder)
+                          github_pat_*)
 
                 Development Infrastructure Layer
                           │
@@ -49,6 +60,7 @@ Slack Bot / Linear Labeler ◄─── Hybrid AI Provider ────┘
 | **Repository Pattern**                  | Clean data access layer with pagination, filtering, and type safety.               |
 | **Exact Node.js Version Enforcement**   | Eliminates ALL native module conflicts with 20.19.2 + comprehensive validation.    |
 | **Dual-Context Native Module Handling** | Perfect support for both Node.js testing and Electron runtime environments.        |
+| **Third-Party Token Management**        | Extensible service-specific validation for VSCode/Slack/Apple Notes integrations.  |
 
 ## Core Service Architecture
 
@@ -113,6 +125,51 @@ TrayWindow.importPRD() → native file dialog → secure processing
 
 // Evidence score banner with API key guidance
 EvidenceScoreBanner.display() → score + setup instructions
+
+// AI Service Settings Modal with comprehensive management
+AIServiceSettingsModal.show() → provider selection, key management, connection testing
+```
+
+### 5. Third-Party Token Management (Phase 3.5.2 - Backend Complete)
+
+```typescript
+// Enhanced TokenVault with service-specific validation
+TokenVault.validateToken(service: ApiService, token: string) → ValidationResult
+TokenVault.isTokenStored(service: ApiService) → boolean
+
+// Service-specific validation rules
+interface ServiceValidationRules {
+  vscode: {
+    patterns: ['ghp_*', 'github_pat_*']
+    minLength: 40
+    description: 'GitHub Personal Access Token'
+  }
+  slack: {
+    patterns: ['xoxb-*']
+    minLength: 50
+    description: 'Slack Bot Token'
+  }
+  'apple-notes': {
+    patterns: ['*']
+    minLength: 32
+    description: 'Apple Notes API Token (Future)'
+  }
+}
+
+// Enhanced SettingsService with CRUD operations
+SettingsService.configureThirdPartyToken(service, token) → encrypted storage + validation
+SettingsService.removeThirdPartyToken(service) → secure removal + audit logging
+SettingsService.getTokenStatus() → multi-service availability status
+SettingsService.testThirdPartyToken(service) → service-specific connection testing
+SettingsService.getMissingTokenWarnings() → smart warning system
+
+// Extended IPC Infrastructure
+IPC_CHANNELS = {
+  'configure-third-party-token': (service, token) → success/error
+  'remove-third-party-token': (service) → success/error
+  'get-token-status': () → { vscode: boolean, slack: boolean, ... }
+  'test-third-party-token': (service) → connection result
+}
 ```
 
 ## Reusable Patterns
@@ -196,87 +253,160 @@ VoltaManager.autoSwitch(); // Team consistency
 // Comprehensive pre-flight validation pipeline
 DevelopmentPipeline = [
   ToolsValidator.checkCriticalTools(), // node, pnpm, git
-  NodeVersionChecker.validateExact(),  // 20.19.2 enforcement
-  ProjectValidator.checkStructure(),   // package.json, .nvmrc, scripts
-  DependencyValidator.checkPackages(), // critical packages present
-  NativeModuleManager.rebuildForElectron(), // context-aware rebuild
-  ApplicationLauncher.startWithDebugging()  // enhanced debugging
+  NodeVersionChecker.validateExact(), // 20.19.2 enforcement
+  ProjectValidator.checkStructure(), // package.json, .nvmrc, scripts
+  NativeModuleManager.rebuild(), // context-aware rebuilds
+  TestSuite.runValidation(), // comprehensive testing
+  BuildValidator.checkOutput(), // final build verification
 ];
-
-// Error handling with guidance
-ErrorHandler.provideGuidance(error) → specific resolution steps
 ```
 
-## Security Architecture
-
-### 1. Encryption at Rest
-
-- **AES-256-GCM**: All credentials encrypted with unique IVs and auth tags
-- **PBKDF2**: Key derivation with 100,000 iterations for maximum security
-- **Local Storage**: No credentials transmitted to external services
-
-### 2. Firebase Security
-
-- **ID Token Authentication**: Secure API access with automatic refresh
-- **HTTPS Only**: All Firebase communication encrypted in transit
-- **Environment Isolation**: Sensitive config in .env files (gitignored)
-
-### 3. API Key Management
-
-- **User Choice**: Self-managed OpenAI keys OR managed Firebase service
-- **Automatic Fallback**: Firebase unavailable → OpenAI direct (seamless)
-- **Error Handling**: Clear guidance when API keys missing or invalid
-
-### 4. Development Security
-
-- **Version Enforcement**: Prevents potentially vulnerable Node.js versions
-- **Native Module Security**: Controlled compilation with verified sources
-- **Pre-commit Hooks**: Gitleaks security scanning + linting validation
-
-## Database Schema Patterns
-
-### 1. Relational Design (6 Tables)
-
-```sql
-personas (id, name, demographic, interests, pain_points, preferred_solutions)
-evidence (id, persona_id, document_id, quote, importance, date_created)
-product_documents (id, title, content, file_path, created_at)
-evidence_scores (id, prd_id, persona_id, score, calculation_details, created_at)
-embeddings (id, text, vector, metadata, created_at)
-api_tokens (id, provider, encrypted_value, created_at)
-```
-
-### 2. Type Safety (TypeScript Interfaces)
+### 7. Third-Party Integration Pattern (Phase 3.5.2 - New)
 
 ```typescript
-interface PersonaType {
-  id: string;
-  name: string;
-  demographic: string[];
-  interests: string[];
-  pain_points: string[];
-  preferred_solutions: string[];
+// Extensible service-specific validation pattern
+interface IThirdPartyService {
+  validateToken(token: string): ValidationResult;
+  testConnection(token: string): Promise<ConnectionResult>;
+  getRequiredScopes(): string[];
+  getSetupInstructions(): string;
 }
 
-// Database ↔ Application type conversion handled by repositories
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings?: string[];
+}
+
+interface ConnectionResult {
+  success: boolean;
+  error?: string;
+  metadata?: Record<string, any>;
+}
+
+// Implementations: VSCodeService, SlackService, AppleNotesService
+// Usage: Service registry pattern with automatic discovery
+
+class ThirdPartyServiceRegistry {
+  private services = new Map<ApiService, IThirdPartyService>();
+
+  register(service: ApiService, implementation: IThirdPartyService) {
+    this.services.set(service, implementation);
+  }
+
+  validate(service: ApiService, token: string): ValidationResult {
+    return (
+      this.services.get(service)?.validateToken(token) ?? {
+        isValid: false,
+        errors: ['Service not found'],
+      }
+    );
+  }
+}
+
+// Service-specific implementations
+class VSCodeService implements IThirdPartyService {
+  validateToken(token: string): ValidationResult {
+    // GitHub PAT validation: ghp_* or github_pat_*, 40+ chars
+    const patterns = [
+      /^ghp_[A-Za-z0-9_]{36,}$/,
+      /^github_pat_[A-Za-z0-9_]{22,}$/,
+    ];
+    const isValid =
+      patterns.some(pattern => pattern.test(token)) && token.length >= 40;
+
+    return {
+      isValid,
+      errors: isValid ? [] : ['Invalid GitHub Personal Access Token format'],
+      warnings: !isValid
+        ? ['Token should be ghp_* (classic) or github_pat_* (fine-grained)']
+        : [],
+    };
+  }
+
+  async testConnection(token: string): Promise<ConnectionResult> {
+    // Test GitHub API access with token
+    // Implementation specific to GitHub API validation
+  }
+
+  getRequiredScopes(): string[] {
+    return ['repo', 'user:email']; // GitHub-specific scopes
+  }
+
+  getSetupInstructions(): string {
+    return 'Generate a Personal Access Token at https://github.com/settings/tokens';
+  }
+}
 ```
 
-## Performance Patterns
+## Architecture Evolution
 
-### 1. Caching Strategy
+### Phase 3.5.2 Strategic Scope Change
 
-- **EmbeddingRetrievalService**: 5-minute TTL cache for similarity queries
-- **PersonaLoader**: In-memory persona cache with database sync
-- **Firebase Provider**: Connection pooling and retry logic
+**Previous Integration Focus**: Notion + Slack + Linear  
+**New Strategic Focus**: VSCode + Slack + Apple Notes
 
-### 2. Optimization Techniques
+**Architectural Benefits**:
 
-- **Batch Processing**: Firebase supports up to 50 texts per request
-- **Vector Indexing**: Efficient similarity search with cosine distance
-- **Lazy Loading**: Services initialize only when needed
+- **Developer-Centric**: VSCode integration aligns with daily development workflow
+- **Communication-Focused**: Slack integration enables team evidence sharing
+- **Future Productivity**: Apple Notes placeholder for personal workflow expansion
+- **Simplified MVP**: Reduced integration complexity while maintaining extensibility
 
-### 3. Development Performance
+**Technical Implementation**:
 
-- **Native Module Caching**: Context-aware rebuilds prevent unnecessary recompilation
-- **Version Validation Caching**: Fast validation with helpful error messages
-- **Parallel Processing**: Concurrent TypeScript compilation + validation
+- Service-specific validation with clear error messaging
+- Extensible pattern supporting future service additions
+- Type-safe service registry with automatic discovery
+- Comprehensive testing infrastructure for validation and connection testing
+
+### Extensibility Design
+
+The third-party token management system is designed for easy expansion:
+
+```typescript
+// Adding new services requires minimal changes
+type ApiService =
+  | 'openai'
+  | 'vscode'
+  | 'slack'
+  | 'apple-notes'
+  | 'firebase-cloud'
+  | 'future-service';
+
+// Service registration pattern
+serviceRegistry.register('future-service', new FutureService());
+
+// Automatic UI discovery (future enhancement)
+const availableServices = serviceRegistry.getAll();
+```
+
+## Current Implementation Status
+
+**✅ COMPLETE PHASES**:
+
+- Development Infrastructure Layer (Node.js standardization)
+- Data Layer Services (evidence scoring, embeddings, file ingest)
+- Hybrid AI Management (TokenVault, Firebase, provider selection)
+- Interface Layer Core (chat, import, scores, toasts, activity logs, settings)
+- Third-Party Token Management Backend (validation, storage, IPC, testing)
+
+**🔄 IN PROGRESS**:
+
+- Third-Party Token Management UI (service selection, validation display, connection testing)
+
+**⏳ FUTURE SCOPE**:
+
+- Notion/Linear integrations (moved to future scope for strategic focus)
+- VS Code extension implementation
+- Slack bot implementation
+- Apple Notes integration implementation
+
+## Quality Patterns Established
+
+**Type Safety**: Strict TypeScript throughout with comprehensive interfaces  
+**Error Handling**: Graceful degradation with detailed error messages  
+**Security**: AES-256-GCM encryption for all credential storage  
+**Testing**: Comprehensive test suites with high coverage  
+**Documentation**: Complete implementation summaries and testing guides  
+**Extensibility**: Service registry pattern supporting future integrations

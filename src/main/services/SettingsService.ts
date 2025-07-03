@@ -8,7 +8,14 @@
 import { join } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { Logger } from '@main/utils/logger';
-import { storeToken, getToken, removeToken } from '@main/security/tokenVault';
+import {
+  storeToken,
+  getToken,
+  removeToken,
+  validateToken,
+  isTokenStored,
+  type ApiService,
+} from '@main/security/tokenVault';
 import { PATHS, DEFAULT_SETTINGS } from '@shared/constants';
 import type {
   AppSettings,
@@ -447,6 +454,198 @@ export class SettingsService {
     } catch (error) {
       logger.error('❌ Failed to reset settings', error);
       throw error;
+    }
+  }
+
+  /**
+   * Configure third-party token (Phase 3.5.2)
+   */
+  public async configureThirdPartyToken(
+    service: ApiService,
+    token: string
+  ): Promise<void> {
+    logger.info(`🔐 Configuring third-party token for service: ${service}`);
+
+    try {
+      // Validate token format
+      if (!validateToken(service, token)) {
+        throw new Error(
+          `Invalid token format for ${service}. Please check the token and try again.`
+        );
+      }
+
+      // Store token securely in vault
+      await storeToken(service, token);
+
+      logger.info(
+        `✅ Third-party token configured successfully for service: ${service}`
+      );
+    } catch (error) {
+      logger.error(
+        `❌ Failed to configure third-party token for ${service}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get token status for all services (Phase 3.5.2)
+   */
+  public async getTokenStatus(): Promise<
+    Array<{
+      service: ApiService;
+      exists: boolean;
+      lastUpdated?: Date;
+    }>
+  > {
+    logger.debug('📊 Getting token status for all services');
+
+    try {
+      const services: ApiService[] = [
+        'openai',
+        'vscode',
+        'slack',
+        'apple-notes',
+        'firebase-cloud',
+      ];
+      const status = [];
+
+      for (const service of services) {
+        const exists = await isTokenStored(service);
+
+        // For now, we don't track lastUpdated in the database schema
+        // This could be enhanced in the future with database timestamps
+        status.push({
+          service,
+          exists,
+          lastUpdated: exists ? new Date() : undefined, // Placeholder
+        });
+      }
+
+      logger.debug(`✅ Token status retrieved for ${status.length} services`);
+      return status;
+    } catch (error) {
+      logger.error('❌ Failed to get token status', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove third-party token (Phase 3.5.2)
+   */
+  public async removeThirdPartyToken(service: ApiService): Promise<void> {
+    logger.info(`🗑️ Removing third-party token for service: ${service}`);
+
+    try {
+      await removeToken(service);
+      logger.info(
+        `✅ Third-party token removed successfully for service: ${service}`
+      );
+    } catch (error) {
+      logger.error(
+        `❌ Failed to remove third-party token for ${service}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Test third-party token connectivity (Phase 3.5.2)
+   */
+  public async testThirdPartyToken(
+    service: ApiService,
+    token?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    details?: Record<string, unknown>;
+  }> {
+    logger.info(`🧪 Testing third-party token for service: ${service}`);
+
+    try {
+      const tokenToTest = token || (await getToken(service));
+      if (!tokenToTest) {
+        return { success: false, error: 'No token provided or stored' };
+      }
+
+      // Validate token format first
+      if (!validateToken(service, tokenToTest)) {
+        return {
+          success: false,
+          error: `Invalid token format for ${service}`,
+        };
+      }
+
+      // Service-specific testing logic
+      switch (service) {
+        case 'vscode':
+          // TODO: Implement actual VSCode/GitHub API test when integration is ready
+          // For now, simulate a test
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return {
+            success: true,
+            details: { message: 'Token format valid (full test pending)' },
+          };
+
+        case 'slack':
+          // TODO: Implement actual Slack API test when integration is ready
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return {
+            success: true,
+            details: { message: 'Token format valid (full test pending)' },
+          };
+
+        case 'apple-notes':
+          // TODO: Implement actual Apple Notes API test when available
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return {
+            success: true,
+            details: { message: 'Token format valid (full test pending)' },
+          };
+
+        default:
+          return {
+            success: false,
+            error: `Testing not implemented for service: ${service}`,
+          };
+      }
+    } catch (error) {
+      logger.error(`❌ Third-party token test failed for ${service}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Check if any required third-party providers are missing tokens (Phase 3.5.2)
+   */
+  public async getMissingTokenWarnings(): Promise<string[]> {
+    logger.debug('🔍 Checking for missing token warnings');
+
+    try {
+      const warnings: string[] = [];
+
+      // Define which services are "required" for certain features
+      // This can be customized based on actual app requirements
+      const optionalServices: ApiService[] = ['vscode', 'slack', 'apple-notes'];
+
+      for (const service of optionalServices) {
+        const exists = await isTokenStored(service);
+        if (!exists) {
+          const serviceName =
+            service.charAt(0).toUpperCase() + service.slice(1);
+          warnings.push(`${serviceName} integration not configured`);
+        }
+      }
+
+      return warnings;
+    } catch (error) {
+      logger.error('❌ Failed to check missing token warnings', error);
+      return [];
     }
   }
 }

@@ -9,6 +9,11 @@ interface ElectronAPI {
   // File operations
   openFileDialog: () => void;
   handleTrayFileDrop: (filePath: string) => void;
+  handleTrayFileDropWithContent: (
+    fileName: string,
+    fileContent: string,
+    fileSize: number
+  ) => void;
   importPRD: (filePath: string) => Promise<unknown>;
   importTranscript: (filePath: string) => Promise<unknown>;
 
@@ -33,6 +38,13 @@ interface ElectronAPI {
   configureAIService: (config: unknown) => Promise<unknown>;
   testAPIKey: (provider: string, apiKey?: string) => Promise<unknown>;
   getCloudSubscriptionInfo: () => Promise<unknown>;
+
+  // Phase 3.5.2: Third-party token management
+  setThirdPartyToken: (service: string, token: string) => Promise<unknown>;
+  getTokenStatus: () => Promise<unknown>;
+  testThirdPartyToken: (service: string, token?: string) => Promise<unknown>;
+  removeThirdPartyToken: (service: string) => Promise<unknown>;
+  getMissingTokenWarnings: () => Promise<unknown>;
 
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
@@ -72,6 +84,9 @@ interface ElectronAPI {
   onSettingsUpdated: (callback: (data: unknown) => void) => void;
   onApiKeyTestResult: (callback: (data: unknown) => void) => void;
   onCloudSubscriptionInfo: (callback: (data: unknown) => void) => void;
+  // Phase 3.5.2: Third-party token event listeners
+  onTokenStatusUpdated: (callback: (data: unknown) => void) => void;
+  onThirdPartyTokenTestResult: (callback: (data: unknown) => void) => void;
   onOpenSettingsWindow: (callback: () => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (

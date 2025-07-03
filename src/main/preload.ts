@@ -39,6 +39,13 @@ interface ElectronAPI {
   testAPIKey: (provider: string, apiKey?: string) => Promise<unknown>;
   getCloudSubscriptionInfo: () => Promise<unknown>;
 
+  // Phase 3.5.2: Third-party token management operations
+  setThirdPartyToken: (service: string, token: string) => Promise<unknown>;
+  getTokenStatus: () => Promise<unknown>;
+  testThirdPartyToken: (service: string, token?: string) => Promise<unknown>;
+  removeThirdPartyToken: (service: string) => Promise<unknown>;
+  getMissingTokenWarnings: () => Promise<unknown>;
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -99,6 +106,10 @@ interface ElectronAPI {
       fileSize: number;
     }) => void
   ) => void;
+
+  // Phase 3.5.2: Third-party token management event listeners
+  onTokenStatusUpdated: (callback: (data: unknown) => void) => void;
+  onThirdPartyTokenTestResult: (callback: (data: unknown) => void) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;
@@ -178,7 +189,7 @@ const electronAPI: ElectronAPI = {
 
   updateSettings: (updates: unknown) => {
     console.log('📋 Updating settings');
-    return ipcRenderer.invoke('update-settings', { updates });
+    return ipcRenderer.invoke('update-settings', { settings: updates });
   },
 
   configureAIService: (config: unknown) => {
@@ -194,6 +205,32 @@ const electronAPI: ElectronAPI = {
   getCloudSubscriptionInfo: () => {
     console.log('📋 Getting cloud subscription info');
     return ipcRenderer.invoke('get-cloud-subscription-info');
+  },
+
+  // Phase 3.5.2: Third-party token management operations
+  setThirdPartyToken: (service: string, token: string) => {
+    console.log('🔐 Setting third-party token', { service });
+    return ipcRenderer.invoke('set-third-party-token', { service, token });
+  },
+
+  getTokenStatus: () => {
+    console.log('📊 Getting token status');
+    return ipcRenderer.invoke('get-token-status');
+  },
+
+  testThirdPartyToken: (service: string, token?: string) => {
+    console.log('🧪 Testing third-party token', { service });
+    return ipcRenderer.invoke('test-third-party-token', { service, token });
+  },
+
+  removeThirdPartyToken: (service: string) => {
+    console.log('🗑️ Removing third-party token', { service });
+    return ipcRenderer.invoke('remove-third-party-token', { service });
+  },
+
+  getMissingTokenWarnings: () => {
+    console.log('⚠️ Getting missing token warnings');
+    return ipcRenderer.invoke('get-missing-token-warnings');
   },
 
   // Phase 3.1.6: Activity log operations
@@ -280,6 +317,17 @@ const electronAPI: ElectronAPI = {
 
   onCloudSubscriptionInfo: (callback: (data: unknown) => void) => {
     ipcRenderer.on('cloud-subscription-info', (_, data) => callback(data));
+  },
+
+  // Phase 3.5.2: Third-party token management event listeners
+  onTokenStatusUpdated: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('token-status-updated', (_, data) => callback(data));
+  },
+
+  onThirdPartyTokenTestResult: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('third-party-token-test-result', (_, data) =>
+      callback(data)
+    );
   },
 
   onOpenSettingsWindow: (callback: () => void) => {

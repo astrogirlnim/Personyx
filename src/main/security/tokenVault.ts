@@ -19,12 +19,13 @@ const MASTER_KEY_ACCOUNT = 'vault-master-key';
 
 /**
  * Supported API services
+ * Phase 3.5.2 - Focused scope: VSCode, Slack, Apple Notes (future)
  */
 export type ApiService =
   | 'openai'
-  | 'notion'
+  | 'vscode'
   | 'slack'
-  | 'linear'
+  | 'apple-notes'
   | 'firebase-cloud';
 
 /**
@@ -290,6 +291,78 @@ export async function testTokenVault(): Promise<boolean> {
     return isValid;
   } catch (error) {
     logger.error('❌ Token vault test failed', error);
+    return false;
+  }
+}
+
+/**
+ * Validate token format for different services
+ */
+export function validateToken(service: ApiService, token: string): boolean {
+  if (!token || token.trim() === '') {
+    return false;
+  }
+
+  const trimmedToken = token.trim();
+
+  switch (service) {
+    case 'openai':
+      // OpenAI API keys start with 'sk-' and should be at least 40 characters
+      return trimmedToken.startsWith('sk-') && trimmedToken.length >= 40;
+
+    case 'vscode':
+      // VSCode Personal Access Tokens (GitHub/Azure DevOps style) - typically 40+ characters
+      // Can be classic tokens (ghp_) or fine-grained (github_pat_)
+      return (
+        (trimmedToken.startsWith('ghp_') && trimmedToken.length >= 40) ||
+        (trimmedToken.startsWith('github_pat_') && trimmedToken.length >= 82) ||
+        (trimmedToken.length >= 40 && /^[a-zA-Z0-9_-]+$/.test(trimmedToken))
+      );
+
+    case 'slack':
+      // Slack bot tokens start with 'xoxb-' and are typically 56+ characters
+      return trimmedToken.startsWith('xoxb-') && trimmedToken.length >= 50;
+
+    case 'apple-notes':
+      // Apple Notes API tokens (future implementation) - placeholder validation
+      // Will be updated when Apple Notes API becomes available
+      return trimmedToken.length >= 32;
+
+    case 'firebase-cloud':
+      // Firebase Cloud keys are typically JWT-like or long random strings
+      return trimmedToken.length >= 32;
+
+    default:
+      // Unknown service - basic length check
+      return trimmedToken.length >= 20;
+  }
+}
+
+/**
+ * Check if a token is stored for a service (without revealing the token)
+ */
+export async function isTokenStored(service: ApiService): Promise<boolean> {
+  try {
+    logger.debug(`🔍 Checking if token is stored for service: ${service}`);
+
+    const db = getDatabase();
+    const result = await db
+      .select({ service: apiTokens.service })
+      .from(apiTokens)
+      .where(eq(apiTokens.service, service))
+      .limit(1);
+
+    const exists = result.length > 0;
+    logger.debug(
+      `${exists ? '✅' : '📭'} Token ${exists ? 'exists' : 'not found'} for service: ${service}`
+    );
+
+    return exists;
+  } catch (error) {
+    logger.error(
+      `❌ Failed to check token existence for service: ${service}`,
+      error
+    );
     return false;
   }
 }
