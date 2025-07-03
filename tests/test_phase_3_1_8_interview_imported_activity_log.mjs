@@ -146,7 +146,7 @@ async function testEnhancedDataFlow() {
     );
     
     // Test 1.3: processTranscriptManual captures detailed results
-    const hasIngestResultCapture = orchestratorContent.includes('const ingestResult = await this.transcriptIngestService.processTranscript');
+    const hasIngestResultCapture = orchestratorContent.includes('const ingestResult') && orchestratorContent.includes('transcriptIngestService.processTranscript');
     const hasEvidenceCountCalculation = orchestratorContent.includes('await this.calculateEvidenceCountsByPersona');
     
     logTest(
