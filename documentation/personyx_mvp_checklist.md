@@ -109,12 +109,12 @@ _Criteria: storage & computation services, depends only on Phase 1._
 
 _Criteria: user-facing components; each relies on Phases 1 & 2._
 
-[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (4/8 sub-features)
+[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (5/8 sub-features)
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
 - [x] **1.3** Display real-time Evidence Score banner after import. ✅ COMPLETE (with advanced state management & persistence)
-- [ ] **1.4** Show global error toast for failed ingest events.
+- [x] **1.4** Show global error toast for failed ingest events. ✅ COMPLETE
 - [x] **1.5** Add "Import Interview Transcript" modal with drag-&-drop + "Open Folder" fallback. ✅ COMPLETE
 - [ ] **1.6** Implement Activity Log panel (ingest successes, errors, score updates).
 - [ ] **1.7** Show success toast "Transcript analysed – evidence added" on completion.

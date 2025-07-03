@@ -19,6 +19,7 @@ export const IPC_CHANNELS = {
   API_KEY_TEST_RESULT: 'api-key-test-result',
   CLOUD_SUBSCRIPTION_INFO: 'cloud-subscription-info',
   ERROR: 'error',
+  GLOBAL_ERROR: 'global-error', // Phase 3.1.4: Global error toast events
 
   // Renderer to Main
   IMPORT_PRD: 'import-prd',
