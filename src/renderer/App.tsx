@@ -19,6 +19,7 @@ import {
   GlobalSuccessToast,
   SuccessToast,
 } from './components/GlobalSuccessToast';
+import { ActivityLogPanel } from './components/ActivityLogPanel';
 import { useEvidenceScores } from './hooks/useEvidenceScores';
 import {
   getLastImportedPRD,
@@ -1199,6 +1200,7 @@ export function App(): JSX.Element {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
+  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false); // Phase 3.1.6: Activity log panel state
   const [isCardDragging, setIsCardDragging] = useState(false);
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
   const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
@@ -1319,6 +1321,11 @@ export function App(): JSX.Element {
         e.preventDefault();
         setIsTranscriptModalOpen(true);
       }
+      // Ctrl/Cmd + L to open activity log panel (Phase 3.1.6)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+        e.preventDefault();
+        setIsActivityLogOpen(true);
+      }
       // Escape to close modals
       if (e.key === 'Escape') {
         if (isChatOpen) {
@@ -1327,6 +1334,8 @@ export function App(): JSX.Element {
           setIsImportModalOpen(false);
         } else if (isTranscriptModalOpen) {
           setIsTranscriptModalOpen(false);
+        } else if (isActivityLogOpen) {
+          setIsActivityLogOpen(false);
         }
       }
     };
@@ -1906,6 +1915,26 @@ export function App(): JSX.Element {
                   />
                 </svg>
               </button>
+              {/* Activity Log Button (Phase 3.1.6) */}
+              <button
+                onClick={() => setIsActivityLogOpen(true)}
+                className="p-2 rounded-full hover:bg-graphite/20 dark:hover:bg-graphite-dark/20 transition-colors"
+                title="Activity Log (Ctrl+L)"
+              >
+                <svg
+                  className="w-6 h-6 text-slate dark:text-slate-dark"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m-6 8h6M6 20h.01M6 16h.01M6 12h.01"
+                  />
+                </svg>
+              </button>
               {/* Chat Button */}
               <button
                 onClick={() => setIsChatOpen(true)}
@@ -2162,6 +2191,12 @@ export function App(): JSX.Element {
         }}
         initialFile={transcriptDraggedFile}
         initialFilePath={transcriptTrayFilePath}
+      />
+
+      {/* Phase 3.1.6: Activity Log Panel */}
+      <ActivityLogPanel
+        isOpen={isActivityLogOpen}
+        onClose={() => setIsActivityLogOpen(false)}
       />
 
       {/* Phase 3.1.4: Global Error Toast */}

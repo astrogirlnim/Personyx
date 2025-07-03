@@ -104,6 +104,20 @@ export const apiTokens = sqliteTable('api_tokens', {
     .notNull(),
 });
 
+// Activity log table - tracks all app activities for Phase 3.1.6
+export const activityLog = sqliteTable('activity_log', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(), // 'import-success' | 'import-error' | 'score-update' | 'general-activity'
+  title: text('title').notNull(),
+  description: text('description'),
+  source: text('source').notNull(), // 'prd-import' | 'transcript-import' | 'evidence-score' | 'general'
+  metadata: text('metadata'), // JSON metadata (file names, scores, errors, etc.)
+  timestamp: integer('timestamp').notNull(), // Unix timestamp
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
 // Export types for use in repositories
 export type Persona = typeof personas.$inferSelect;
 export type NewPersona = typeof personas.$inferInsert;
@@ -117,3 +131,5 @@ export type EvidenceScore = typeof evidenceScores.$inferSelect;
 export type NewEvidenceScore = typeof evidenceScores.$inferInsert;
 export type ApiToken = typeof apiTokens.$inferSelect;
 export type NewApiToken = typeof apiTokens.$inferInsert;
+export type ActivityLog = typeof activityLog.$inferSelect;
+export type NewActivityLog = typeof activityLog.$inferInsert;

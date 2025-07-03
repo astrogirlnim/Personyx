@@ -22,6 +22,7 @@ export const IPC_CHANNELS = {
   ERROR: 'error',
   GLOBAL_ERROR: 'global-error', // Phase 3.1.4: Global error toast events
   TRANSCRIPT_SUCCESS_TOAST: 'transcript-success-toast', // Phase 3.1.7: Success toast events
+  ACTIVITY_LOG_UPDATED: 'activity-log-updated', // Phase 3.1.6: Activity log events
 
   // Renderer to Main
   IMPORT_PRD: 'import-prd',
@@ -35,6 +36,11 @@ export const IPC_CHANNELS = {
   TEST_API_KEY: 'test-api-key',
   GET_CLOUD_SUBSCRIPTION_INFO: 'get-cloud-subscription-info',
   APP_QUIT: 'app-quit',
+  // Phase 3.1.6: Activity log channels
+  GET_ACTIVITY_LOG: 'get-activity-log',
+  ACTIVITY_LOG_STATS: 'activity-log-stats',
+  CLEAR_ACTIVITY_LOG: 'clear-activity-log',
+  EXPORT_ACTIVITY_LOG: 'export-activity-log',
 } as const;
 
 // File paths and directories

@@ -53,6 +53,57 @@ export interface EvidenceScore {
   };
 }
 
+// Activity Log - Phase 3.1.6
+export interface ActivityLog {
+  id: string;
+  type: ActivityLogType;
+  title: string;
+  description?: string;
+  source: ActivityLogSource;
+  metadata?: ActivityLogMetadata;
+  timestamp: Date;
+  createdAt: Date;
+}
+
+export type ActivityLogType =
+  | 'import-success'
+  | 'import-error'
+  | 'score-update'
+  | 'general-activity';
+
+export type ActivityLogSource =
+  | 'prd-import'
+  | 'transcript-import'
+  | 'evidence-score'
+  | 'general';
+
+export interface ActivityLogMetadata {
+  fileName?: string;
+  evidenceCount?: number;
+  personasAffected?: string[];
+  processingTime?: number;
+  errorMessage?: string;
+  scores?: EvidenceScore[];
+  documentId?: string;
+  [key: string]: unknown; // Allow additional metadata
+}
+
+export interface ActivityLogFilter {
+  type?: ActivityLogType;
+  source?: ActivityLogSource;
+  dateFrom?: Date;
+  dateTo?: Date;
+  search?: string;
+}
+
+export interface ActivityLogStats {
+  totalActivities: number;
+  todayActivities: number;
+  successRate: number;
+  errorCount: number;
+  lastActivity?: Date;
+}
+
 // IPC Event Types
 export interface IPCEvents {
   // Main to Renderer
@@ -124,6 +175,12 @@ export interface IPCEvents {
     dismissible?: boolean;
     autoDismissMs?: number;
   };
+  // Phase 3.1.6: Activity log events
+  'activity-log-updated': {
+    entries: ActivityLog[];
+    totalCount: number;
+    stats: ActivityLogStats;
+  };
 
   // Renderer to Main
   'import-prd': {
@@ -161,6 +218,18 @@ export interface IPCEvents {
   };
   'get-cloud-subscription-info': Record<string, never>;
   'app-quit': Record<string, never>;
+  // Phase 3.1.6: Activity log requests
+  'get-activity-log': {
+    page?: number;
+    limit?: number;
+    filter?: ActivityLogFilter;
+  };
+  'activity-log-stats': Record<string, never>;
+  'clear-activity-log': Record<string, never>;
+  'export-activity-log': {
+    format: 'csv' | 'json';
+    filter?: ActivityLogFilter;
+  };
 }
 
 // AI Service Provider Configuration
