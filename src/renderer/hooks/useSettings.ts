@@ -346,13 +346,39 @@ export function useSettings(): SettingsState & SettingsActions {
       }));
     };
 
+    // Phase 3.5.2: Listen for third-party token events
+    const handleTokenStatusUpdated = (data: unknown) => {
+      console.log('📢 Token status updated event received:', data);
+      const statusData = data as TokenStatus[];
+      setState(prevState => ({
+        ...prevState,
+        tokenStatus: statusData,
+      }));
+    };
+
+    const handleThirdPartyTokenTestResult = (data: unknown) => {
+      console.log('📢 Third-party token test result received:', data);
+      const testData = data as ThirdPartyTokenTestResult;
+      setState(prevState => ({
+        ...prevState,
+        lastThirdPartyTestResult: testData,
+        isTestingThirdPartyToken: false,
+      }));
+    };
+
     // Register event listeners
     window.electronAPI.onSettingsUpdated(handleSettingsUpdated);
     window.electronAPI.onApiKeyTestResult(handleApiKeyTestResult);
     window.electronAPI.onCloudSubscriptionInfo(handleCloudSubscriptionInfo);
+    window.electronAPI.onTokenStatusUpdated(handleTokenStatusUpdated);
+    window.electronAPI.onThirdPartyTokenTestResult(
+      handleThirdPartyTokenTestResult
+    );
 
-    // Load initial settings
+    // Load initial settings and token status
     loadSettings();
+    refreshTokenStatus();
+    loadMissingTokenWarnings();
 
     // Cleanup function
     return () => {
@@ -360,8 +386,170 @@ export function useSettings(): SettingsState & SettingsActions {
       window.electronAPI.removeAllListeners('settings-updated');
       window.electronAPI.removeAllListeners('api-key-test-result');
       window.electronAPI.removeAllListeners('cloud-subscription-info');
+      window.electronAPI.removeAllListeners('token-status-updated');
+      window.electronAPI.removeAllListeners('third-party-token-test-result');
     };
   }, [loadSettings]);
+
+  // Phase 3.5.2: Implement third-party token management methods
+  const setThirdPartyToken = useCallback(
+    async (service: string, token: string) => {
+      try {
+        setState(prev => ({ ...prev, error: null }));
+
+        console.log(`🔐 Configuring third-party token for service: ${service}`);
+        await window.electronAPI.setThirdPartyToken(service, token);
+
+        console.log(
+          `✅ Third-party token configured successfully for service: ${service}`
+        );
+
+        // Refresh token status and warnings
+        await refreshTokenStatus();
+        await loadMissingTokenWarnings();
+
+        // Log the token configuration activity
+        await logSettingsActivity('Third-party token configured', {
+          service,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : `Failed to configure token for ${service}`;
+        console.error(
+          `❌ Failed to configure third-party token for ${service}:`,
+          err
+        );
+        setState(prev => ({ ...prev, error: errorMessage }));
+        throw err;
+      }
+    },
+    []
+  );
+
+  const testThirdPartyToken = useCallback(
+    async (service: string, token?: string) => {
+      try {
+        setState(prev => ({
+          ...prev,
+          isTestingThirdPartyToken: true,
+          error: null,
+          lastThirdPartyTestResult: null,
+        }));
+
+        console.log(`🧪 Testing third-party token for service: ${service}`);
+        const result = await window.electronAPI.testThirdPartyToken(
+          service,
+          token
+        );
+
+        console.log(
+          `✅ Third-party token test completed for ${service}:`,
+          result
+        );
+        setState(prev => ({
+          ...prev,
+          lastThirdPartyTestResult: result as ThirdPartyTokenTestResult,
+          isTestingThirdPartyToken: false,
+        }));
+
+        // Log the token test activity
+        await logSettingsActivity('Third-party token tested', {
+          service,
+          success: Boolean((result as { success?: boolean }).success),
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : `Failed to test token for ${service}`;
+        console.error(
+          `❌ Failed to test third-party token for ${service}:`,
+          err
+        );
+        setState(prev => ({
+          ...prev,
+          error: errorMessage,
+          lastThirdPartyTestResult: {
+            service,
+            success: false,
+            error: errorMessage,
+          },
+          isTestingThirdPartyToken: false,
+        }));
+      }
+    },
+    []
+  );
+
+  const removeThirdPartyToken = useCallback(async (service: string) => {
+    try {
+      setState(prev => ({ ...prev, error: null }));
+
+      console.log(`🗑️ Removing third-party token for service: ${service}`);
+      await window.electronAPI.removeThirdPartyToken(service);
+
+      console.log(
+        `✅ Third-party token removed successfully for service: ${service}`
+      );
+
+      // Refresh token status and warnings
+      await refreshTokenStatus();
+      await loadMissingTokenWarnings();
+
+      // Log the token removal activity
+      await logSettingsActivity('Third-party token removed', {
+        service,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : `Failed to remove token for ${service}`;
+      console.error(
+        `❌ Failed to remove third-party token for ${service}:`,
+        err
+      );
+      setState(prev => ({ ...prev, error: errorMessage }));
+      throw err;
+    }
+  }, []);
+
+  const refreshTokenStatus = useCallback(async () => {
+    try {
+      console.log('📊 Refreshing token status...');
+      const status = await window.electronAPI.getTokenStatus();
+
+      console.log('✅ Token status refreshed:', status);
+      setState(prev => ({
+        ...prev,
+        tokenStatus: status as TokenStatus[],
+      }));
+    } catch (err) {
+      console.error('❌ Failed to refresh token status:', err);
+      // Don't throw - this is not critical functionality
+    }
+  }, []);
+
+  const loadMissingTokenWarnings = useCallback(async () => {
+    try {
+      console.log('⚠️ Loading missing token warnings...');
+      const warnings = await window.electronAPI.getMissingTokenWarnings();
+
+      console.log('✅ Missing token warnings loaded:', warnings);
+      setState(prev => ({
+        ...prev,
+        missingTokenWarnings: warnings as string[],
+      }));
+    } catch (err) {
+      console.error('❌ Failed to load missing token warnings:', err);
+      // Don't throw - this is not critical functionality
+    }
+  }, []);
 
   return {
     // State
@@ -386,22 +574,12 @@ export function useSettings(): SettingsState & SettingsActions {
     clearError,
     setTestResult,
     logSettingsActivity,
-    // Phase 3.5.2: Third-party token actions (placeholder implementations)
-    setThirdPartyToken: async (service: string, _token: string) => {
-      console.log('🔐 setThirdPartyToken not yet implemented', { service });
-    },
-    testThirdPartyToken: async (service: string, _token?: string) => {
-      console.log('🧪 testThirdPartyToken not yet implemented', { service });
-    },
-    removeThirdPartyToken: async (service: string) => {
-      console.log('🗑️ removeThirdPartyToken not yet implemented', { service });
-    },
-    refreshTokenStatus: async () => {
-      console.log('📊 refreshTokenStatus not yet implemented');
-    },
-    loadMissingTokenWarnings: async () => {
-      console.log('⚠️ loadMissingTokenWarnings not yet implemented');
-    },
+    // Phase 3.5.2: Third-party token actions
+    setThirdPartyToken,
+    testThirdPartyToken,
+    removeThirdPartyToken,
+    refreshTokenStatus,
+    loadMissingTokenWarnings,
   };
 }
 

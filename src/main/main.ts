@@ -1822,15 +1822,24 @@ I'd love to help you think through this from both a strategic and tactical persp
 
       // Convert string to ApiService type (with validation)
       if (
-        !['openai', 'notion', 'slack', 'linear', 'firebase-cloud'].includes(
-          service
-        )
+        ![
+          'openai',
+          'vscode',
+          'slack',
+          'apple-notes',
+          'firebase-cloud',
+        ].includes(service)
       ) {
         throw new Error(`Unsupported service: ${service}`);
       }
 
       await this.settingsService.configureThirdPartyToken(
-        service as 'openai' | 'notion' | 'slack' | 'linear' | 'firebase-cloud',
+        service as
+          | 'openai'
+          | 'vscode'
+          | 'slack'
+          | 'apple-notes'
+          | 'firebase-cloud',
         token
       );
 
@@ -1891,15 +1900,24 @@ I'd love to help you think through this from both a strategic and tactical persp
 
       // Convert string to ApiService type (with validation)
       if (
-        !['openai', 'notion', 'slack', 'linear', 'firebase-cloud'].includes(
-          service
-        )
+        ![
+          'openai',
+          'vscode',
+          'slack',
+          'apple-notes',
+          'firebase-cloud',
+        ].includes(service)
       ) {
         throw new Error(`Unsupported service: ${service}`);
       }
 
       const result = await this.settingsService.testThirdPartyToken(
-        service as 'openai' | 'notion' | 'slack' | 'linear' | 'firebase-cloud',
+        service as
+          | 'openai'
+          | 'vscode'
+          | 'slack'
+          | 'apple-notes'
+          | 'firebase-cloud',
         token
       );
 
@@ -1943,15 +1961,24 @@ I'd love to help you think through this from both a strategic and tactical persp
 
       // Convert string to ApiService type (with validation)
       if (
-        !['openai', 'notion', 'slack', 'linear', 'firebase-cloud'].includes(
-          service
-        )
+        ![
+          'openai',
+          'vscode',
+          'slack',
+          'apple-notes',
+          'firebase-cloud',
+        ].includes(service)
       ) {
         throw new Error(`Unsupported service: ${service}`);
       }
 
       await this.settingsService.removeThirdPartyToken(
-        service as 'openai' | 'notion' | 'slack' | 'linear' | 'firebase-cloud'
+        service as
+          | 'openai'
+          | 'vscode'
+          | 'slack'
+          | 'apple-notes'
+          | 'firebase-cloud'
       );
 
       // Emit token status update to renderer

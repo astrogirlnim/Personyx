@@ -25,6 +25,38 @@ interface AIServiceSettingsModalProps {
   onClose: () => void;
 }
 
+// Third-party service configuration
+const THIRD_PARTY_SERVICES = [
+  {
+    id: 'vscode',
+    name: 'VSCode',
+    description: 'GitHub API integration for VSCode workflows',
+    icon: '🔧',
+    placeholder: 'ghp_... or github_pat_...',
+    helpText: 'GitHub Personal Access Token for VSCode integration',
+    helpUrl: 'https://github.com/settings/tokens',
+  },
+  {
+    id: 'slack',
+    name: 'Slack',
+    description: 'Slack Bot integration for team communication',
+    icon: '💬',
+    placeholder: 'xoxb-...',
+    helpText: 'Slack Bot User OAuth Token',
+    helpUrl: 'https://api.slack.com/apps',
+  },
+  {
+    id: 'apple-notes',
+    name: 'Apple Notes',
+    description: 'Apple Notes integration for note management',
+    icon: '📝',
+    placeholder: 'apple_notes_...',
+    helpText: 'Apple Notes API token (coming soon)',
+    helpUrl: '#',
+    comingSoon: true,
+  },
+];
+
 export function AIServiceSettingsModal({
   isOpen,
   onClose,
@@ -42,6 +74,14 @@ export function AIServiceSettingsModal({
     clearError,
     setTestResult,
     logSettingsActivity,
+    // Phase 3.5.2: Third-party token management
+    tokenStatus,
+    isTestingThirdPartyToken,
+    lastThirdPartyTestResult,
+    setThirdPartyToken,
+    testThirdPartyToken,
+    removeThirdPartyToken,
+    refreshTokenStatus,
   } = useSettings();
 
   // Local component state
@@ -52,6 +92,14 @@ export function AIServiceSettingsModal({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
+  // Phase 3.5.2: Third-party token local state
+  const [thirdPartyTokens, setThirdPartyTokens] = useState<
+    Record<string, string>
+  >({});
+  const [showThirdPartyTokens, setShowThirdPartyTokens] = useState<
+    Record<string, boolean>
+  >({});
+
   // Reset state when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
@@ -59,6 +107,9 @@ export function AIServiceSettingsModal({
       setHasUnsavedChanges(false);
       setShowApiKey(false);
       clearError();
+      // Phase 3.5.2: Reset third-party token state
+      setThirdPartyTokens({});
+      setShowThirdPartyTokens({});
     } else if (settings) {
       setSelectedProvider(getCurrentAIProvider(settings));
       // Load cloud subscription info when modal opens
@@ -67,8 +118,18 @@ export function AIServiceSettingsModal({
           console.warn('Failed to load cloud subscription info:', err)
         );
       }
+      // Phase 3.5.2: Load token status when modal opens
+      refreshTokenStatus().catch(err =>
+        console.warn('Failed to load token status:', err)
+      );
     }
-  }, [isOpen, settings, clearError, getCloudSubscriptionInfo]);
+  }, [
+    isOpen,
+    settings,
+    clearError,
+    getCloudSubscriptionInfo,
+    refreshTokenStatus,
+  ]);
 
   // Track changes for unsaved state
   useEffect(() => {
@@ -81,6 +142,94 @@ export function AIServiceSettingsModal({
       setHasUnsavedChanges(hasProviderChanged || hasKeyChanged);
     }
   }, [selectedProvider, localApiKey, settings]);
+
+  // Phase 3.5.2: Helper function to get token status for a service
+  const getServiceTokenStatus = useCallback(
+    (serviceId: string): boolean => {
+      return (
+        tokenStatus.find(status => status.service === serviceId)?.exists ||
+        false
+      );
+    },
+    [tokenStatus]
+  );
+
+  // Phase 3.5.2: Helper function to handle third-party token input change
+  const handleThirdPartyTokenChange = useCallback(
+    (serviceId: string, value: string) => {
+      setThirdPartyTokens(prev => ({ ...prev, [serviceId]: value }));
+      clearError();
+    },
+    [clearError]
+  );
+
+  // Phase 3.5.2: Helper function to toggle third-party token visibility
+  const toggleThirdPartyTokenVisibility = useCallback((serviceId: string) => {
+    setShowThirdPartyTokens(prev => ({
+      ...prev,
+      [serviceId]: !prev[serviceId],
+    }));
+  }, []);
+
+  // Phase 3.5.2: Handle saving third-party token
+  const handleSaveThirdPartyToken = useCallback(
+    async (serviceId: string) => {
+      const token = thirdPartyTokens[serviceId];
+      if (!token || token.trim() === '') return;
+
+      try {
+        await setThirdPartyToken(serviceId, token.trim());
+        // Clear the local token input after successful save
+        setThirdPartyTokens(prev => ({ ...prev, [serviceId]: '' }));
+        console.log(`✅ Third-party token saved for ${serviceId}`);
+      } catch (err) {
+        console.error(
+          `❌ Failed to save third-party token for ${serviceId}:`,
+          err
+        );
+        // Error is handled by the hook
+      }
+    },
+    [thirdPartyTokens, setThirdPartyToken]
+  );
+
+  // Phase 3.5.2: Handle removing third-party token
+  const handleRemoveThirdPartyToken = useCallback(
+    async (serviceId: string) => {
+      if (!confirm(`Are you sure you want to remove the ${serviceId} token?`))
+        return;
+
+      try {
+        await removeThirdPartyToken(serviceId);
+        console.log(`✅ Third-party token removed for ${serviceId}`);
+      } catch (err) {
+        console.error(
+          `❌ Failed to remove third-party token for ${serviceId}:`,
+          err
+        );
+        // Error is handled by the hook
+      }
+    },
+    [removeThirdPartyToken]
+  );
+
+  // Phase 3.5.2: Handle testing third-party token
+  const handleTestThirdPartyToken = useCallback(
+    async (serviceId: string) => {
+      const token = thirdPartyTokens[serviceId];
+      try {
+        await testThirdPartyToken(serviceId, token?.trim());
+        console.log(`✅ Third-party token test completed for ${serviceId}`);
+      } catch (err) {
+        console.error(
+          `❌ Failed to test third-party token for ${serviceId}:`,
+          err
+        );
+        // Error is handled by the hook
+      }
+    },
+    [thirdPartyTokens, testThirdPartyToken]
+  );
 
   const validateApiKey = useCallback((key: string): boolean => {
     if (!key || key.trim() === '') return false;
@@ -715,6 +864,311 @@ export function AIServiceSettingsModal({
                   </span>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Phase 3.5.2: Third-Party Integrations */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-body font-medium text-slate dark:text-slate-dark">
+                Third-Party Integrations
+              </h3>
+              <span className="text-caption text-steel dark:text-steel-dark">
+                {tokenStatus.filter(status => status.exists).length} of{' '}
+                {THIRD_PARTY_SERVICES.length} configured
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {THIRD_PARTY_SERVICES.map(service => {
+                const isConfigured = getServiceTokenStatus(service.id);
+                const hasLocalToken =
+                  thirdPartyTokens[service.id]?.trim() !== '';
+                const isCurrentlyTesting =
+                  isTestingThirdPartyToken &&
+                  lastThirdPartyTestResult?.service === service.id;
+
+                return (
+                  <div
+                    key={service.id}
+                    className="border border-graphite dark:border-graphite-dark rounded-lg p-4 space-y-3"
+                  >
+                    {/* Service Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{service.icon}</span>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className="text-body font-medium text-slate dark:text-slate-dark">
+                              {service.name}
+                            </h4>
+                            {isConfigured && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-persona/10 text-persona">
+                                Configured
+                              </span>
+                            )}
+                            {service.comingSoon && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-insight/10 text-insight">
+                                Coming Soon
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-caption text-steel dark:text-steel-dark">
+                            {service.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Service Actions */}
+                      <div className="flex items-center space-x-2">
+                        {isConfigured && (
+                          <button
+                            onClick={() =>
+                              handleTestThirdPartyToken(service.id)
+                            }
+                            disabled={
+                              isTestingThirdPartyToken || service.comingSoon
+                            }
+                            className="flex items-center space-x-1 px-3 py-1 text-caption text-evidence dark:text-evidence-dark hover:bg-evidence/10 dark:hover:bg-evidence-dark/10 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isCurrentlyTesting ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b border-evidence dark:border-evidence-dark"></div>
+                                <span>Testing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                <span>Test</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+
+                        {isConfigured && (
+                          <button
+                            onClick={() =>
+                              handleRemoveThirdPartyToken(service.id)
+                            }
+                            disabled={isTestingThirdPartyToken}
+                            className="flex items-center space-x-1 px-3 py-1 text-caption text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                            <span>Remove</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Token Input (only show if not configured or if user is adding a new token) */}
+                    {(!isConfigured || hasLocalToken) && (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <input
+                            type={
+                              showThirdPartyTokens[service.id]
+                                ? 'text'
+                                : 'password'
+                            }
+                            value={thirdPartyTokens[service.id] || ''}
+                            onChange={e =>
+                              handleThirdPartyTokenChange(
+                                service.id,
+                                e.target.value
+                              )
+                            }
+                            placeholder={service.placeholder}
+                            className="w-full p-3 pr-24 border border-graphite dark:border-graphite-dark rounded-lg bg-paper dark:bg-paper-dark text-slate dark:text-slate-dark focus:border-evidence dark:focus:border-evidence-dark focus:outline-none"
+                            disabled={
+                              loading ||
+                              isTestingThirdPartyToken ||
+                              service.comingSoon
+                            }
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleThirdPartyTokenVisibility(service.id)
+                              }
+                              className="text-steel dark:text-steel-dark hover:text-slate dark:hover:text-slate-dark"
+                              disabled={service.comingSoon}
+                            >
+                              {showThirdPartyTokens[service.id] ? (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                            {hasLocalToken && (
+                              <button
+                                onClick={() =>
+                                  handleSaveThirdPartyToken(service.id)
+                                }
+                                disabled={
+                                  loading ||
+                                  isTestingThirdPartyToken ||
+                                  !thirdPartyTokens[service.id]?.trim() ||
+                                  service.comingSoon
+                                }
+                                className="px-2 py-1 text-xs bg-evidence dark:bg-evidence-dark text-paper dark:text-paper-dark rounded hover:bg-evidence/90 dark:hover:bg-evidence-dark/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Save
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-caption text-steel dark:text-steel-dark">
+                          {service.helpText}.{' '}
+                          {service.helpUrl !== '#' && (
+                            <a
+                              href={service.helpUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-evidence dark:text-evidence-dark hover:underline"
+                            >
+                              Get your token here →
+                            </a>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Test Result Display */}
+                    {lastThirdPartyTestResult &&
+                      lastThirdPartyTestResult.service === service.id && (
+                        <div
+                          className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${
+                            lastThirdPartyTestResult.success
+                              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+                              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                          }`}
+                        >
+                          {lastThirdPartyTestResult.success ? (
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          )}
+                          <span className="text-caption">
+                            {lastThirdPartyTestResult.success
+                              ? lastThirdPartyTestResult.details?.message ||
+                                'Token validation successful'
+                              : lastThirdPartyTestResult.error ||
+                                'Token validation failed'}
+                          </span>
+                        </div>
+                      )}
+
+                    {/* Add Token Button (only show if not configured and no local token) */}
+                    {!isConfigured && !hasLocalToken && (
+                      <button
+                        onClick={() => {
+                          setThirdPartyTokens(prev => ({
+                            ...prev,
+                            [service.id]: '',
+                          }));
+                        }}
+                        disabled={service.comingSoon}
+                        className="flex items-center space-x-2 px-3 py-2 text-evidence dark:text-evidence-dark hover:bg-evidence/10 dark:hover:bg-evidence-dark/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                          />
+                        </svg>
+                        <span>Add {service.name} Token</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

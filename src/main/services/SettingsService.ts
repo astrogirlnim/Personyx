@@ -504,9 +504,9 @@ export class SettingsService {
     try {
       const services: ApiService[] = [
         'openai',
-        'notion',
+        'vscode',
         'slack',
-        'linear',
+        'apple-notes',
         'firebase-cloud',
       ];
       const status = [];
@@ -580,8 +580,8 @@ export class SettingsService {
 
       // Service-specific testing logic
       switch (service) {
-        case 'notion':
-          // TODO: Implement actual Notion API test when integration is ready
+        case 'vscode':
+          // TODO: Implement actual VSCode/GitHub API test when integration is ready
           // For now, simulate a test
           await new Promise(resolve => setTimeout(resolve, 500));
           return {
@@ -597,8 +597,8 @@ export class SettingsService {
             details: { message: 'Token format valid (full test pending)' },
           };
 
-        case 'linear':
-          // TODO: Implement actual Linear API test when integration is ready
+        case 'apple-notes':
+          // TODO: Implement actual Apple Notes API test when available
           await new Promise(resolve => setTimeout(resolve, 500));
           return {
             success: true,
@@ -631,7 +631,7 @@ export class SettingsService {
 
       // Define which services are "required" for certain features
       // This can be customized based on actual app requirements
-      const optionalServices: ApiService[] = ['notion', 'slack', 'linear'];
+      const optionalServices: ApiService[] = ['vscode', 'slack', 'apple-notes'];
 
       for (const service of optionalServices) {
         const exists = await isTokenStored(service);

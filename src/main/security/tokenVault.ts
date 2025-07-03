@@ -19,12 +19,13 @@ const MASTER_KEY_ACCOUNT = 'vault-master-key';
 
 /**
  * Supported API services
+ * Phase 3.5.2 - Focused scope: VSCode, Slack, Apple Notes (future)
  */
 export type ApiService =
   | 'openai'
-  | 'notion'
+  | 'vscode'
   | 'slack'
-  | 'linear'
+  | 'apple-notes'
   | 'firebase-cloud';
 
 /**
@@ -309,20 +310,23 @@ export function validateToken(service: ApiService, token: string): boolean {
       // OpenAI API keys start with 'sk-' and should be at least 40 characters
       return trimmedToken.startsWith('sk-') && trimmedToken.length >= 40;
 
-    case 'notion':
-      // Notion integration tokens start with 'secret_' and are longer
-      return trimmedToken.startsWith('secret_') && trimmedToken.length >= 45;
+    case 'vscode':
+      // VSCode Personal Access Tokens (GitHub/Azure DevOps style) - typically 40+ characters
+      // Can be classic tokens (ghp_) or fine-grained (github_pat_)
+      return (
+        (trimmedToken.startsWith('ghp_') && trimmedToken.length >= 40) ||
+        (trimmedToken.startsWith('github_pat_') && trimmedToken.length >= 82) ||
+        (trimmedToken.length >= 40 && /^[a-zA-Z0-9_-]+$/.test(trimmedToken))
+      );
 
     case 'slack':
       // Slack bot tokens start with 'xoxb-' and are typically 56+ characters
       return trimmedToken.startsWith('xoxb-') && trimmedToken.length >= 50;
 
-    case 'linear':
-      // Linear API keys are UUIDs or start with 'lin_api_' and are 40+ characters
-      return (
-        (trimmedToken.length === 36 && /^[0-9a-f-]+$/i.test(trimmedToken)) ||
-        (trimmedToken.startsWith('lin_api_') && trimmedToken.length >= 40)
-      );
+    case 'apple-notes':
+      // Apple Notes API tokens (future implementation) - placeholder validation
+      // Will be updated when Apple Notes API becomes available
+      return trimmedToken.length >= 32;
 
     case 'firebase-cloud':
       // Firebase Cloud keys are typically JWT-like or long random strings
