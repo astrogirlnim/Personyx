@@ -345,13 +345,18 @@ export class ActivityLogRepo {
       timestamp = new Date();
     }
 
-    // Handle createdAt conversion
-    if (typeof dbActivity.createdAt === 'number') {
+    // Handle createdAt conversion - it can be Date, number, or string from SQLite
+    if (dbActivity.createdAt instanceof Date) {
+      createdAt = dbActivity.createdAt;
+    } else if (typeof dbActivity.createdAt === 'number') {
       createdAt = new Date(dbActivity.createdAt * 1000);
+    } else if (typeof dbActivity.createdAt === 'string') {
+      createdAt = new Date(dbActivity.createdAt);
     } else {
       logger.warn('⚠️ Unexpected createdAt type, using current time', {
         activityId: dbActivity.id,
         createdAt: dbActivity.createdAt,
+        createdAtType: typeof dbActivity.createdAt,
       });
       createdAt = new Date();
     }
