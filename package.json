@@ -42,7 +42,6 @@
     "db:validate": "npm run build:main && node scripts/validate-database.js",
     "check-node-version": "node scripts/check-node-version.js",
     "rebuild-for-electron": "electron-builder install-app-deps",
-    "rebuild-for-node": "if [ \"$CI\" = \"true\" ]; then echo 'Skipping native module rebuild in CI'; else pnpm rebuild better-sqlite3 keytar --reporter=silent; fi",
     "fix-native-modules": "npm run rebuild-for-electron",
     "security:scan": "gitleaks detect --source . --no-git -v",
     "security:scan-staged": "gitleaks detect --source . --staged -v",
