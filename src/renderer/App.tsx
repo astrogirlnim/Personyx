@@ -12,6 +12,7 @@ import type {
   EvidenceScore,
 } from '../shared/types';
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
+import { TranscriptImportModal } from './components/TranscriptImportModal';
 import { useEvidenceScores } from './hooks/useEvidenceScores';
 import {
   getLastImportedPRD,
@@ -1191,9 +1192,15 @@ export function App(): JSX.Element {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
   const [isCardDragging, setIsCardDragging] = useState(false);
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
   const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
+  const [transcriptDraggedFile, setTranscriptDraggedFile] =
+    useState<File | null>(null);
+  const [transcriptTrayFilePath, setTranscriptTrayFilePath] = useState<
+    string | null
+  >(null);
 
   // Evidence Score state
   const [currentEvidenceScores, setCurrentEvidenceScores] = useState<
@@ -1269,12 +1276,19 @@ export function App(): JSX.Element {
         e.preventDefault();
         setIsImportModalOpen(true);
       }
+      // Ctrl/Cmd + T to open transcript modal
+      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        e.preventDefault();
+        setIsTranscriptModalOpen(true);
+      }
       // Escape to close modals
       if (e.key === 'Escape') {
         if (isChatOpen) {
           setIsChatOpen(false);
         } else if (isImportModalOpen) {
           setIsImportModalOpen(false);
+        } else if (isTranscriptModalOpen) {
+          setIsTranscriptModalOpen(false);
         }
       }
     };
@@ -1317,6 +1331,37 @@ export function App(): JSX.Element {
         setDraggedFile(file); // Set the file object created from content
         setIsImportModalOpen(true);
       });
+
+      // Listen for transcript import events
+      window.electronAPI.onOpenImportTranscriptModalWithFile(
+        (data: { filePath: string }) => {
+          console.log(
+            '🎤 Opening transcript modal from tray file drop:',
+            data.filePath
+          );
+          setTranscriptDraggedFile(null); // Clear any existing dragged file
+          setTranscriptTrayFilePath(data.filePath); // Store the tray file path
+          setIsTranscriptModalOpen(true);
+        }
+      );
+
+      window.electronAPI.onOpenImportTranscriptModalWithFileContent(
+        (data: { fileName: string; fileContent: string; fileSize: number }) => {
+          console.log(
+            '🎤 Opening transcript modal from tray file content drop:',
+            data.fileName
+          );
+          // Create a File object from the content
+          const file = new File([data.fileContent], data.fileName, {
+            type: data.fileName.endsWith('.md')
+              ? 'text/markdown'
+              : 'text/plain',
+          });
+          setTranscriptTrayFilePath(null); // Clear any existing tray file path
+          setTranscriptDraggedFile(file); // Set the file object created from content
+          setIsTranscriptModalOpen(true);
+        }
+      );
 
       // Listen for evidence score events
       window.electronAPI.onPRDImported((data: unknown) => {
@@ -1472,7 +1517,7 @@ export function App(): JSX.Element {
       window.removeEventListener('keydown', handleKeyDown);
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
-  }, [isChatOpen, isImportModalOpen]);
+  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen]);
 
   // Debug evidence scores state changes
   useEffect(() => {
@@ -1744,6 +1789,26 @@ export function App(): JSX.Element {
                   />
                 </svg>
               </button>
+              {/* Import Transcript Button */}
+              <button
+                onClick={() => setIsTranscriptModalOpen(true)}
+                className="p-2 rounded-full hover:bg-graphite/20 dark:hover:bg-graphite-dark/20 transition-colors"
+                title="Import Interview Transcript (Ctrl+T)"
+              >
+                <svg
+                  className="w-6 h-6 text-slate dark:text-slate-dark"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+              </button>
               {/* Chat Button */}
               <button
                 onClick={() => setIsChatOpen(true)}
@@ -1988,6 +2053,18 @@ export function App(): JSX.Element {
         }}
         initialFile={draggedFile}
         initialFilePath={trayFilePath}
+      />
+
+      <TranscriptImportModal
+        isOpen={isTranscriptModalOpen}
+        onClose={() => {
+          console.log('🚪 Closing transcript modal - clearing state');
+          setIsTranscriptModalOpen(false);
+          setTranscriptDraggedFile(null); // Clear dragged file when modal closes
+          setTranscriptTrayFilePath(null); // Clear tray file path when modal closes
+        }}
+        initialFile={transcriptDraggedFile}
+        initialFilePath={transcriptTrayFilePath}
       />
     </div>
   );

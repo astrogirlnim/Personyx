@@ -22,6 +22,7 @@ export const IPC_CHANNELS = {
 
   // Renderer to Main
   IMPORT_PRD: 'import-prd',
+  IMPORT_TRANSCRIPT: 'import-transcript',
   GET_EVIDENCE_SCORES: 'get-evidence-scores',
   CHAT_WITH_PERSONA: 'chat-with-persona',
   GET_PERSONAS: 'get-personas',

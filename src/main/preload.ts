@@ -15,6 +15,7 @@ interface ElectronAPI {
     fileContent: string
   ) => void;
   importPRD: (filePath: string) => Promise<unknown>;
+  importTranscript: (filePath: string) => Promise<unknown>;
 
   // App operations
   getPersonas: () => Promise<unknown>;
@@ -48,6 +49,16 @@ interface ElectronAPI {
       fileSize: number;
     }) => void
   ) => void;
+  onOpenImportTranscriptModalWithFile: (
+    callback: (data: { filePath: string }) => void
+  ) => void;
+  onOpenImportTranscriptModalWithFileContent: (
+    callback: (data: {
+      fileName: string;
+      fileContent: string;
+      fileSize: number;
+    }) => void
+  ) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;
@@ -74,6 +85,11 @@ const electronAPI: ElectronAPI = {
   importPRD: (filePath: string) => {
     console.log('📄 Importing PRD:', filePath);
     return ipcRenderer.invoke('import-prd', { filePath });
+  },
+
+  importTranscript: (filePath: string) => {
+    console.log('📄 Importing transcript:', filePath);
+    return ipcRenderer.invoke('import-transcript', { filePath });
   },
 
   // App operations
@@ -154,6 +170,27 @@ const electronAPI: ElectronAPI = {
   ) => {
     ipcRenderer.on('open-import-modal-with-file-content', (_, data) =>
       callback(data)
+    );
+  },
+
+  onOpenImportTranscriptModalWithFile: (
+    callback: (data: { filePath: string }) => void
+  ) => {
+    ipcRenderer.on('open-import-transcript-modal-with-file', (_, data) =>
+      callback(data)
+    );
+  },
+
+  onOpenImportTranscriptModalWithFileContent: (
+    callback: (data: {
+      fileName: string;
+      fileContent: string;
+      fileSize: number;
+    }) => void
+  ) => {
+    ipcRenderer.on(
+      'open-import-transcript-modal-with-file-content',
+      (_, data) => callback(data)
     );
   },
 

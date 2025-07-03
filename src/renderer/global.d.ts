@@ -10,6 +10,7 @@ interface ElectronAPI {
   openFileDialog: () => void;
   handleTrayFileDrop: (filePath: string) => void;
   importPRD: (filePath: string) => Promise<unknown>;
+  importTranscript: (filePath: string) => Promise<unknown>;
 
   // App operations
   getPersonas: () => Promise<Persona[]>;
@@ -37,6 +38,16 @@ interface ElectronAPI {
     callback: (data: { filePath: string }) => void
   ) => void;
   onOpenImportModalWithFileContent: (
+    callback: (data: {
+      fileName: string;
+      fileContent: string;
+      fileSize: number;
+    }) => void
+  ) => void;
+  onOpenImportTranscriptModalWithFile: (
+    callback: (data: { filePath: string }) => void
+  ) => void;
+  onOpenImportTranscriptModalWithFileContent: (
     callback: (data: {
       fileName: string;
       fileContent: string;
