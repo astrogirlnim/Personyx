@@ -109,7 +109,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 
 _Criteria: user-facing components; each relies on Phases 1 & 2._
 
-[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (6/8 sub-features)
+[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (5/8 features, 5/18 sub-features)
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
@@ -117,6 +117,16 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [x] **1.4** Show global error toast for failed ingest events. ✅ COMPLETE
 - [x] **1.5** Add "Import Interview Transcript" modal with drag-&-drop + "Open Folder" fallback. ✅ COMPLETE
 - [ ] **1.6** Implement Activity Log panel (ingest successes, errors, score updates).
+  - [ ] **1.6.1** Create ActivityLogService in main process to track all activities
+  - [ ] **1.6.2** Add activity log database schema and migration
+  - [ ] **1.6.3** Implement ActivityLogPanel component with filtering and search
+  - [ ] **1.6.4** Add real-time activity broadcasting via IPC events
+  - [ ] **1.6.5** Integrate activity logging into all main process services
+  - [ ] **1.6.6** Add activity log persistence and localStorage utilities
+  - [ ] **1.6.7** Implement activity log UI with Evidence Gate design compliance
+  - [ ] **1.6.8** Add comprehensive testing for activity log functionality
+  - [ ] **1.6.9** Add activity log performance optimizations and archival
+  - [ ] **1.6.10** Integrate activity log into main tray UI with keyboard shortcuts
 - [x] **1.7** Show success toast "Transcript analysed – evidence added" on completion. ✅ COMPLETE
 - [ ] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts.
 
