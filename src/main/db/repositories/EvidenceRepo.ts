@@ -5,16 +5,29 @@
 
 import { eq } from 'drizzle-orm';
 import { getDatabase } from '@main/db/connection';
-import { evidence, type Evidence, type NewEvidence } from '@main/db/schema';
+import { evidence, type NewEvidence } from '@main/db/schema';
+import type { Evidence } from '@shared/types';
 import { Logger } from '@main/utils/logger';
 
 const logger = new Logger('evidence-repo');
+
+// Application-level interface for creating evidence (with proper tags type)
+export interface CreateEvidenceData {
+  personaId: string;
+  content: string;
+  source: string;
+  sourceType: 'interview' | 'prd' | 'feedback' | 'other';
+  timestamp: Date;
+  tags: string[]; // Application level expects array
+  sentiment?: 'positive' | 'negative' | 'neutral' | null;
+  importance: number;
+}
 
 export class EvidenceRepo {
   /**
    * Create new evidence
    */
-  async create(data: Omit<NewEvidence, 'id'>): Promise<Evidence> {
+  async create(data: CreateEvidenceData): Promise<Evidence> {
     try {
       logger.info('➕ Creating new evidence', {
         personaId: data.personaId,
@@ -72,10 +85,12 @@ export class EvidenceRepo {
       }
 
       const evidenceData = result[0];
-      // Parse JSON fields
+      // Parse JSON fields and cast types
       const parsedEvidence: Evidence = {
         ...evidenceData,
         tags: JSON.parse(evidenceData.tags),
+        sourceType: evidenceData.sourceType as Evidence['sourceType'],
+        sentiment: evidenceData.sentiment as Evidence['sentiment'],
       };
 
       logger.debug('✅ Evidence found', { id });
@@ -99,11 +114,13 @@ export class EvidenceRepo {
         .from(evidence)
         .where(eq(evidence.personaId, personaId));
 
-      // Parse JSON fields for all evidence
+      // Parse JSON fields for all evidence and cast types
       const parsedEvidence: Evidence[] = result.map(
         (item: typeof evidence.$inferSelect) => ({
           ...item,
           tags: JSON.parse(item.tags),
+          sourceType: item.sourceType as Evidence['sourceType'],
+          sentiment: item.sentiment as Evidence['sentiment'],
         })
       );
 
@@ -128,11 +145,13 @@ export class EvidenceRepo {
       const db = getDatabase();
       const result = await db.select().from(evidence);
 
-      // Parse JSON fields for all evidence
+      // Parse JSON fields for all evidence and cast types
       const parsedEvidence: Evidence[] = result.map(
         (item: typeof evidence.$inferSelect) => ({
           ...item,
           tags: JSON.parse(item.tags),
+          sourceType: item.sourceType as Evidence['sourceType'],
+          sentiment: item.sentiment as Evidence['sentiment'],
         })
       );
 

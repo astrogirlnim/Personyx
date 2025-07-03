@@ -12,6 +12,13 @@ import type {
   EvidenceScore,
 } from '../shared/types';
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
+import { useEvidenceScores } from './hooks/useEvidenceScores';
+import {
+  getLastImportedPRD,
+  saveEvidenceScores,
+  getEvidenceScores,
+  logScoreUpdate,
+} from './utils/localStorage';
 
 // Chat Window Component
 interface ChatWindowProps {
@@ -1168,6 +1175,7 @@ export function App(): JSX.Element {
     isReady: false,
     personas: [],
     recentScores: [],
+    currentEvidenceScores: [], // Phase 4.1: Current document evidence scores
     settings: {
       theme: 'system',
       autoUpdate: true,
@@ -1192,21 +1200,53 @@ export function App(): JSX.Element {
     EvidenceScore[]
   >([]);
 
+  // Phase 4.3: Use evidence scores utility hook
+  const { scores, maxScore, debugInfo } = useEvidenceScores(
+    currentEvidenceScores
+  );
+
+  // Phase 4.2: Get current document ID for persistence
+  const [, setCurrentDocumentId] = useState<string | null>(null);
+
   useEffect(() => {
     console.log('🚀 Personyx App component mounted');
 
     // Initialize app state
     const initializeApp = async () => {
       try {
+        // Phase 4.2: Load persisted evidence scores on startup
+        const persistedScores = getEvidenceScores();
+        const lastImported = getLastImportedPRD();
+
+        console.log('💾 Restored from localStorage:', {
+          persistedScoresCount: persistedScores.length,
+          lastImported: lastImported
+            ? {
+                documentId: lastImported.documentId,
+                fileName: lastImported.fileName,
+                importedAt: lastImported.importedAt,
+              }
+            : null,
+        });
+
         // Load personas
         const personas = (await window.electronAPI.getPersonas()) as Persona[];
         console.log('📋 Loaded personas:', personas);
+
+        // Set current document ID if we have a last imported PRD
+        if (lastImported) {
+          setCurrentDocumentId(lastImported.documentId);
+        }
 
         setAppState(prev => ({
           ...prev,
           isReady: true,
           personas: personas || [],
+          currentEvidenceScores: persistedScores,
         }));
+
+        // Set the current evidence scores in our component state too
+        setCurrentEvidenceScores(persistedScores);
       } catch (error) {
         console.error('Failed to initialize app:', error);
         setAppState(prev => ({ ...prev, isReady: true }));
@@ -1287,6 +1327,7 @@ export function App(): JSX.Element {
         const typedData = data as {
           evidenceScores?: EvidenceScore[];
           documentId: string;
+          title?: string;
         };
         if (typedData.evidenceScores && typedData.evidenceScores.length > 0) {
           console.log('🔄 Setting evidence scores from PRD import:', {
@@ -1297,7 +1338,26 @@ export function App(): JSX.Element {
               score: s.score,
             })),
           });
+
+          // Phase 4.2: Save to localStorage
+          saveEvidenceScores(typedData.evidenceScores);
+
+          // Phase 4.2: Log for debugging (we need file info for this)
+          logScoreUpdate(
+            typedData.documentId,
+            typedData.evidenceScores,
+            'import'
+          );
+
+          // Update state
           setCurrentEvidenceScores(typedData.evidenceScores);
+          setCurrentDocumentId(typedData.documentId);
+
+          // Update AppState
+          setAppState(prev => ({
+            ...prev,
+            currentEvidenceScores: typedData.evidenceScores!,
+          }));
         }
       });
 
@@ -1379,6 +1439,18 @@ export function App(): JSX.Element {
                   ? Math.max(...newScores.map(s => s.score))
                   : null,
             });
+
+            // Phase 4.2: Save updated scores to localStorage
+            saveEvidenceScores(newScores);
+
+            // Phase 4.2: Log for debugging
+            logScoreUpdate(typedData.documentId, newScores, 'update');
+
+            // Update AppState
+            setAppState(prev => ({
+              ...prev,
+              currentEvidenceScores: newScores,
+            }));
 
             return newScores;
           });
@@ -1788,45 +1860,25 @@ export function App(): JSX.Element {
               </h3>
               <div className="text-center">
                 {/* Evidence Score Gauge */}
-                <EvidenceScoreGauge
-                  score={
-                    currentEvidenceScores.length > 0
-                      ? (() => {
-                          const maxScore = Math.max(
-                            ...currentEvidenceScores.map(s => s.score)
-                          );
-                          console.log(
-                            '🎯 Evidence Score Calculation for Gauge:',
-                            {
-                              currentEvidenceScoresCount:
-                                currentEvidenceScores.length,
-                              allScores: currentEvidenceScores.map(s => ({
-                                documentId: s.documentId,
-                                personaId: s.personaId,
-                                score: s.score,
-                              })),
-                              maxScore,
-                            }
-                          );
-                          return maxScore;
-                        })()
-                      : null
-                  }
-                  className="mb-4"
-                />
+                <EvidenceScoreGauge score={maxScore} className="mb-4" />
+                {/* Phase 4 Debug Info - Only show in development */}
+                {process.env.NODE_ENV === 'development' &&
+                  debugInfo.debugInfo.totalUpdates > 0 && (
+                    <div className="mt-2 text-xs text-steel dark:text-steel-dark">
+                      Debug: {debugInfo.scoresCount} scores,{' '}
+                      {debugInfo.debugInfo.totalUpdates} updates
+                    </div>
+                  )}
 
                 {/* Status Text and Actions */}
-                {currentEvidenceScores.length > 0 ? (
+                {scores.length > 0 ? (
                   <div>
                     <p className="text-body text-steel dark:text-steel-dark mb-2">
-                      {currentEvidenceScores.length} persona
-                      {currentEvidenceScores.length !== 1 ? 's' : ''} analyzed
+                      {scores.length} persona
+                      {scores.length !== 1 ? 's' : ''} analyzed
                     </p>
                     <p className="text-caption text-steel dark:text-steel-dark mb-4">
-                      Highest score:{' '}
-                      {Math.max(
-                        ...currentEvidenceScores.map(s => s.score)
-                      ).toFixed(0)}
+                      Highest score: {maxScore?.toFixed(0) || '0'}
                       /100
                     </p>
                   </div>

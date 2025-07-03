@@ -12,25 +12,8 @@ import { LangGraphService } from './LangGraphService';
 import type { TranscriptFileEvent } from './InterviewFolderWatcher';
 import type { Persona, Evidence } from '@shared/types';
 import type { Embedding } from '@main/db/schema';
-import type { Evidence as DBEvidence } from '@main/db/schema';
 
 const logger = new Logger('embedding-retrieval-service');
-
-/**
- * Convert database Evidence to shared Evidence type
- * Handles JSON parsing and type conversion
- */
-function convertDbEvidenceToShared(dbEvidence: DBEvidence): Evidence {
-  return {
-    ...dbEvidence,
-    tags: JSON.parse(dbEvidence.tags),
-    sourceType: dbEvidence.sourceType as Evidence['sourceType'],
-    sentiment:
-      dbEvidence.sentiment === null
-        ? undefined
-        : (dbEvidence.sentiment as Evidence['sentiment']),
-  };
-}
 
 // Similarity search result interface
 export interface SimilarityResult {
@@ -372,7 +355,7 @@ export class EmbeddingRetrievalService {
 
         enrichedResults.push({
           evidenceId: evidenceData.id,
-          evidence: convertDbEvidenceToShared(evidenceData as DBEvidence),
+          evidence: evidenceData,
           embedding,
           similarity,
           quote,

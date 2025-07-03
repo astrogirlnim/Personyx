@@ -365,9 +365,8 @@ export class EvidenceScoreService {
         primaryGoal: persona.primaryGoal,
       });
 
-      // Get relevant evidence for this persona and convert to shared types
-      const dbEvidence = await this.evidenceRepo.findByPersonaId(personaId);
-      const allEvidence = dbEvidence.map(e => this.convertDbEvidence(e));
+      // Get relevant evidence for this persona (already in shared types)
+      const allEvidence = await this.evidenceRepo.findByPersonaId(personaId);
       logger.debug(
         `📊 Found ${allEvidence.length} evidence items for persona`,
         {

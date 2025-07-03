@@ -113,7 +113,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
-- [x] **1.3** Display real-time Evidence Score banner after import. ✅ COMPLETE
+- [x] **1.3** Display real-time Evidence Score banner after import. ✅ COMPLETE (with advanced state management & persistence)
 - [ ] **1.4** Show global error toast for failed ingest events.
 - [ ] **1.5** Add "Import Interview Transcript" modal with drag-&-drop + "Open Folder" fallback.
 - [ ] **1.6** Implement Activity Log panel (ingest successes, errors, score updates).

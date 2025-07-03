@@ -733,7 +733,7 @@ Focus on identifying specific pain points, goals, and language patterns that mat
       source: transcriptEvent.fileName,
       sourceType: 'interview',
       timestamp: transcriptEvent.timestamp,
-      tags: JSON.stringify(bestClassification.keywords),
+      tags: bestClassification.keywords,
       sentiment: null, // Could be enhanced with sentiment analysis
       importance: Math.round(bestClassification.confidence / 10), // 1-10 scale
     });
