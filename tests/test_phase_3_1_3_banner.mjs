@@ -30,7 +30,7 @@ class TestRunner {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
     console.log(logMessage);
-    
+
     this.results.push({
       timestamp,
       level,
@@ -41,7 +41,7 @@ class TestRunner {
   async runCommand(command, args = [], options = {}) {
     return new Promise((resolve, reject) => {
       this.log(`Running command: ${command} ${args.join(' ')}`);
-      
+
       const child = spawn(command, args, {
         stdio: 'pipe',
         ...options,
@@ -50,15 +50,15 @@ class TestRunner {
       let stdout = '';
       let stderr = '';
 
-      child.stdout.on('data', (data) => {
+      child.stdout.on('data', data => {
         stdout += data.toString();
       });
 
-      child.stderr.on('data', (data) => {
+      child.stderr.on('data', data => {
         stderr += data.toString();
       });
 
-      child.on('close', (code) => {
+      child.on('close', code => {
         if (code === 0) {
           resolve({ stdout, stderr, code });
         } else {
@@ -103,32 +103,44 @@ class TestRunner {
 // Main test function
 async function testEvidenceScoreBanner() {
   const runner = new TestRunner();
-  
+
   try {
     runner.log('🧪 Starting Evidence Score Banner Test');
-    runner.log('Testing Phase 3.1.3 - End-to-end Evidence Score Banner functionality');
+    runner.log(
+      'Testing Phase 3.1.3 - End-to-end Evidence Score Banner functionality'
+    );
 
     // Test 1: Verify test data files exist
     runner.log('📋 Test 1: Verifying test data files');
-    
+
     const testFiles = ['test_prd.md', 'sample_prd.md'];
     for (const fileName of testFiles) {
-      const exists = await runner.fileExists(path.join(TEST_CONFIG.testDataPath, fileName));
+      const exists = await runner.fileExists(
+        path.join(TEST_CONFIG.testDataPath, fileName)
+      );
       runner.assert(exists, `Test file ${fileName} should exist`);
     }
 
     // Test 2: Read and validate test PRD content
     runner.log('📄 Test 2: Reading and validating test PRD content');
-    
+
     const testPRDContent = await runner.readTestFile('test_prd.md');
-    runner.assert(testPRDContent.length > 100, 'Test PRD should have substantial content');
-    runner.assert(testPRDContent.includes('PRD') || testPRDContent.includes('Product'), 'Test PRD should contain product-related content');
+    runner.assert(
+      testPRDContent.length > 100,
+      'Test PRD should have substantial content'
+    );
+    runner.assert(
+      testPRDContent.includes('PRD') || testPRDContent.includes('Product'),
+      'Test PRD should contain product-related content'
+    );
 
     // Test 3: Test database connection and schema
     runner.log('🗄️ Test 3: Testing database connection and schema');
-    
+
     try {
-      const { stdout } = await runner.runCommand('node', ['scripts/validate-database.js']);
+      const { stdout } = await runner.runCommand('node', [
+        'scripts/validate-database.js',
+      ]);
       runner.assert(stdout.includes('✅'), 'Database validation should pass');
     } catch (error) {
       runner.log(`Database validation failed: ${error.message}`, 'warn');
@@ -137,72 +149,89 @@ async function testEvidenceScoreBanner() {
 
     // Test 4: Test evidence score calculation logic
     runner.log('📊 Test 4: Testing evidence score calculation');
-    
+
     // This would require the app to be running, so we'll simulate the process
     const mockScores = [
       { personaId: 'solo_founder', score: 74.1 },
-      { personaId: 'agency_marketer', score: 74.77 }
+      { personaId: 'agency_marketer', score: 74.77 },
     ];
 
     for (const mockScore of mockScores) {
       runner.assert(
-        mockScore.score >= TEST_CONFIG.expectedScoreRange[0] && 
-        mockScore.score <= TEST_CONFIG.expectedScoreRange[1],
+        mockScore.score >= TEST_CONFIG.expectedScoreRange[0] &&
+          mockScore.score <= TEST_CONFIG.expectedScoreRange[1],
         `Score for ${mockScore.personaId} should be in expected range (${mockScore.score})`
       );
     }
 
     // Test 5: Test localStorage functionality
     runner.log('💾 Test 5: Testing localStorage utilities');
-    
+
     // Since we can't test browser localStorage in Node.js, we'll test the utility functions
     // by simulating their behavior
     const mockLocalStorage = {
       data: {},
-      setItem(key, value) { this.data[key] = value; },
-      getItem(key) { return this.data[key] || null; },
-      removeItem(key) { delete this.data[key]; }
+      setItem(key, value) {
+        this.data[key] = value;
+      },
+      getItem(key) {
+        return this.data[key] || null;
+      },
+      removeItem(key) {
+        delete this.data[key];
+      },
     };
 
     // Simulate saving evidence scores
     const testScoresData = {
       scores: mockScores,
       savedAt: new Date().toISOString(),
-      scoresCount: mockScores.length
+      scoresCount: mockScores.length,
     };
 
-    mockLocalStorage.setItem('personyx:evidenceScores', JSON.stringify(testScoresData));
-    const retrieved = JSON.parse(mockLocalStorage.getItem('personyx:evidenceScores'));
-    
-    runner.assert(retrieved.scoresCount === mockScores.length, 'localStorage should correctly persist score count');
-    runner.assert(retrieved.scores.length === mockScores.length, 'localStorage should correctly persist scores array');
+    mockLocalStorage.setItem(
+      'personyx:evidenceScores',
+      JSON.stringify(testScoresData)
+    );
+    const retrieved = JSON.parse(
+      mockLocalStorage.getItem('personyx:evidenceScores')
+    );
+
+    runner.assert(
+      retrieved.scoresCount === mockScores.length,
+      'localStorage should correctly persist score count'
+    );
+    runner.assert(
+      retrieved.scores.length === mockScores.length,
+      'localStorage should correctly persist scores array'
+    );
 
     // Test 6: Test evidence score gauge calculation
     runner.log('🎯 Test 6: Testing evidence score gauge calculation');
-    
+
     const maxScore = Math.max(...mockScores.map(s => s.score));
     runner.assert(maxScore > 0, 'Max score should be greater than 0');
     runner.assert(maxScore <= 100, 'Max score should not exceed 100');
-    
+
     runner.log(`Calculated max score: ${maxScore}`);
 
     // Test 7: Test file upload debugging utilities
     runner.log('🐛 Test 7: Testing file upload debugging utilities');
-    
+
     const mockFileUpload = {
       fileName: 'test_prd.md',
       fileSize: testPRDContent.length,
       contentPreview: testPRDContent.substring(0, 200),
       documentId: 'mock-doc-id',
-      scores: mockScores
+      scores: mockScores,
     };
 
     // Test content hash generation (simplified)
-    const generateContentHash = (content) => {
+    const generateContentHash = content => {
       let hash = 0;
       for (let i = 0; i < content.length; i++) {
         const char = content.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
+        hash = (hash << 5) - hash + char;
         hash = hash & hash; // Convert to 32bit integer
       }
       return Math.abs(hash).toString(36);
@@ -210,21 +239,27 @@ async function testEvidenceScoreBanner() {
 
     const contentHash = generateContentHash(testPRDContent);
     runner.assert(contentHash.length > 0, 'Content hash should be generated');
-    runner.assert(typeof contentHash === 'string', 'Content hash should be a string');
+    runner.assert(
+      typeof contentHash === 'string',
+      'Content hash should be a string'
+    );
 
     // Test 8: Performance and resource validation
     runner.log('⚡ Test 8: Performance and resource validation');
-    
+
     const endTime = Date.now();
     const testDuration = endTime - runner.startTime;
-    
-    runner.assert(testDuration < TEST_CONFIG.timeout, 'Test should complete within timeout');
+
+    runner.assert(
+      testDuration < TEST_CONFIG.timeout,
+      'Test should complete within timeout'
+    );
     runner.log(`Test completed in ${testDuration}ms`);
 
     // Test Summary
     runner.log('✅ All Evidence Score Banner tests passed!');
     runner.log('🎉 Phase 3.1.3 Evidence Score Banner functionality verified');
-    
+
     return {
       success: true,
       duration: testDuration,
@@ -233,10 +268,9 @@ async function testEvidenceScoreBanner() {
         testsRun: 8,
         testsPassed: 8,
         testsFailed: 0,
-        warnings: runner.results.filter(r => r.level === 'warn').length
-      }
+        warnings: runner.results.filter(r => r.level === 'warn').length,
+      },
     };
-
   } catch (error) {
     runner.log(`❌ Test failed: ${error.message}`, 'error');
     return {
@@ -247,8 +281,8 @@ async function testEvidenceScoreBanner() {
         testsRun: 8,
         testsPassed: 0,
         testsFailed: 1,
-        warnings: runner.results.filter(r => r.level === 'warn').length
-      }
+        warnings: runner.results.filter(r => r.level === 'warn').length,
+      },
     };
   }
 }
@@ -266,7 +300,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`Tests Failed: ${result.summary.testsFailed}`);
         console.log(`Warnings: ${result.summary.warnings}`);
       }
-      
+
       if (result.error) {
         console.error(`Error: ${result.error}`);
         process.exit(1);
@@ -281,4 +315,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export { testEvidenceScoreBanner }; 
+export { testEvidenceScoreBanner };

@@ -70,33 +70,35 @@ async function generateContentHash(content) {
 
 async function createTestFiles() {
   console.log('📝 Creating test PRD files...');
-  
+
   for (const prd of testPRDs) {
     const filePath = join('tests/files', prd.name);
     await writeFile(filePath, prd.content);
     const hash = await generateContentHash(prd.content);
-    console.log(`✅ Created ${prd.name} (hash: ${hash}, ${prd.content.length} chars)`);
+    console.log(
+      `✅ Created ${prd.name} (hash: ${hash}, ${prd.content.length} chars)`
+    );
   }
 }
 
 async function testContentExtraction() {
   console.log('\n🔬 Testing content extraction...');
-  
+
   for (const prd of testPRDs) {
     const filePath = join('tests/files', prd.name);
-    
+
     if (existsSync(filePath)) {
       const extractedContent = await readFile(filePath, 'utf-8');
       const originalHash = await generateContentHash(prd.content);
       const extractedHash = await generateContentHash(extractedContent);
-      
+
       console.log(`📄 ${prd.name}:`);
       console.log(`   Original hash: ${originalHash}`);
       console.log(`   Extracted hash: ${extractedHash}`);
       console.log(`   Match: ${originalHash === extractedHash ? '✅' : '❌'}`);
       console.log(`   Length: ${extractedContent.length} chars`);
       console.log(`   Preview: ${extractedContent.substring(0, 100)}...`);
-      
+
       if (originalHash !== extractedHash) {
         console.log(`❌ CONTENT CORRUPTION DETECTED in ${prd.name}`);
         console.log(`   Expected: ${prd.content.substring(0, 100)}...`);
@@ -108,7 +110,7 @@ async function testContentExtraction() {
 
 async function testContentRelevanceAlgorithm() {
   console.log('\n🧮 Testing content relevance algorithm (mocked)...');
-  
+
   // Mock the checkContentRelevance function from EvidenceScoreService
   function checkContentRelevance(evidenceContent, prdContent) {
     const evidence = evidenceContent.toLowerCase();
@@ -116,10 +118,44 @@ async function testContentRelevanceAlgorithm() {
 
     // Extract meaningful words (longer than 3 chars, not common stopwords)
     const stopwords = new Set([
-      'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
-      'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his',
-      'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy',
-      'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use',
+      'the',
+      'and',
+      'for',
+      'are',
+      'but',
+      'not',
+      'you',
+      'all',
+      'can',
+      'had',
+      'her',
+      'was',
+      'one',
+      'our',
+      'out',
+      'day',
+      'get',
+      'has',
+      'him',
+      'his',
+      'how',
+      'man',
+      'new',
+      'now',
+      'old',
+      'see',
+      'two',
+      'way',
+      'who',
+      'boy',
+      'did',
+      'its',
+      'let',
+      'put',
+      'say',
+      'she',
+      'too',
+      'use',
     ]);
 
     const prdWords = prd
@@ -135,9 +171,11 @@ async function testContentRelevanceAlgorithm() {
     console.log(`📊 Content relevance analysis:`);
     console.log(`   PRD words: [${prdWords.slice(0, 10).join(', ')}...]`);
     console.log(`   Matches: [${matches.slice(0, 5).join(', ')}...]`);
-    console.log(`   Relevance score: ${Math.round(relevanceScore * 100) / 100}`);
+    console.log(
+      `   Relevance score: ${Math.round(relevanceScore * 100) / 100}`
+    );
     console.log(`   Is relevant: ${isRelevant ? '✅' : '❌'}`);
-    
+
     return { relevanceScore, isRelevant, prdWords, matches };
   }
 
@@ -148,30 +186,38 @@ async function testContentRelevanceAlgorithm() {
   `;
 
   const results = [];
-  
+
   for (const prd of testPRDs) {
     console.log(`\n🔍 Testing relevance for ${prd.name}:`);
     const result = checkContentRelevance(mockEvidence, prd.content);
     results.push({
       name: prd.name,
       contentHash: await generateContentHash(prd.content),
-      ...result
+      ...result,
     });
   }
 
   // Analyze results for corruption patterns
   console.log('\n📈 RELEVANCE ANALYSIS RESULTS:');
   console.log('=====================================');
-  
+
   const relevanceScores = results.map(r => r.relevanceScore);
   const uniqueScores = [...new Set(relevanceScores)];
-  
-  console.log(`Relevance scores: [${relevanceScores.map(s => Math.round(s * 100) / 100).join(', ')}]`);
-  console.log(`Unique scores: ${uniqueScores.length}/${relevanceScores.length}`);
-  
+
+  console.log(
+    `Relevance scores: [${relevanceScores.map(s => Math.round(s * 100) / 100).join(', ')}]`
+  );
+  console.log(
+    `Unique scores: ${uniqueScores.length}/${relevanceScores.length}`
+  );
+
   if (uniqueScores.length === 1 && relevanceScores.length > 1) {
-    console.log('❌ POTENTIAL ALGORITHM ISSUE: All relevance scores are identical!');
-    console.log('   This could indicate content corruption or algorithm problems.');
+    console.log(
+      '❌ POTENTIAL ALGORITHM ISSUE: All relevance scores are identical!'
+    );
+    console.log(
+      '   This could indicate content corruption or algorithm problems.'
+    );
   } else {
     console.log('✅ ALGORITHM WORKING: Relevance scores vary as expected');
   }
@@ -180,7 +226,9 @@ async function testContentRelevanceAlgorithm() {
   for (const result of results) {
     console.log(`\n${result.name}:`);
     console.log(`  Content Hash: ${result.contentHash}`);
-    console.log(`  Relevance Score: ${Math.round(result.relevanceScore * 100) / 100}`);
+    console.log(
+      `  Relevance Score: ${Math.round(result.relevanceScore * 100) / 100}`
+    );
     console.log(`  Is Relevant: ${result.isRelevant ? '✅' : '❌'}`);
     console.log(`  PRD Words Found: ${result.prdWords.length}`);
     console.log(`  Matches Found: ${result.matches.length}`);
@@ -189,28 +237,29 @@ async function testContentRelevanceAlgorithm() {
 
 async function testFileReadingWithTimeout() {
   console.log('\n⏱️ Testing file reading with timeout protection...');
-  
+
   for (const prd of testPRDs) {
     const filePath = join('tests/files', prd.name);
-    
+
     try {
       // Simulate the file reading that might happen in the app
       const readPromise = readFile(filePath, 'utf-8');
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('File read timeout')), 5000)
       );
-      
+
       const content = await Promise.race([readPromise, timeoutPromise]);
       const hash = await generateContentHash(content);
-      
+
       console.log(`✅ ${prd.name}: Read successfully (hash: ${hash})`);
-      
+
       // Check if content matches expected
       const expectedHash = await generateContentHash(prd.content);
       if (hash !== expectedHash) {
-        console.log(`❌ CONTENT MISMATCH: Expected ${expectedHash}, got ${hash}`);
+        console.log(
+          `❌ CONTENT MISMATCH: Expected ${expectedHash}, got ${hash}`
+        );
       }
-      
     } catch (error) {
       console.log(`❌ ${prd.name}: Failed to read - ${error.message}`);
     }
@@ -219,7 +268,7 @@ async function testFileReadingWithTimeout() {
 
 async function cleanup() {
   console.log('\n🧹 Cleaning up test files...');
-  
+
   for (const prd of testPRDs) {
     const filePath = join('tests/files', prd.name);
     try {
@@ -240,7 +289,7 @@ async function runInvestigation() {
     await testContentExtraction();
     await testContentRelevanceAlgorithm();
     await testFileReadingWithTimeout();
-    
+
     console.log('\n🎯 INVESTIGATION SUMMARY:');
     console.log('========================');
     console.log('✅ File creation: Working correctly');
@@ -255,7 +304,6 @@ async function runInvestigation() {
     console.log('1. selectedFile.text() calls in renderer');
     console.log('2. File object caching in browser');
     console.log('3. React state updates with file references');
-    
   } catch (error) {
     console.log('❌ Investigation failed:', error.message);
     console.log('Stack:', error.stack);
@@ -264,4 +312,4 @@ async function runInvestigation() {
   }
 }
 
-runInvestigation(); 
+runInvestigation();

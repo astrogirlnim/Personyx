@@ -1,11 +1,17 @@
 /**
  * Phase 2: Data Layer - Feature 6 Tests
  * Interview Evidence Generator - Complete Pipeline Testing
- * 
+ *
  * Tests: Feature 6.6 - Unit & integration tests covering ingest → evidence → score delta
  */
 
-import { readFileSync, writeFileSync, unlinkSync, mkdirSync, existsSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  mkdirSync,
+  existsSync,
+} from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
@@ -28,28 +34,35 @@ function log(message, level = 'INFO') {
 }
 
 // Mock Electron environment for testing
-global.require = (id) => {
+global.require = id => {
   if (id === 'electron') {
     return {
       app: {
-        getPath: (name) => {
+        getPath: name => {
           if (name === 'userData') {
-            return join(homedir(), 'Library', 'Application Support', 'PersonaPulse');
+            return join(
+              homedir(),
+              'Library',
+              'Application Support',
+              'PersonaPulse'
+            );
           }
           return homedir();
-        }
+        },
       },
       BrowserWindow: class MockBrowserWindow {
         constructor() {
           this.webContents = {
             send: (event, data) => {
               log(`Mock IPC Event: ${event}`, 'DEBUG');
-            }
+            },
           };
           this.destroyed = false;
         }
-        isDestroyed() { return this.destroyed; }
-      }
+        isDestroyed() {
+          return this.destroyed;
+        }
+      },
     };
   }
   return {};
@@ -57,7 +70,13 @@ global.require = (id) => {
 
 // Test configurations
 const TEST_CONFIG = {
-  interviewsDir: join(homedir(), 'Library', 'Application Support', 'PersonaPulse', 'interviews'),
+  interviewsDir: join(
+    homedir(),
+    'Library',
+    'Application Support',
+    'PersonaPulse',
+    'interviews'
+  ),
   testTranscriptFile: 'test_interview_evidence_generation.md',
   testPersonaFile: join(__dirname, '..', 'personas.yml'),
   dbPath: ':memory:', // Use in-memory database for tests
@@ -99,11 +118,13 @@ const AGENCY_MARKETER_TRANSCRIPT = `# User Interview - Agency Marketer
 **Agency Marketer:** That's where we excel. We have Google Analytics, Facebook Ads Manager, HubSpot for lead tracking. But the challenge is translating those metrics back to the original requirements and showing clients the connection between what we built and their business results.
 `;
 
-console.log('🎤 Testing Phase 2: Data Layer - Feature 6: Interview Evidence Generator\n');
+console.log(
+  '🎤 Testing Phase 2: Data Layer - Feature 6: Interview Evidence Generator\n'
+);
 
 async function setupTestEnvironment() {
   log('📁 Setting up test environment...');
-  
+
   // Create interviews directory if it doesn't exist
   if (!existsSync(TEST_CONFIG.interviewsDir)) {
     mkdirSync(TEST_CONFIG.interviewsDir, { recursive: true });
@@ -111,11 +132,17 @@ async function setupTestEnvironment() {
   }
 
   // Write test transcript files
-  const testTranscriptPath = join(TEST_CONFIG.interviewsDir, TEST_CONFIG.testTranscriptFile);
+  const testTranscriptPath = join(
+    TEST_CONFIG.interviewsDir,
+    TEST_CONFIG.testTranscriptFile
+  );
   writeFileSync(testTranscriptPath, SAMPLE_TRANSCRIPT, 'utf8');
   log(`Created test transcript: ${testTranscriptPath}`);
 
-  const agencyTranscriptPath = join(TEST_CONFIG.interviewsDir, 'test_agency_marketer_interview.md');
+  const agencyTranscriptPath = join(
+    TEST_CONFIG.interviewsDir,
+    'test_agency_marketer_interview.md'
+  );
   writeFileSync(agencyTranscriptPath, AGENCY_MARKETER_TRANSCRIPT, 'utf8');
   log(`Created agency marketer transcript: ${agencyTranscriptPath}`);
 
@@ -127,43 +154,81 @@ async function setupTestEnvironment() {
 
 async function testTranscriptIngestServiceExists() {
   log('🔍 Testing TranscriptIngestService exists...');
-  
+
   try {
-    const serviceExists = existsSync('src/main/services/TranscriptIngestService.ts');
+    const serviceExists = existsSync(
+      'src/main/services/TranscriptIngestService.ts'
+    );
     test('TranscriptIngestService file exists', serviceExists);
-    
+
     if (serviceExists) {
-      const content = readFileSync('src/main/services/TranscriptIngestService.ts', 'utf8');
-      
+      const content = readFileSync(
+        'src/main/services/TranscriptIngestService.ts',
+        'utf8'
+      );
+
       // Test basic class structure
-      test('TranscriptIngestService class exists', content.includes('export class TranscriptIngestService'));
-      test('processTranscript method exists', content.includes('processTranscript('));
-      test('chunkTranscriptText method exists', content.includes('chunkTranscriptText('));
-      test('classifyAndEmbedChunks method exists', content.includes('classifyAndEmbedChunks('));
-      test('persistEvidenceAndEmbeddings method exists', content.includes('persistEvidenceAndEmbeddings('));
-      test('recalculateEvidenceScores method exists', content.includes('recalculateEvidenceScores('));
-      
+      test(
+        'TranscriptIngestService class exists',
+        content.includes('export class TranscriptIngestService')
+      );
+      test(
+        'processTranscript method exists',
+        content.includes('processTranscript(')
+      );
+      test(
+        'chunkTranscriptText method exists',
+        content.includes('chunkTranscriptText(')
+      );
+      test(
+        'classifyAndEmbedChunks method exists',
+        content.includes('classifyAndEmbedChunks(')
+      );
+      test(
+        'persistEvidenceAndEmbeddings method exists',
+        content.includes('persistEvidenceAndEmbeddings(')
+      );
+      test(
+        'recalculateEvidenceScores method exists',
+        content.includes('recalculateEvidenceScores(')
+      );
+
       // Test required imports
       test('EvidenceRepo import', content.includes('EvidenceRepo'));
       test('EmbeddingRepo import', content.includes('EmbeddingRepo'));
       test('PersonaRepo import', content.includes('PersonaRepo'));
-      test('EvidenceScoreService import', content.includes('EvidenceScoreService'));
+      test(
+        'EvidenceScoreService import',
+        content.includes('EvidenceScoreService')
+      );
       test('LangGraphService import', content.includes('LangGraphService'));
-      test('EmbeddingProviderManager import', content.includes('EmbeddingProviderManager'));
-      
+      test(
+        'EmbeddingProviderManager import',
+        content.includes('EmbeddingProviderManager')
+      );
+
       // Test configuration constants
       test('CHUNK_CONFIG defined', content.includes('CHUNK_CONFIG'));
       test('PROCESSING_CONFIG defined', content.includes('PROCESSING_CONFIG'));
-      test('Chunking parameters', content.includes('maxChunkSize') && content.includes('minChunkSize'));
+      test(
+        'Chunking parameters',
+        content.includes('maxChunkSize') && content.includes('minChunkSize')
+      );
       test('Confidence threshold', content.includes('minConfidenceThreshold'));
       test('Batch processing', content.includes('batchSize'));
-      
+
       // Test IPC event emissions
-      test('transcript-imported event', content.includes('transcript-imported'));
+      test(
+        'transcript-imported event',
+        content.includes('transcript-imported')
+      );
       test('evidence-created event', content.includes('evidence-created'));
-      test('IPC window checks', content.includes('mainWindow') && content.includes('isDestroyed'));
+      test(
+        'IPC window checks',
+        content.includes('mainWindow') && content.includes('isDestroyed')
+      );
     }
-    
+
     return serviceExists;
   } catch (error) {
     test('TranscriptIngestService analysis', false, error.message);
@@ -173,38 +238,73 @@ async function testTranscriptIngestServiceExists() {
 
 async function testWorkflowOrchestratorIntegration() {
   log('🔄 Testing WorkflowOrchestrator integration...');
-  
+
   try {
-    const orchestratorExists = existsSync('src/main/services/WorkflowOrchestrator.ts');
+    const orchestratorExists = existsSync(
+      'src/main/services/WorkflowOrchestrator.ts'
+    );
     test('WorkflowOrchestrator file exists', orchestratorExists);
-    
+
     if (orchestratorExists) {
-      const content = readFileSync('src/main/services/WorkflowOrchestrator.ts', 'utf8');
-      
+      const content = readFileSync(
+        'src/main/services/WorkflowOrchestrator.ts',
+        'utf8'
+      );
+
       // Test TranscriptIngestService integration
-      test('TranscriptIngestService import', content.includes('TranscriptIngestService'));
-      test('TranscriptIngestService instance', content.includes('transcriptIngestService'));
-      test('processTranscriptWithIngestService method', content.includes('processTranscriptWithIngestService'));
-      
+      test(
+        'TranscriptIngestService import',
+        content.includes('TranscriptIngestService')
+      );
+      test(
+        'TranscriptIngestService instance',
+        content.includes('transcriptIngestService')
+      );
+      test(
+        'processTranscriptWithIngestService method',
+        content.includes('processTranscriptWithIngestService')
+      );
+
       // Test new workflow methods
       test('start() method exists', content.includes('async start()'));
       test('stop() method exists', content.includes('async stop()'));
       test('setMainWindow() method exists', content.includes('setMainWindow('));
-      
+
       // Test event handling
-      test('transcript-added handler updated', content.includes('processTranscriptWithIngestService(transcriptEvent, \'added\')'));
-      test('transcript-updated handler updated', content.includes('processTranscriptWithIngestService(transcriptEvent, \'updated\')'));
-      test('transcript-manual handler updated', content.includes('processTranscriptWithIngestService(transcriptEvent, \'manual\')'));
-      
+      test(
+        'transcript-added handler updated',
+        content.includes(
+          "processTranscriptWithIngestService(transcriptEvent, 'added')"
+        )
+      );
+      test(
+        'transcript-updated handler updated',
+        content.includes(
+          "processTranscriptWithIngestService(transcriptEvent, 'updated')"
+        )
+      );
+      test(
+        'transcript-manual handler updated',
+        content.includes(
+          "processTranscriptWithIngestService(transcriptEvent, 'manual')"
+        )
+      );
+
       // Test IPC event emissions
-      test('transcript-ingested emission', content.includes('transcript-ingested'));
-      test('error emission', content.includes('emitToRenderer(\'error\''));
-      
+      test(
+        'transcript-ingested emission',
+        content.includes('transcript-ingested')
+      );
+      test('error emission', content.includes("emitToRenderer('error'"));
+
       // Test status reporting
-      test('transcriptIngestReady in status', content.includes('transcriptIngestReady'));
+      test(
+        'transcriptIngestReady in status',
+        content.includes('transcriptIngestReady')
+      );
       test('getProcessingStats call', content.includes('getProcessingStats()'));
     }
-    
+
     return orchestratorExists;
   } catch (error) {
     test('WorkflowOrchestrator analysis', false, error.message);
@@ -214,31 +314,46 @@ async function testWorkflowOrchestratorIntegration() {
 
 async function testMainProcessIntegration() {
   log('🚀 Testing main process integration...');
-  
+
   try {
     const mainExists = existsSync('src/main/main.ts');
     test('main.ts file exists', mainExists);
-    
+
     if (mainExists) {
       const content = readFileSync('src/main/main.ts', 'utf8');
-      
+
       // Test workflow orchestrator initialization
-      test('WorkflowOrchestrator start() call', content.includes('workflowOrchestrator.start()'));
-      test('setMainWindow integration', content.includes('workflowOrchestrator.setMainWindow(this.mainWindow)'));
-      
+      test(
+        'WorkflowOrchestrator start() call',
+        content.includes('workflowOrchestrator.start()')
+      );
+      test(
+        'setMainWindow integration',
+        content.includes('workflowOrchestrator.setMainWindow(this.mainWindow)')
+      );
+
       // Test service initialization order
       const initServicesMatch = content.match(/initializeCoreServices.*?}/s);
       if (initServicesMatch) {
         const initContent = initServicesMatch[0];
-        test('Database initialized before orchestrator', 
-          initContent.indexOf('initDatabase()') < initContent.indexOf('workflowOrchestrator'));
-        test('LangGraph initialized before orchestrator', 
-          initContent.indexOf('langGraphService.initialize()') < initContent.indexOf('workflowOrchestrator'));
-        test('Personas loaded before orchestrator',
-          initContent.indexOf('personaLoader.loadPersonas()') < initContent.indexOf('workflowOrchestrator'));
+        test(
+          'Database initialized before orchestrator',
+          initContent.indexOf('initDatabase()') <
+            initContent.indexOf('workflowOrchestrator')
+        );
+        test(
+          'LangGraph initialized before orchestrator',
+          initContent.indexOf('langGraphService.initialize()') <
+            initContent.indexOf('workflowOrchestrator')
+        );
+        test(
+          'Personas loaded before orchestrator',
+          initContent.indexOf('personaLoader.loadPersonas()') <
+            initContent.indexOf('workflowOrchestrator')
+        );
       }
     }
-    
+
     return mainExists;
   } catch (error) {
     test('main.ts analysis', false, error.message);
@@ -248,7 +363,7 @@ async function testMainProcessIntegration() {
 
 async function testTextChunkingLogic() {
   log('📝 Testing text chunking logic...');
-  
+
   // Test chunking configuration
   const chunkingTests = [
     {
@@ -281,31 +396,49 @@ async function testTextChunkingLogic() {
   ];
 
   chunkingTests.forEach(testCase => {
-    test(`Chunking: ${testCase.name}`, true, `Content length: ${testCase.content.length}`);
+    test(
+      `Chunking: ${testCase.name}`,
+      true,
+      `Content length: ${testCase.content.length}`
+    );
   });
 
   // Test chunk size constraints
-  test('Max chunk size reasonable', 1000 <= 2000, '1000 chars max is reasonable for AI processing');
-  test('Min chunk size reasonable', 50 >= 20, '50 chars min prevents meaningless fragments');
-  test('Overlap size reasonable', 100 <= 200, '100 chars overlap preserves context');
+  test(
+    'Max chunk size reasonable',
+    1000 <= 2000,
+    '1000 chars max is reasonable for AI processing'
+  );
+  test(
+    'Min chunk size reasonable',
+    50 >= 20,
+    '50 chars min prevents meaningless fragments'
+  );
+  test(
+    'Overlap size reasonable',
+    100 <= 200,
+    '100 chars overlap preserves context'
+  );
 
   return true;
 }
 
 async function testPersonaClassificationFlow() {
   log('🎯 Testing persona classification flow...');
-  
+
   // Test classification requirements
   const classificationTests = [
     {
       name: 'Solo Founder keywords',
-      content: 'I struggle with writing PRDs and scope creep in my solo projects',
+      content:
+        'I struggle with writing PRDs and scope creep in my solo projects',
       expectedPersona: 'solo-founder',
       shouldMatch: true,
     },
     {
-      name: 'Agency Marketer keywords',  
-      content: 'Our clients always want more conversions and we use Monday.com for project management',
+      name: 'Agency Marketer keywords',
+      content:
+        'Our clients always want more conversions and we use Monday.com for project management',
       expectedPersona: 'agency-marketer',
       shouldMatch: true,
     },
@@ -317,26 +450,39 @@ async function testPersonaClassificationFlow() {
     },
     {
       name: 'Technical jargon',
-      content: 'I need to optimize the database queries and improve API performance',
+      content:
+        'I need to optimize the database queries and improve API performance',
       expectedPersona: 'solo-founder', // Technical content might match solo founder
       shouldMatch: true,
     },
     {
       name: 'Marketing terminology',
-      content: 'We need to improve our conversion rates and A/B test the landing page',
+      content:
+        'We need to improve our conversion rates and A/B test the landing page',
       expectedPersona: 'agency-marketer',
       shouldMatch: true,
     },
   ];
 
   classificationTests.forEach(testCase => {
-    test(`Classification: ${testCase.name}`, true, 
-      `Content: "${testCase.content.substring(0, 50)}..."`);
+    test(
+      `Classification: ${testCase.name}`,
+      true,
+      `Content: "${testCase.content.substring(0, 50)}..."`
+    );
   });
 
   // Test confidence thresholds
-  test('Min confidence threshold exists', true, 'Prevents low-quality classifications');
-  test('Confidence threshold reasonable', 0.3 >= 0.2 && 0.3 <= 0.8, '30% is reasonable minimum');
+  test(
+    'Min confidence threshold exists',
+    true,
+    'Prevents low-quality classifications'
+  );
+  test(
+    'Confidence threshold reasonable',
+    0.3 >= 0.2 && 0.3 <= 0.8,
+    '30% is reasonable minimum'
+  );
   test('Batch processing configured', true, 'Avoids API rate limits');
   test('Retry logic configured', true, 'Handles temporary failures');
 
@@ -345,11 +491,11 @@ async function testPersonaClassificationFlow() {
 
 async function testEvidenceAndEmbeddingPersistence() {
   log('💾 Testing evidence and embedding persistence...');
-  
+
   // Test evidence record structure
   const evidenceFields = [
     'personaId',
-    'content', 
+    'content',
     'source',
     'sourceType',
     'timestamp',
@@ -362,7 +508,7 @@ async function testEvidenceAndEmbeddingPersistence() {
     test(`Evidence field: ${field}`, true, 'Required for evidence records');
   });
 
-  // Test embedding record structure  
+  // Test embedding record structure
   const embeddingFields = [
     'evidenceId',
     'embedding',
@@ -377,11 +523,27 @@ async function testEvidenceAndEmbeddingPersistence() {
   });
 
   // Test data types and constraints
-  test('Evidence importance 1-10 scale', true, 'Maps confidence to importance scale');
-  test('Source type is "interview"', true, 'Correctly categorizes evidence source');
+  test(
+    'Evidence importance 1-10 scale',
+    true,
+    'Maps confidence to importance scale'
+  );
+  test(
+    'Source type is "interview"',
+    true,
+    'Correctly categorizes evidence source'
+  );
   test('Tags stored as JSON array', true, 'Preserves classification keywords');
-  test('Timestamp preservation', true, 'Maintains original transcript timestamp');
-  test('Embedding model tracking', true, 'Tracks which model generated embeddings');
+  test(
+    'Timestamp preservation',
+    true,
+    'Maintains original transcript timestamp'
+  );
+  test(
+    'Embedding model tracking',
+    true,
+    'Tracks which model generated embeddings'
+  );
   test('Chunk indexing', true, 'Preserves chunk order and relationships');
 
   return true;
@@ -389,16 +551,17 @@ async function testEvidenceAndEmbeddingPersistence() {
 
 async function testEvidenceScoreRecalculation() {
   log('📊 Testing evidence score recalculation...');
-  
+
   // Test score recalculation requirements
   const recalculationTests = [
     {
       name: 'Multiple personas affected',
-      description: 'When transcript affects multiple personas, all should be recalculated',
+      description:
+        'When transcript affects multiple personas, all should be recalculated',
       requirement: true,
     },
     {
-      name: 'All PRDs rescored', 
+      name: 'All PRDs rescored',
       description: 'All existing PRDs should be rescored for affected personas',
       requirement: true,
     },
@@ -414,19 +577,28 @@ async function testEvidenceScoreRecalculation() {
     },
     {
       name: 'Error handling',
-      description: 'Individual score calculation failures should not stop the process',
+      description:
+        'Individual score calculation failures should not stop the process',
       requirement: true,
     },
   ];
 
   recalculationTests.forEach(testCase => {
-    test(`Score recalculation: ${testCase.name}`, testCase.requirement, testCase.description);
+    test(
+      `Score recalculation: ${testCase.name}`,
+      testCase.requirement,
+      testCase.description
+    );
   });
 
   // Test score calculation components
   test('Recency component', true, 'New evidence improves recency scores');
   test('Coverage component', true, 'More evidence improves coverage scores');
-  test('Relevance component', true, 'Better matched evidence improves relevance');
+  test(
+    'Relevance component',
+    true,
+    'Better matched evidence improves relevance'
+  );
   test('Weighted scoring', true, 'Components combined with proper weights');
 
   return true;
@@ -434,12 +606,17 @@ async function testEvidenceScoreRecalculation() {
 
 async function testIPCEventIntegration() {
   log('📡 Testing IPC event integration...');
-  
+
   // Test IPC events
   const ipcEvents = [
     {
       name: 'transcript-imported',
-      fields: ['transcriptFileName', 'evidenceCreated', 'personasAffected', 'processingTime'],
+      fields: [
+        'transcriptFileName',
+        'evidenceCreated',
+        'personasAffected',
+        'processingTime',
+      ],
       description: 'Emitted when transcript processing completes',
     },
     {
@@ -462,7 +639,11 @@ async function testIPCEventIntegration() {
   });
 
   // Test error handling
-  test('Window existence check', true, 'Prevents IPC errors on destroyed windows');
+  test(
+    'Window existence check',
+    true,
+    'Prevents IPC errors on destroyed windows'
+  );
   test('Error event emission', true, 'Errors are communicated to renderer');
   test('Graceful degradation', true, 'Service continues even if IPC fails');
 
@@ -471,7 +652,7 @@ async function testIPCEventIntegration() {
 
 async function testEndToEndPipeline() {
   log('🎭 Testing end-to-end pipeline...');
-  
+
   // Simulate the complete pipeline
   const pipelineSteps = [
     {
@@ -527,8 +708,16 @@ async function testEndToEndPipeline() {
 
   // Test pipeline metrics
   test('Processing time tracking', true, 'Pipeline performance monitored');
-  test('Success rate calculation', true, 'Chunk processing success rate tracked');
-  test('Error isolation', true, 'Individual chunk failures do not break pipeline');
+  test(
+    'Success rate calculation',
+    true,
+    'Chunk processing success rate tracked'
+  );
+  test(
+    'Error isolation',
+    true,
+    'Individual chunk failures do not break pipeline'
+  );
   test('Batch optimization', true, 'API calls batched for efficiency');
 
   return true;
@@ -536,7 +725,7 @@ async function testEndToEndPipeline() {
 
 async function testErrorHandlingAndRobustness() {
   log('🛡️ Testing error handling and robustness...');
-  
+
   const errorScenarios = [
     {
       scenario: 'API Rate Limits',
@@ -576,13 +765,25 @@ async function testErrorHandlingAndRobustness() {
   ];
 
   errorScenarios.forEach(scenario => {
-    test(`Error Handling: ${scenario.scenario}`, scenario.test, scenario.handling);
+    test(
+      `Error Handling: ${scenario.scenario}`,
+      scenario.test,
+      scenario.handling
+    );
   });
 
   // Test configuration robustness
   test('Configurable timeouts', true, 'Prevents hanging operations');
-  test('Configurable thresholds', true, 'Allows tuning for different use cases');
-  test('Graceful degradation', true, 'Continues with partial results when possible');
+  test(
+    'Configurable thresholds',
+    true,
+    'Allows tuning for different use cases'
+  );
+  test(
+    'Graceful degradation',
+    true,
+    'Continues with partial results when possible'
+  );
   test('Comprehensive logging', true, 'Facilitates debugging and monitoring');
 
   return true;
@@ -590,7 +791,7 @@ async function testErrorHandlingAndRobustness() {
 
 async function testPerformanceAndOptimization() {
   log('⚡ Testing performance and optimization...');
-  
+
   const optimizations = [
     {
       optimization: 'Batch API Calls',
@@ -631,14 +832,18 @@ async function testPerformanceAndOptimization() {
   // Test performance metrics
   test('Processing time tracking', true, 'Performance monitoring built in');
   test('Success rate metrics', true, 'Quality monitoring included');
-  test('Scalable architecture', true, 'Can handle multiple concurrent transcripts');
+  test(
+    'Scalable architecture',
+    true,
+    'Can handle multiple concurrent transcripts'
+  );
 
   return true;
 }
 
 async function cleanupTestEnvironment() {
   log('🧹 Cleaning up test environment...');
-  
+
   try {
     // Remove test transcript files
     const testFiles = [
@@ -653,7 +858,10 @@ async function cleanupTestEnvironment() {
           log(`Removed test file: ${file}`);
         }
       } catch (error) {
-        log(`Warning: Could not remove test file ${file}: ${error.message}`, 'WARN');
+        log(
+          `Warning: Could not remove test file ${file}: ${error.message}`,
+          'WARN'
+        );
       }
     });
 
@@ -667,38 +875,44 @@ async function cleanupTestEnvironment() {
 async function runTests() {
   try {
     // Setup
-    const { testTranscriptPath, agencyTranscriptPath } = await setupTestEnvironment();
-    
+    const { testTranscriptPath, agencyTranscriptPath } =
+      await setupTestEnvironment();
+
     // Core service tests
     const serviceExists = await testTranscriptIngestServiceExists();
     const orchestratorIntegrated = await testWorkflowOrchestratorIntegration();
     const mainIntegrated = await testMainProcessIntegration();
-    
+
     // Feature-specific tests
     await testTextChunkingLogic();
     await testPersonaClassificationFlow();
     await testEvidenceAndEmbeddingPersistence();
     await testEvidenceScoreRecalculation();
     await testIPCEventIntegration();
-    
+
     // Integration and robustness tests
     await testEndToEndPipeline();
     await testErrorHandlingAndRobustness();
     await testPerformanceAndOptimization();
-    
+
     // Cleanup
     await cleanupTestEnvironment();
-    
+
     // Summary
     console.log('\n📊 Test Summary:');
     console.log('==================');
     test('Core Service Implementation', serviceExists);
     test('Workflow Integration', orchestratorIntegrated);
     test('Main Process Integration', mainIntegrated);
-    test('Complete Pipeline Architecture', serviceExists && orchestratorIntegrated && mainIntegrated);
-    
+    test(
+      'Complete Pipeline Architecture',
+      serviceExists && orchestratorIntegrated && mainIntegrated
+    );
+
     if (serviceExists && orchestratorIntegrated && mainIntegrated) {
-      console.log('\n✅ Phase 2: Data Layer - Feature 6: Interview Evidence Generator');
+      console.log(
+        '\n✅ Phase 2: Data Layer - Feature 6: Interview Evidence Generator'
+      );
       console.log('✅ All components implemented and integrated successfully!');
       console.log('✅ Ready for real-world transcript processing');
       console.log('\n🎯 Next Steps:');
@@ -707,18 +921,22 @@ async function runTests() {
       console.log('   3. Verify UI updates in renderer process');
       console.log('   4. Validate persona classification accuracy');
     } else {
-      console.log('\n❌ Phase 2: Data Layer - Feature 6: Interview Evidence Generator');
+      console.log(
+        '\n❌ Phase 2: Data Layer - Feature 6: Interview Evidence Generator'
+      );
       console.log('❌ Missing critical components or integration issues');
       console.log('\n🔧 Required Fixes:');
-      if (!serviceExists) console.log('   - Complete TranscriptIngestService implementation');
-      if (!orchestratorIntegrated) console.log('   - Integrate with WorkflowOrchestrator');
-      if (!mainIntegrated) console.log('   - Update main process initialization');
+      if (!serviceExists)
+        console.log('   - Complete TranscriptIngestService implementation');
+      if (!orchestratorIntegrated)
+        console.log('   - Integrate with WorkflowOrchestrator');
+      if (!mainIntegrated)
+        console.log('   - Update main process initialization');
     }
-    
   } catch (error) {
     console.error('❌ Test execution failed:', error);
     process.exitCode = 1;
   }
 }
 
-runTests(); 
+runTests();
