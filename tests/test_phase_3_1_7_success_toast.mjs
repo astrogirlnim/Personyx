@@ -278,7 +278,8 @@ const appContent = readFileSync(appFile, 'utf8');
 
 test(
   'GlobalSuccessToast import',
-  appContent.includes("import { GlobalSuccessToast, SuccessToast") &&
+  appContent.includes("GlobalSuccessToast,") &&
+  appContent.includes("SuccessToast,") &&
   appContent.includes("from './components/GlobalSuccessToast'")
 );
 
@@ -289,8 +290,8 @@ test(
 
 test(
   'Success toast management functions',
-  appContent.includes('const addSuccessToast = useCallback') &&
-  appContent.includes('const dismissSuccessToast = useCallback')
+  appContent.includes('const dismissSuccessToast = useCallback') &&
+  appContent.includes('setSuccessToasts(prev => [...prev, successToast])')
 );
 
 test(
@@ -313,8 +314,8 @@ test(
 // Test dependencies in useEffect
 test(
   'Success toast callback in dependencies',
-  appContent.includes('addSuccessToast') &&
-  appContent.includes('[isChatOpen, isImportModalOpen, isTranscriptModalOpen, addErrorToast, addSuccessToast]')
+  appContent.includes('}, []); // Empty dependency array to ensure listeners are only set up once') &&
+  !appContent.includes('addSuccessToast') // Intentionally removed to prevent duplicate listeners
 );
 
 // Test implementation completeness
@@ -337,7 +338,7 @@ test(
 test(
   'Success toast logging',
   appContent.includes("console.log('✅ Transcript success received:") &&
-  appContent.includes("console.log('✅ Adding success toast:")
+  appContent.includes("console.log('🎯 Creating success toast with ID:")
 );
 
 // Design system compliance tests
