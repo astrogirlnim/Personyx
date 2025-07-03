@@ -301,6 +301,7 @@ function ImportPRDModal({
   const [progress, setProgress] = useState<ProgressStage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [shouldAutoImport, setShouldAutoImport] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const progressStages: ProgressStage[] = [
@@ -332,7 +333,7 @@ function ImportPRDModal({
       setIsDragging(false);
     } else {
       console.log('🚪 Import modal opening');
-      // Set initial file if provided - but don't auto-import!
+      // Set initial file if provided
       if (initialFile) {
         console.log('🔍 Setting initial file in modal:', {
           name: initialFile.name,
@@ -352,6 +353,182 @@ function ImportPRDModal({
       }
     }
   }, [isOpen, initialFile, initialFilePath]);
+
+  const handleImport = useCallback(async () => {
+    if (!selectedFile && !selectedFilePath) return;
+
+    setIsProcessing(true);
+    setError(null);
+    setResult(null);
+
+    // Initialize progress stages
+    const initialProgress = progressStages.map(stage => ({ ...stage }));
+    setProgress(initialProgress);
+
+    try {
+      // Simulate progress updates for better UX
+      const updateProgress = (
+        stageIndex: number,
+        status: ProgressStage['status'],
+        message?: string
+      ) => {
+        setProgress(prev =>
+          prev.map((stage, index) =>
+            index === stageIndex
+              ? { ...stage, status, message }
+              : index < stageIndex
+                ? { ...stage, status: 'complete' }
+                : stage
+          )
+        );
+      };
+
+      // Stage 1: Validating file
+      updateProgress(0, 'active');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateProgress(0, 'complete');
+
+      // Stage 2: Reading content
+      updateProgress(1, 'active');
+
+      let importResult: ImportResult;
+
+      if (selectedFile) {
+        // Handle File object (from drag/drop or file picker)
+        const fileContent = await selectedFile.text();
+
+        updateProgress(1, 'complete');
+
+        // Stage 3: Processing with main process
+        updateProgress(2, 'active', 'Sending to main process...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UI feedback
+        updateProgress(2, 'complete');
+
+        // Stage 4: Generating embeddings
+        updateProgress(3, 'active', 'Processing with AI...');
+
+        // Stage 5: Calculating evidence scores
+        updateProgress(4, 'active', 'Calculating scores...');
+
+        // Call the actual IPC handler with file content
+        importResult = (await window.electronAPI.importPRD(
+          fileContent
+        )) as ImportResult;
+      } else if (selectedFilePath) {
+        // Handle file path (from tray drop)
+        updateProgress(1, 'complete');
+
+        // Stage 3: Processing with main process
+        updateProgress(2, 'active', 'Sending to main process...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UI feedback
+        updateProgress(2, 'complete');
+
+        // Stage 4: Generating embeddings
+        updateProgress(3, 'active', 'Processing with AI...');
+
+        // Stage 5: Calculating evidence scores
+        updateProgress(4, 'active', 'Calculating scores...');
+
+        // Call the actual IPC handler with file path
+        importResult = (await window.electronAPI.importPRD(
+          selectedFilePath
+        )) as ImportResult;
+      } else {
+        throw new Error('No file or file path selected');
+      }
+
+      updateProgress(4, 'complete');
+
+      setResult(importResult);
+
+      // TODO: Add success notification and update app state
+      console.log('✅ PRD import completed successfully:', importResult);
+    } catch (error) {
+      console.error('Import failed:', error);
+      setError(`Import failed: ${error}`);
+
+      // Mark current stage as error
+      setProgress(prev =>
+        prev.map(stage =>
+          stage.status === 'active'
+            ? { ...stage, status: 'error', message: 'Failed' }
+            : stage
+        )
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [selectedFile, selectedFilePath, progressStages]);
+
+  // Auto-start processing when file comes from tray drop
+  useEffect(() => {
+    if (
+      isOpen &&
+      !isProcessing &&
+      !result &&
+      (initialFile || initialFilePath) &&
+      (selectedFile || selectedFilePath) &&
+      !shouldAutoImport
+    ) {
+      console.log('🚀 Auto-starting import for tray-dropped file');
+
+      // Basic validation for File objects - detailed validation will happen in handleImport
+      if (selectedFile) {
+        if (selectedFile.size === 0) {
+          console.log('❌ Auto-import cancelled - empty file');
+          setError('File cannot be empty');
+          return;
+        }
+        if (selectedFile.size > 10 * 1024 * 1024) {
+          console.log('❌ Auto-import cancelled - file too large');
+          setError('File size must be less than 10MB');
+          return;
+        }
+        const validExtensions = ['.md', '.txt', '.markdown'];
+        const hasValidExtension = validExtensions.some(ext =>
+          selectedFile.name.toLowerCase().endsWith(ext)
+        );
+        if (!hasValidExtension) {
+          console.log('❌ Auto-import cancelled - invalid file type');
+          setError('Please select a valid PRD file (.md, .txt, or .markdown)');
+          return;
+        }
+      }
+
+      // Trigger auto-import after a short delay to show the UI
+      setTimeout(() => {
+        setShouldAutoImport(true);
+      }, 500);
+    }
+  }, [
+    isOpen,
+    selectedFile,
+    selectedFilePath,
+    initialFile,
+    initialFilePath,
+    isProcessing,
+    result,
+    shouldAutoImport,
+  ]);
+
+  // Handle auto-import trigger
+  useEffect(() => {
+    if (
+      shouldAutoImport &&
+      (selectedFile || selectedFilePath) &&
+      !isProcessing
+    ) {
+      console.log('🚀 Executing auto-import');
+      setShouldAutoImport(false); // Reset the flag
+      handleImport();
+    }
+  }, [
+    shouldAutoImport,
+    selectedFile,
+    selectedFilePath,
+    isProcessing,
+    handleImport,
+  ]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -571,112 +748,6 @@ function ImportPRDModal({
     },
     [validateFile]
   );
-
-  const handleImport = async () => {
-    if (!selectedFile && !selectedFilePath) return;
-
-    setIsProcessing(true);
-    setError(null);
-    setResult(null);
-
-    // Initialize progress stages
-    const initialProgress = progressStages.map(stage => ({ ...stage }));
-    setProgress(initialProgress);
-
-    try {
-      // Simulate progress updates for better UX
-      const updateProgress = (
-        stageIndex: number,
-        status: ProgressStage['status'],
-        message?: string
-      ) => {
-        setProgress(prev =>
-          prev.map((stage, index) =>
-            index === stageIndex
-              ? { ...stage, status, message }
-              : index < stageIndex
-                ? { ...stage, status: 'complete' }
-                : stage
-          )
-        );
-      };
-
-      // Stage 1: Validating file
-      updateProgress(0, 'active');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      updateProgress(0, 'complete');
-
-      // Stage 2: Reading content
-      updateProgress(1, 'active');
-
-      let importResult: ImportResult;
-
-      if (selectedFile) {
-        // Handle File object (from drag/drop or file picker)
-        const fileContent = await selectedFile.text();
-
-        updateProgress(1, 'complete');
-
-        // Stage 3: Processing with main process
-        updateProgress(2, 'active', 'Sending to main process...');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UI feedback
-        updateProgress(2, 'complete');
-
-        // Stage 4: Generating embeddings
-        updateProgress(3, 'active', 'Processing with AI...');
-
-        // Stage 5: Calculating evidence scores
-        updateProgress(4, 'active', 'Calculating scores...');
-
-        // Call the actual IPC handler with file content
-        importResult = (await window.electronAPI.importPRD(
-          fileContent
-        )) as ImportResult;
-      } else if (selectedFilePath) {
-        // Handle file path (from tray drop)
-        updateProgress(1, 'complete');
-
-        // Stage 3: Processing with main process
-        updateProgress(2, 'active', 'Sending to main process...');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UI feedback
-        updateProgress(2, 'complete');
-
-        // Stage 4: Generating embeddings
-        updateProgress(3, 'active', 'Processing with AI...');
-
-        // Stage 5: Calculating evidence scores
-        updateProgress(4, 'active', 'Calculating scores...');
-
-        // Call the actual IPC handler with file path
-        importResult = (await window.electronAPI.importPRD(
-          selectedFilePath
-        )) as ImportResult;
-      } else {
-        throw new Error('No file or file path selected');
-      }
-
-      updateProgress(4, 'complete');
-
-      setResult(importResult);
-
-      // TODO: Add success notification and update app state
-      console.log('✅ PRD import completed successfully:', importResult);
-    } catch (error) {
-      console.error('Import failed:', error);
-      setError(`Import failed: ${error}`);
-
-      // Mark current stage as error
-      setProgress(prev =>
-        prev.map(stage =>
-          stage.status === 'active'
-            ? { ...stage, status: 'error', message: 'Failed' }
-            : stage
-        )
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleClose = () => {
     if (!isProcessing) {
