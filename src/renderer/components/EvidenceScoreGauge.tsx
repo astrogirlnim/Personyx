@@ -43,6 +43,25 @@ export function EvidenceScoreGauge({
 
   // Handle score changes and trigger pulse animation
   useEffect(() => {
+    // 🔥 CRITICAL DEBUG: Force log useEffect entry to see if it runs at all
+    console.log(
+      '🔥 FORCE: useEffect ENTRY - Score changed',
+      JSON.stringify(
+        {
+          score,
+          scoreType: typeof score,
+          prevScore: prevScoreRef.current,
+          prevScoreType: typeof prevScoreRef.current,
+          scoreChanged: score !== prevScoreRef.current,
+          displayScore,
+          areEqual: score === prevScoreRef.current,
+          strictEqual: score === prevScoreRef.current,
+        },
+        null,
+        2
+      )
+    );
+
     const prevScore = prevScoreRef.current;
 
     console.log(
@@ -60,6 +79,17 @@ export function EvidenceScoreGauge({
       )
     );
 
+    // 🔥 FORCE: Always update displayScore regardless of conditions
+    if (score !== null) {
+      console.log(
+        '🔥 FORCE: Setting displayScore from',
+        displayScore,
+        'to',
+        score
+      );
+      setDisplayScore(score);
+    }
+
     // Only trigger pulse on non-null score changes (not initial load)
     if (score !== null && score !== prevScore && prevScore !== null) {
       console.log(
@@ -74,29 +104,14 @@ export function EvidenceScoreGauge({
         )
       );
       setShouldPulse(true);
-      // Remove pulse class after animation completes
-      const timer = setTimeout(() => {
-        setShouldPulse(false);
-        console.log('🎯 EvidenceScoreGauge: Pulse animation completed');
-      }, 400);
-      return () => clearTimeout(timer);
+      // Reset pulse after animation
+      setTimeout(() => setShouldPulse(false), 400);
     }
 
+    // Update ref for next comparison
     prevScoreRef.current = score;
-    setDisplayScore(score);
-
-    console.log(
-      '🎯 EvidenceScoreGauge: Updated display score',
-      JSON.stringify(
-        {
-          displayScore: score,
-          prevScoreRef: prevScoreRef.current,
-        },
-        null,
-        2
-      )
-    );
-  }, [score]);
+    console.log('🔥 FORCE: Updated prevScoreRef.current to', score);
+  }, [score]); // 🔥 Only depend on score, not displayScore
 
   // Determine score color class based on value
   const getScoreColorClass = (scoreValue: number | null): string => {

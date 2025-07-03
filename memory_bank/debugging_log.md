@@ -491,3 +491,134 @@ The database and UI systems are working correctly. The issue is likely in the **
 **Next Investigation**: Verify that uploaded file content is actually being read and processed, not replaced with template/cached content.
 
 ---
+
+# Debugging Log - Evidence Score Display Issue
+
+## Current Status: CRITICAL BUG IDENTIFIED 🚨
+
+**Date**: 2025-01-03  
+**Issue**: Evidence scores display correctly in backend/logs but show old values in frontend UI  
+**Component**: EvidenceScoreGauge.tsx  
+**Phase**: 3.1.3 Evidence Score Banner - BLOCKED
+
+## Bug Analysis Summary
+
+### ✅ What's Working
+
+1. **Backend scoring**: Perfectly calculating 53.6 (solo_founder) and 52.27 (agency_marketer)
+2. **IPC communication**: Frontend receiving correct scores via PRDImported events
+3. **State management**: App.tsx receiving and storing correct evidence scores
+4. **Prop passing**: EvidenceScoreGauge receiving correct `score` prop (53.6)
+
+### ❌ What's Broken
+
+1. **displayScore state**: Stuck at old value (57.6) in EvidenceScoreGauge component
+2. **useEffect execution**: The useEffect that should update displayScore is NOT running
+3. **UI display**: Shows 58 (rounded from 57.6) instead of correct 54 (rounded from 53.6)
+
+## Detailed Log Analysis
+
+### Evidence from Console Logs:
+
+```javascript
+// ✅ GOOD: Component receives correct prop
+"🎯 EvidenceScoreGauge: Incoming prop analysis {
+  "score": 53.6,          // ✅ Correct new score
+  "scoreType": "number"
+}"
+
+// ❌ BAD: Component renders with old state
+"🎯 EvidenceScoreGauge: Rendering {
+  "score": 53.6,          // ✅ Correct prop
+  "displayScore": 57.6,   // ❌ OLD state value - should be 53.6
+  "shouldPulse": false,
+  "strokeDashoffset": 186.4849399170901,
+  "colorClass": "text-risk-red dark:text-risk-red-dark"
+}"
+
+// ❌ MISSING: These logs should appear but don't:
+// "🎯 EvidenceScoreGauge: Score update triggered"
+// "🎯 EvidenceScoreGauge: Updated display score"
+```
+
+## Root Cause Analysis
+
+### Primary Issue: useEffect Not Executing
+
+The useEffect responsible for updating displayScore when score changes is **not running at all**:
+
+```tsx
+useEffect(() => {
+  // This entire block is not executing
+  console.log('🎯 EvidenceScoreGauge: Score update triggered', ...);
+  // ... rest of logic
+}, [score]); // Dependency should trigger on score change
+```
+
+### Potential Causes (In Priority Order):
+
+1. **React Strict Mode**: Double-rendering might be interfering with ref comparison logic
+2. **Conditional Logic Bug**: The effect might have a condition preventing execution
+3. **Object Reference Issue**: Score prop might be the same object reference despite value change
+4. **React Optimization**: React might be optimizing away the effect due to rapid re-renders
+5. **prevScoreRef Logic**: The ref comparison logic might be preventing updates
+
+## Next Investigation Steps
+
+### Step 1: Simplify useEffect (IMMEDIATE)
+
+Remove all conditional logic and force the effect to run:
+
+```tsx
+useEffect(() => {
+  console.log('🔥 FORCE: useEffect running with score:', score);
+  setDisplayScore(score);
+  prevScoreRef.current = score;
+}, [score]);
+```
+
+### Step 2: Add Effect Debugging (IMMEDIATE)
+
+Add detailed logging to understand why effect isn't running:
+
+```tsx
+useEffect(() => {
+  console.log('🔥 useEffect ENTRY:', {
+    score,
+    prevScore: prevScoreRef.current,
+    scoreChanged: score !== prevScoreRef.current,
+  });
+  // ... rest of logic
+}, [score]);
+```
+
+### Step 3: Check React Strict Mode (NEXT)
+
+Verify if React.StrictMode is causing double-renders that interfere with effect
+
+### Step 4: Investigate Component Lifecycle (NEXT)
+
+Check if component is unmounting/remounting unexpectedly
+
+## Success Criteria
+
+- [ ] "🎯 EvidenceScoreGauge: Score update triggered" appears in logs
+- [ ] displayScore updates from 57.6 to 53.6
+- [ ] UI shows 54 instead of 58
+- [ ] Score updates reliably on subsequent PRD uploads
+
+## Files to Investigate
+
+1. `src/renderer/components/EvidenceScoreGauge.tsx` - Primary issue location
+2. `src/renderer/App.tsx` - Parent component rendering behavior
+3. `src/renderer/main.tsx` - Check for React.StrictMode
+
+## Backup Plan
+
+If useEffect issues persist, implement direct prop-to-state synchronization without effect dependency optimization.
+
+---
+
+**Next Action**: Implement Step 1 & 2 immediately to force useEffect execution and gather detailed debugging data.
+
+---

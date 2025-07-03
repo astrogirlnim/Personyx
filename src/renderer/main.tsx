@@ -15,9 +15,12 @@ if (!container) {
 
 const root = createRoot(container);
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  // 🔥 TEMPORARILY DISABLED: Testing if StrictMode causes useEffect issues
+  // <React.StrictMode>
+  <App />
+  // </React.StrictMode>
 );
 
-console.log('🎨 Personyx renderer initialized');
+console.log(
+  '🎨 Personyx renderer initialized - StrictMode DISABLED for debugging'
+);
