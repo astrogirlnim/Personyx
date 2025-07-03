@@ -109,7 +109,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 
 _Criteria: user-facing components; each relies on Phases 1 & 2._
 
-[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (5/8 sub-features)
+[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (6/8 sub-features)
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
@@ -117,7 +117,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [x] **1.4** Show global error toast for failed ingest events. ✅ COMPLETE
 - [x] **1.5** Add "Import Interview Transcript" modal with drag-&-drop + "Open Folder" fallback. ✅ COMPLETE
 - [ ] **1.6** Implement Activity Log panel (ingest successes, errors, score updates).
-- [ ] **1.7** Show success toast "Transcript analysed – evidence added" on completion.
+- [x] **1.7** Show success toast "Transcript analysed – evidence added" on completion. ✅ COMPLETE
 - [ ] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts.
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
