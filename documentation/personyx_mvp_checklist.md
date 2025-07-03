@@ -185,7 +185,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
   - [x] **5.2.6** Write unit tests for third-party token validation, storage, removal, and IPC round-trips ✅ COMPLETE
   - [x] **5.2.7** Add quick-verification vitest script `test_phase_3_5_2_quick_verification.mjs` covering happy path & edge cases ✅ COMPLETE
   - [x] **5.2.8** Update manual testing guide with new scenarios (valid/invalid tokens, removal, error states) ✅ COMPLETE
-- [ ] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart).
+- [x] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart). ✅ COMPLETE
 - [ ] **5.4** Persist dark / light theme toggle to local prefs.
 
 ---
