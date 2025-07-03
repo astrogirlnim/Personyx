@@ -423,6 +423,7 @@ export class TrayManager {
               background: rgba(255, 255, 255, 0.1);
               transform: scale(1.02);
             }
+
             .icon {
               font-size: 48px;
               margin-bottom: 16px;
@@ -445,18 +446,53 @@ export class TrayManager {
           </style>
         </head>
         <body>
-          <div class="select-zone" id="selectZone" onclick="openFileDialog()">
+          <div class="select-zone" id="selectZone">
             <div class="icon">📄</div>
             <div class="title">Select PRD File</div>
-            <div class="subtitle">Click here to browse for your Product Requirements Document</div>
+            <div class="subtitle">Click to browse for files</div>
             <div class="supported-formats">Supports: .md, .txt, .markdown</div>
           </div>
           
           <script>
+            
+            // Debug function to check if electronAPI is available
+            function checkElectronAPI() {
+              console.log('🔍 Checking electronAPI availability:', !!window.electronAPI);
+              if (window.electronAPI) {
+                console.log('✅ ElectronAPI functions available:', Object.keys(window.electronAPI));
+              } else {
+                console.error('❌ ElectronAPI not available in tray drop zone');
+              }
+            }
+            
+            // Check API availability when page loads
+            document.addEventListener('DOMContentLoaded', function() {
+              console.log('🚀 Tray drop zone page loaded');
+              checkElectronAPI();
+              setupEventListeners();
+            });
+            
+            function setupEventListeners() {
+              const selectZone = document.getElementById('selectZone');
+              if (!selectZone) {
+                console.error('❌ Select zone element not found');
+                return;
+              }
+              
+              // Set up click event listener on the select zone
+              selectZone.addEventListener('click', openFileDialog);
+              
+              console.log('✅ Click event listener set up for tray drop zone');
+            }
+            
             function openFileDialog() {
-              console.log('📂 Opening file dialog...');
-              // Send message to main process to open file dialog
-              window.electronAPI?.openFileDialog();
+              console.log('📂 Opening file dialog from tray drop zone...');
+              checkElectronAPI();
+              if (window.electronAPI && window.electronAPI.openFileDialog) {
+                window.electronAPI.openFileDialog();
+              } else {
+                console.error('❌ Cannot open file dialog - electronAPI not available');
+              }
             }
           </script>
         </body>
@@ -470,10 +506,23 @@ export class TrayManager {
   private setupDropZoneHandlers(): void {
     if (!this.dropZoneWindow) return;
 
+    this.logger.debug('🔧 Setting up drop zone IPC handlers...');
+
+    // Handle console messages from drop zone for debugging
+    this.dropZoneWindow.webContents.on(
+      'console-message',
+      (event, level, message, _line, _sourceId) => {
+        // Forward console messages from drop zone to main logger
+        this.logger.debug(`📱 [Tray Drop Zone] ${message}`);
+      }
+    );
+
     // Handle file dialog requests from the drop zone
     this.dropZoneWindow.webContents.on(
       'ipc-message',
-      async (_event, channel, ..._args) => {
+      async (_event, channel, ...args) => {
+        this.logger.debug(`📱 IPC message from drop zone: ${channel}`, args);
+
         if (channel === 'open-file-dialog') {
           this.logger.info('📁 File dialog requested from drop zone');
 
@@ -487,6 +536,8 @@ export class TrayManager {
         }
       }
     );
+
+    this.logger.info('✅ Drop zone IPC handlers set up successfully');
   }
 
   /**
@@ -504,13 +555,35 @@ export class TrayManager {
         return;
       }
 
+      // Close drop zone first
+      this.closeDropZone();
+
       // Trigger the actual PRD processing pipeline through main process
       this.logger.info(`🚀 Sending file to secure ingest service: ${filePath}`);
 
-      // Emit IPC event to main process for file processing
+      // Ensure main window is open and get it
+      personyxApp.createMainWindow();
       const mainWindow = personyxApp.getMainWindow();
+
       if (mainWindow) {
-        mainWindow.webContents.send('import-prd', { filePath });
+        // Wait a bit for window to be ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Send message to renderer to open import modal with the file
+        mainWindow.webContents.send('open-import-modal-with-file', {
+          filePath,
+        });
+
+        // Focus the main window and bring to front
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.moveTop();
+
+        this.logger.info('✅ Main window opened and focused with import modal');
+      } else {
+        this.logger.error(
+          '❌ Could not create main window for file processing'
+        );
       }
 
       // Show initial notification (final result will come from main process)
@@ -629,6 +702,17 @@ export class TrayManager {
       }
     } catch (error) {
       this.logger.error('❌ PRD import dialog failed', error);
+    }
+  }
+
+  /**
+   * Close the drop zone window if it's open
+   */
+  public closeDropZone(): void {
+    if (this.dropZoneWindow) {
+      this.dropZoneWindow.close();
+      this.dropZoneWindow = null;
+      this.logger.info('📂 Drop zone window closed');
     }
   }
 

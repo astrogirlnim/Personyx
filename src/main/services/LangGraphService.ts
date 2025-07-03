@@ -61,6 +61,8 @@ export class LangGraphService {
   private readonly CLASSIFICATION_MODEL = 'gpt-4o-mini';
   private readonly MAX_RETRIES = 3;
   private readonly RETRY_DELAY = 1000; // ms
+  private readonly API_TIMEOUT = 30000; // 30 seconds timeout
+  private readonly CLASSIFICATION_TIMEOUT = 15000; // 15 seconds for classification
 
   constructor() {
     this.personaRepo = new PersonaRepo();
@@ -348,7 +350,7 @@ export class LangGraphService {
             model: this.EMBEDDING_MODEL,
             input: chunk.content,
           });
-        });
+        }, this.API_TIMEOUT);
 
         if (response.data.length > 0) {
           embeddings.push({
@@ -416,6 +418,41 @@ export class LangGraphService {
   }
 
   /**
+   * Generate embeddings only (for PRD chunks that don't need persona classification)
+   */
+  async generateEmbeddingsOnly(
+    content: string,
+    chunkIndex: number = 0
+  ): Promise<
+    Array<{
+      chunkIndex: number;
+      embedding: number[];
+      model: string;
+      dimensions: number;
+    }>
+  > {
+    logger.debug('🧠 Generating embeddings only (no classification)');
+
+    if (!this.isInitialized) {
+      throw new Error('LangGraph service not initialized');
+    }
+
+    // Create a single chunk for the content
+    const chunks: ChunkData[] = [
+      {
+        content,
+        index: chunkIndex,
+        totalChunks: 1,
+        filePath: 'prd-chunk',
+        fileName: `prd-chunk-${chunkIndex}`,
+      },
+    ];
+
+    // Generate embeddings using current provider
+    return await this.generateEmbeddings(chunks);
+  }
+
+  /**
    * Classify content by persona using current AI provider
    */
   private async classifyByPersona(
@@ -458,6 +495,8 @@ export class LangGraphService {
     );
 
     const classifications: PersonaClassification[] = [];
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 2;
 
     for (const persona of personas) {
       try {
@@ -465,6 +504,7 @@ export class LangGraphService {
 
         const prompt = this.buildClassificationPrompt(persona, content);
 
+        // Add timeout and better error handling for OpenAI API calls
         const response = await this.retryWithBackoff(async () => {
           return await this.openai!.chat.completions.create({
             model: this.CLASSIFICATION_MODEL,
@@ -482,11 +522,17 @@ export class LangGraphService {
             temperature: 0.1,
             max_tokens: 500,
           });
-        });
+        }, this.CLASSIFICATION_TIMEOUT);
 
-        const result = this.parseClassificationResponse(
-          response.choices[0].message.content || ''
-        );
+        const responseContent = response.choices[0]?.message?.content;
+        if (!responseContent) {
+          logger.warn(
+            `⚠️ Empty response from OpenAI for persona: ${persona.name}`
+          );
+          continue;
+        }
+
+        const result = this.parseClassificationResponse(responseContent);
 
         if (result) {
           classifications.push({
@@ -495,13 +541,40 @@ export class LangGraphService {
             reasoning: result.reasoning,
             keywords: result.keywords,
           });
+          logger.debug(
+            `✅ Classified against persona: ${persona.name} (confidence: ${result.confidence}%)`
+          );
+          consecutiveFailures = 0; // Reset failure counter on success
+        } else {
+          logger.warn(
+            `⚠️ Failed to parse classification response for persona: ${persona.name}`
+          );
+          consecutiveFailures++;
         }
       } catch (error) {
+        consecutiveFailures++;
         logger.error('❌ Failed to classify content for persona', {
           personaId: persona.id,
-          error,
+          personaName: persona.name,
+          error: error instanceof Error ? error.message : String(error),
+          consecutiveFailures,
         });
-        // Continue with other personas
+
+        // Add a default low-confidence classification to continue processing
+        classifications.push({
+          personaId: persona.id,
+          confidence: 0,
+          reasoning: 'Classification failed due to error',
+          keywords: [],
+        });
+
+        // Circuit breaker: stop processing if too many consecutive failures
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          logger.error(
+            `🔴 Circuit breaker triggered: ${consecutiveFailures} consecutive failures. Stopping classification.`
+          );
+          break;
+        }
       }
     }
 
@@ -567,8 +640,15 @@ export class LangGraphService {
         ? JSON.parse(persona.keywords)
         : persona.keywords;
 
+    // Limit content to prevent API timeouts and reduce costs
+    const MAX_CONTENT_LENGTH = 1500;
+    const truncatedContent =
+      content.length > MAX_CONTENT_LENGTH
+        ? content.substring(0, MAX_CONTENT_LENGTH) + '...'
+        : content;
+
     return `
-Analyze this interview transcript and determine how well it matches the following user persona:
+Analyze this content and determine how well it matches the following user persona:
 
 **Persona: ${persona.name}**
 - Description: ${persona.description}
@@ -576,17 +656,17 @@ Analyze this interview transcript and determine how well it matches the followin
 - Main Pain Point: ${persona.mainPainPoint}
 - Keywords: ${Array.isArray(keywords) ? keywords.join(', ') : ''}
 
-**Interview Content:**
-${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}
+**Content to Analyze:**
+${truncatedContent}
 
-Respond with a JSON object containing:
+Respond with ONLY a valid JSON object:
 {
   "confidence": <number between 0-100>,
-  "reasoning": "<brief explanation of why this matches or doesn't match the persona>",
-  "keywords": ["<relevant keywords found in the content>"]
+  "reasoning": "<brief explanation>",
+  "keywords": ["<relevant keywords>"]
 }
 
-Be specific about pain points, goals, and language patterns that indicate this persona.
+Focus on identifying specific pain points, goals, and language patterns that match this persona.
 `;
   }
 
@@ -683,16 +763,45 @@ Be specific about pain points, goals, and language patterns that indicate this p
   }
 
   /**
-   * Retry operation with exponential backoff
+   * Add timeout to any promise
    */
-  private async retryWithBackoff<T>(operation: () => Promise<T>): Promise<T> {
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Operation timed out after ${timeoutMs}ms`)),
+          timeoutMs
+        )
+      ),
+    ]);
+  }
+
+  /**
+   * Retry operation with exponential backoff and timeout
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    timeoutMs?: number
+  ): Promise<T> {
     let lastError;
 
     for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
-        return await operation();
+        const promise = operation();
+        return timeoutMs
+          ? await this.withTimeout(promise, timeoutMs)
+          : await promise;
       } catch (error) {
         lastError = error;
+
+        logger.warn(
+          `❌ Operation failed (attempt ${attempt}/${this.MAX_RETRIES})`,
+          {
+            error: error instanceof Error ? error.message : String(error),
+            attempt,
+          }
+        );
 
         if (attempt === this.MAX_RETRIES) {
           break;
@@ -707,6 +816,7 @@ Be specific about pain points, goals, and language patterns that indicate this p
       }
     }
 
+    logger.error('❌ All retry attempts failed', { lastError });
     throw lastError;
   }
 

@@ -9,6 +9,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 interface ElectronAPI {
   // File operations
   openFileDialog: () => void;
+  handleTrayFileDrop: (filePath: string) => void;
+  handleTrayFileDropWithContent: (
+    fileName: string,
+    fileContent: string
+  ) => void;
   importPRD: (filePath: string) => Promise<unknown>;
 
   // App operations
@@ -33,6 +38,16 @@ interface ElectronAPI {
   onAppReady: (callback: () => void) => void;
   onError: (callback: (error: unknown) => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
+  onOpenImportModalWithFile: (
+    callback: (data: { filePath: string }) => void
+  ) => void;
+  onOpenImportModalWithFileContent: (
+    callback: (data: {
+      fileName: string;
+      fileContent: string;
+      fileSize: number;
+    }) => void
+  ) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;
@@ -44,6 +59,16 @@ const electronAPI: ElectronAPI = {
   openFileDialog: () => {
     console.log('📂 Opening file dialog from drop zone');
     ipcRenderer.send('open-file-dialog');
+  },
+
+  handleTrayFileDrop: (filePath: string) => {
+    console.log('🗂️ Tray file drop:', filePath);
+    ipcRenderer.send('tray-file-drop', { filePath });
+  },
+
+  handleTrayFileDropWithContent: (fileName: string, fileContent: string) => {
+    console.log('🗂️ Tray file drop with content:', fileName);
+    ipcRenderer.send('tray-file-drop-with-content', { fileName, fileContent });
   },
 
   importPRD: (filePath: string) => {
@@ -112,6 +137,24 @@ const electronAPI: ElectronAPI = {
 
   onOpenChatWindow: (callback: () => void) => {
     ipcRenderer.on('open-chat-window', () => callback());
+  },
+
+  onOpenImportModalWithFile: (
+    callback: (data: { filePath: string }) => void
+  ) => {
+    ipcRenderer.on('open-import-modal-with-file', (_, data) => callback(data));
+  },
+
+  onOpenImportModalWithFileContent: (
+    callback: (data: {
+      fileName: string;
+      fileContent: string;
+      fileSize: number;
+    }) => void
+  ) => {
+    ipcRenderer.on('open-import-modal-with-file-content', (_, data) =>
+      callback(data)
+    );
   },
 
   // Cleanup

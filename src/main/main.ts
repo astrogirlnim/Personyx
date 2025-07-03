@@ -57,6 +57,10 @@ class PersonyxApp {
   private langGraphService: LangGraphService | null = null;
   private logger: Logger;
   private isAppReady = false;
+  private fileToImportOnReady: {
+    fileName: string;
+    fileContent: string;
+  } | null = null;
 
   constructor() {
     this.logger = new Logger('main');
@@ -136,7 +140,10 @@ class PersonyxApp {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        webSecurity: true,
         preload: join(__dirname, 'preload.js'),
+        // Enable file access for drag and drop
+        sandbox: false,
       },
       titleBarStyle: IS_MAC ? 'hiddenInset' : 'default',
       vibrancy: IS_MAC ? 'under-window' : undefined,
@@ -163,6 +170,23 @@ class PersonyxApp {
         if (this.secureFileIngestService) {
           this.secureFileIngestService.setMainWindow(this.mainWindow);
         }
+
+        // If a file was dropped on the tray, send it to the modal now
+        if (this.fileToImportOnReady) {
+          this.logger.info(
+            '📂 Sending deferred file drop data to renderer',
+            this.fileToImportOnReady.fileName
+          );
+          this.mainWindow.webContents.send(
+            'open-import-modal-with-file-content',
+            {
+              fileName: this.fileToImportOnReady.fileName,
+              fileContent: this.fileToImportOnReady.fileContent,
+              fileSize: this.fileToImportOnReady.fileContent.length,
+            }
+          );
+          this.fileToImportOnReady = null; // Clear after sending
+        }
       }
     });
 
@@ -172,6 +196,25 @@ class PersonyxApp {
     });
 
     // Handle external links
+    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    });
+
+    // Enable drag and drop file operations
+    this.mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+      const parsedUrl = new URL(navigationUrl);
+
+      // Allow navigation to our own renderer and dev server
+      if (
+        parsedUrl.origin !== URL_SCHEMES.RENDERER_DEV.replace(/\/$/, '') &&
+        !navigationUrl.startsWith('file://')
+      ) {
+        event.preventDefault();
+      }
+    });
+
+    // Prevent new window creation from drag and drop
     this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       shell.openExternal(url);
       return { action: 'deny' };
@@ -257,7 +300,7 @@ class PersonyxApp {
     ipcMain.handle(
       IPC_CHANNELS.IMPORT_PRD,
       async (_, data: IPCEvents['import-prd']) => {
-        this.logger.info(`📄 Import PRD request: ${data.filePath}`);
+        this.logger.info(`📄 Import PRD request`);
         return await this.handleImportPRD(data.filePath);
       }
     );
@@ -310,6 +353,95 @@ class PersonyxApp {
         // This will be handled by the tray manager
       }
     });
+
+    // Handle file drops from tray drop zone
+    ipcMain.on('tray-file-drop', async (_event, data: { filePath: string }) => {
+      this.logger.info(`🗂️ File dropped on tray zone: ${data.filePath}`);
+
+      try {
+        // Close the drop zone window first
+        if (this.trayManager) {
+          this.trayManager.closeDropZone();
+        }
+
+        // Ensure main window is open and focused
+        this.createMainWindow();
+        const mainWindow = this.getMainWindow();
+
+        if (mainWindow) {
+          // Wait a bit for window to be ready
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Send message to renderer to open import modal with the dropped file
+          mainWindow.webContents.send('open-import-modal-with-file', {
+            filePath: data.filePath,
+          });
+          this.logger.info('✅ Main window notified to open import modal');
+
+          // Focus the main window and bring to front
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.moveTop();
+
+          // On macOS, also activate the app
+          if (process.platform === 'darwin') {
+            app.focus({ steal: true });
+          }
+        } else {
+          this.logger.error('❌ Could not create main window for file drop');
+        }
+      } catch (error) {
+        this.logger.error('❌ Error handling tray file drop:', error);
+      }
+    });
+
+    // Handle file drops from tray drop zone with content
+    ipcMain.on(
+      'tray-file-drop-with-content',
+      async (_event, data: { fileName: string; fileContent: string }) => {
+        this.logger.info(
+          `🗂️ File dropped on tray zone with content: ${data.fileName}`
+        );
+
+        try {
+          // Close the drop zone window first
+          if (this.trayManager) {
+            this.trayManager.closeDropZone();
+          }
+
+          // Defer sending file content until the window is ready
+          this.fileToImportOnReady = {
+            fileName: data.fileName,
+            fileContent: data.fileContent,
+          };
+          this.logger.info('📂 Deferred file drop until main window is ready.');
+
+          // Ensure main window is open and focused.
+          // The 'ready-to-show' event will handle sending the data.
+          this.createMainWindow();
+          const mainWindow = this.getMainWindow();
+
+          if (mainWindow) {
+            // Focus the main window and bring to front
+            mainWindow.show();
+            mainWindow.focus();
+            mainWindow.moveTop();
+
+            // On macOS, also activate the app
+            if (process.platform === 'darwin') {
+              app.focus({ steal: true });
+            }
+          } else {
+            this.logger.error('❌ Could not create main window for file drop');
+          }
+        } catch (error) {
+          this.logger.error(
+            '❌ Error handling tray file drop with content:',
+            error
+          );
+        }
+      }
+    );
 
     // Check for updates
     ipcMain.handle('check-for-updates', async () => {
@@ -485,18 +617,54 @@ class PersonyxApp {
   /**
    * Handle PRD import (Phase 2.3 - Secure File Ingest)
    */
-  private async handleImportPRD(filePath: string): Promise<ImportResult> {
+  private async handleImportPRD(
+    filePathOrContent: string
+  ): Promise<ImportResult> {
     try {
-      this.logger.info(`📥 Processing PRD import: ${filePath}`);
+      this.logger.info(`📥 Processing PRD import`);
 
       if (!this.secureFileIngestService) {
         this.logger.warn('⚠️ SecureFileIngestService not initialized');
         throw new Error('Secure file ingest service not available');
       }
 
+      let filePath: string;
+      let isTemporaryFile = false;
+
+      // Check if the input is a file path or file content
+      if (filePathOrContent.includes('\n') || filePathOrContent.length > 500) {
+        // Likely file content, create a temporary file
+        const fs = await import('fs');
+        const path = await import('path');
+        const os = await import('os');
+
+        const tempDir = os.tmpdir();
+        const tempFileName = `temp_prd_${Date.now()}.md`;
+        filePath = path.join(tempDir, tempFileName);
+
+        fs.writeFileSync(filePath, filePathOrContent, 'utf8');
+        isTemporaryFile = true;
+        this.logger.info(`📝 Created temporary file: ${filePath}`);
+      } else {
+        // Assume it's a file path
+        filePath = filePathOrContent;
+        this.logger.info(`📂 Using file path: ${filePath}`);
+      }
+
       // Use the new secure file ingest service (Phase 2.3)
       const ingestResult =
         await this.secureFileIngestService.ingestPRDFile(filePath);
+
+      // Clean up temporary file if created
+      if (isTemporaryFile) {
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(filePath);
+          this.logger.info(`🗑️ Cleaned up temporary file: ${filePath}`);
+        } catch (error) {
+          this.logger.warn(`⚠️ Failed to clean up temporary file: ${error}`);
+        }
+      }
 
       if (ingestResult.success) {
         this.logger.info('✅ PRD import completed successfully', {

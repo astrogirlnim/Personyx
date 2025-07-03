@@ -474,25 +474,18 @@ export class SecureFileIngestService {
 
       for (const chunk of batch) {
         try {
-          // Create mock transcript event to reuse existing embedding generation
-          const mockTranscriptEvent = {
-            fileName: `prd-chunk-${chunk.index}`,
-            filePath: `${chunk.documentId}/chunk-${chunk.index}`,
-            content: chunk.content,
-            fileSize: chunk.content.length,
-            timestamp: new Date(),
-            sourceType: 'interview' as const,
-          };
+          // Use LangGraph service to generate embedding only (no classification needed for PRD chunks)
+          const result = await this.langGraphService.generateEmbeddingsOnly(
+            chunk.content,
+            chunk.index
+          );
 
-          // Use LangGraph service to generate embedding (reuse existing method)
-          const result =
-            await this.langGraphService.processTranscript(mockTranscriptEvent);
-
-          if (result.processed && result.embeddings.length > 0) {
+          if (result.length > 0) {
             embeddings.push({
               chunkIndex: chunk.index,
-              embedding: result.embeddings[0].embedding,
+              embedding: result[0].embedding,
             });
+            logger.debug(`✅ Generated embedding for chunk ${chunk.index}`);
           }
         } catch (error) {
           logger.error(
