@@ -450,12 +450,7 @@ export class TrayManager {
           </style>
         </head>
         <body>
-          <div class="select-zone" id="selectZone" 
-               onclick="openFileDialog()"
-               ondrop="handleDrop(event)"
-               ondragover="handleDragOver(event)"
-               ondragenter="handleDragEnter(event)"
-               ondragleave="handleDragLeave(event)">
+          <div class="select-zone" id="selectZone">
             <div class="icon">📄</div>
             <div class="title">Select PRD File</div>
             <div class="subtitle">Drag & drop files here or click to browse</div>
@@ -465,15 +460,93 @@ export class TrayManager {
           <script>
             let dragCounter = 0;
             
+            // Debug function to check if electronAPI is available
+            function checkElectronAPI() {
+              console.log('🔍 Checking electronAPI availability:', !!window.electronAPI);
+              if (window.electronAPI) {
+                console.log('✅ ElectronAPI functions available:', Object.keys(window.electronAPI));
+              } else {
+                console.error('❌ ElectronAPI not available in tray drop zone');
+              }
+            }
+            
+            // Check API availability when page loads
+            document.addEventListener('DOMContentLoaded', function() {
+              console.log('🚀 Tray drop zone page loaded');
+              checkElectronAPI();
+              setupEventListeners();
+            });
+            
+            function setupEventListeners() {
+              const selectZone = document.getElementById('selectZone');
+              if (!selectZone) {
+                console.error('❌ Select zone element not found');
+                return;
+              }
+              
+              // Set up event listeners on the select zone
+              selectZone.addEventListener('click', openFileDialog);
+              selectZone.addEventListener('dragover', handleDragOver);
+              selectZone.addEventListener('dragenter', handleDragEnter);
+              selectZone.addEventListener('dragleave', handleDragLeave);
+              selectZone.addEventListener('drop', handleDrop);
+              
+              // Set up global document event listeners to prevent default browser behavior
+              document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+              
+              document.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+              
+              document.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+              
+              document.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Only handle drop if it's not on the select zone
+                if (!e.target.closest('#selectZone')) {
+                  console.log('🗂️ Drop outside select zone, redirecting to select zone handler');
+                  handleDrop(e);
+                }
+              });
+              
+              console.log('✅ Event listeners set up for tray drop zone');
+            }
+            
             function openFileDialog() {
-              console.log('📂 Opening file dialog...');
-              // Send message to main process to open file dialog
-              window.electronAPI?.openFileDialog();
+              console.log('📂 Opening file dialog from tray drop zone...');
+              checkElectronAPI();
+              if (window.electronAPI && window.electronAPI.openFileDialog) {
+                window.electronAPI.openFileDialog();
+              } else {
+                console.error('❌ Cannot open file dialog - electronAPI not available');
+              }
             }
             
             function handleDragOver(event) {
               event.preventDefault();
               event.stopPropagation();
+              
+              // Ensure we accept file drops
+              if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'copy';
+                
+                // Check if we have files being dragged
+                const hasFiles = Array.from(event.dataTransfer.types).includes('Files');
+                console.log('🗂️ Drag over - has files:', hasFiles, 'types:', Array.from(event.dataTransfer.types));
+                
+                if (!hasFiles) {
+                  event.dataTransfer.dropEffect = 'none';
+                }
+              }
             }
             
             function handleDragEnter(event) {
@@ -481,9 +554,24 @@ export class TrayManager {
               event.stopPropagation();
               dragCounter++;
               
-              // Add visual feedback
-              document.getElementById('selectZone').classList.add('drag-over');
-              console.log('🗂️ Drag enter - tray drop zone');
+              console.log('🗂️ Drag enter - tray drop zone (counter: ' + dragCounter + ')');
+              
+              // Check what types of data are being dragged
+              if (event.dataTransfer) {
+                const types = Array.from(event.dataTransfer.types);
+                const hasFiles = types.includes('Files');
+                console.log('🔍 Drag types:', types, 'hasFiles:', hasFiles);
+                
+                // Only show drag-over state if we have files
+                if (hasFiles) {
+                  const selectZone = document.getElementById('selectZone');
+                  if (selectZone) {
+                    selectZone.classList.add('drag-over');
+                  }
+                } else {
+                  console.log('⚠️ No files detected in drag enter');
+                }
+              }
             }
             
             function handleDragLeave(event) {
@@ -491,40 +579,132 @@ export class TrayManager {
               event.stopPropagation();
               dragCounter--;
               
+              console.log('🗂️ Drag leave - tray drop zone (counter: ' + dragCounter + ')');
+              
               // Only remove visual feedback when actually leaving the drop zone
               if (dragCounter === 0) {
-                document.getElementById('selectZone').classList.remove('drag-over');
-                console.log('🗂️ Drag leave - tray drop zone');
+                const selectZone = document.getElementById('selectZone');
+                if (selectZone) {
+                  selectZone.classList.remove('drag-over');
+                }
               }
             }
             
             function handleDrop(event) {
+              console.log('🗂️ DROP EVENT TRIGGERED in tray zone!');
+              
               event.preventDefault();
               event.stopPropagation();
               dragCounter = 0;
               
               // Remove visual feedback
-              document.getElementById('selectZone').classList.remove('drag-over');
+              const selectZone = document.getElementById('selectZone');
+              if (selectZone) {
+                selectZone.classList.remove('drag-over');
+              }
               
-              const files = event.dataTransfer.files;
-              if (files.length > 0) {
+              console.log('🔍 Drop event details:', {
+                dataTransfer: !!event.dataTransfer,
+                files: event.dataTransfer ? event.dataTransfer.files : null,
+                filesLength: event.dataTransfer ? event.dataTransfer.files.length : 0,
+                types: event.dataTransfer ? Array.from(event.dataTransfer.types) : [],
+                items: event.dataTransfer ? Array.from(event.dataTransfer.items) : []
+              });
+              
+              // Check for files in multiple ways
+              let files = null;
+              let hasFiles = false;
+              
+              if (event.dataTransfer) {
+                // Method 1: Check files directly
+                if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+                  files = Array.from(event.dataTransfer.files);
+                  hasFiles = true;
+                  console.log('✅ Files detected via dataTransfer.files');
+                }
+                
+                // Method 2: Check items (more reliable for some browsers)
+                if (!hasFiles && event.dataTransfer.items && event.dataTransfer.items.length > 0) {
+                  const fileItems = [];
+                  for (let i = 0; i < event.dataTransfer.items.length; i++) {
+                    const item = event.dataTransfer.items[i];
+                    console.log('📄 Item type:', item.type, 'kind:', item.kind);
+                    
+                    if (item.kind === 'file') {
+                      const file = item.getAsFile();
+                      if (file) {
+                        fileItems.push(file);
+                      }
+                    }
+                  }
+                  
+                  if (fileItems.length > 0) {
+                    files = fileItems;
+                    hasFiles = true;
+                    console.log('✅ Files detected via dataTransfer.items');
+                  }
+                }
+                
+                // Method 3: Check types for file indicators
+                if (!hasFiles && event.dataTransfer.types && event.dataTransfer.types.length > 0) {
+                  const hasFileType = event.dataTransfer.types.some(type => 
+                    type === 'Files' || type.startsWith('application/') || type.startsWith('text/')
+                  );
+                  
+                  if (hasFileType) {
+                    console.log('⚠️ File types detected but no file objects available');
+                    alert('File detected but could not be processed. Please try dragging from a different location or use the file dialog.');
+                    return;
+                  }
+                }
+              }
+              
+              if (hasFiles && files && files.length > 0) {
                 const file = files[0];
-                console.log('🗂️ File dropped on tray zone:', file.name);
+                console.log('🗂️ File dropped on tray zone:', {
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  lastModified: file.lastModified
+                });
                 
                 // Validate file type
                 const validExtensions = ['.md', '.txt', '.markdown'];
                 const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
                 
+                console.log('🔍 File validation:', {
+                  extension: fileExtension,
+                  isValid: validExtensions.includes(fileExtension),
+                  sizeOK: file.size <= 10 * 1024 * 1024
+                });
+                
                 if (validExtensions.includes(fileExtension) && file.size <= 10 * 1024 * 1024) {
                   console.log('✅ Valid file, reading content and opening main app with import modal');
+                  
+                  // Check if electronAPI is available
+                  checkElectronAPI();
+                  
+                  if (!window.electronAPI || !window.electronAPI.handleTrayFileDropWithContent) {
+                    console.error('❌ ElectronAPI not available for file drop');
+                    alert('Error: Unable to process file drop. Please try using the main application.');
+                    return;
+                  }
                   
                   // Read file content and send to main process
                   const reader = new FileReader();
                   reader.onload = function(e) {
                     const fileContent = e.target.result;
                     console.log('📄 File content read, length:', fileContent.length);
-                    // Send file content to main process to open main window with import modal
-                    window.electronAPI?.handleTrayFileDropWithContent(file.name, fileContent);
+                    console.log('🚀 Calling handleTrayFileDropWithContent...');
+                    
+                    try {
+                      // Send file content to main process to open main window with import modal
+                      window.electronAPI.handleTrayFileDropWithContent(file.name, fileContent);
+                      console.log('✅ File content sent to main process');
+                    } catch (error) {
+                      console.error('❌ Error sending file to main process:', error);
+                      alert('Error processing file. Please try again.');
+                    }
                   };
                   reader.onerror = function() {
                     console.error('❌ Error reading file');
@@ -532,9 +712,29 @@ export class TrayManager {
                   };
                   reader.readAsText(file);
                 } else {
-                  console.warn('⚠️ Invalid file dropped');
-                  alert('Please drop a valid PRD file (.md, .txt, .markdown) under 10MB');
+                  console.warn('⚠️ Invalid file dropped:', {
+                    extension: fileExtension,
+                    size: file.size,
+                    validExtensions,
+                    maxSize: 10 * 1024 * 1024
+                  });
+                  
+                  if (!validExtensions.includes(fileExtension)) {
+                    alert('Please drop a valid PRD file (.md, .txt, .markdown)');
+                  } else {
+                    alert('File is too large. Maximum size is 10MB.');
+                  }
                 }
+              } else {
+                console.error('⚠️ No files detected in drop event. Debug info:', {
+                  hasDataTransfer: !!event.dataTransfer,
+                  filesLength: event.dataTransfer ? event.dataTransfer.files.length : 0,
+                  itemsLength: event.dataTransfer ? event.dataTransfer.items.length : 0,
+                  typesLength: event.dataTransfer ? event.dataTransfer.types.length : 0,
+                  types: event.dataTransfer ? Array.from(event.dataTransfer.types) : []
+                });
+                
+                alert('No files detected. Please try again or use "Click to browse" instead.');
               }
             }
           </script>
@@ -549,10 +749,23 @@ export class TrayManager {
   private setupDropZoneHandlers(): void {
     if (!this.dropZoneWindow) return;
 
+    this.logger.debug('🔧 Setting up drop zone IPC handlers...');
+
+    // Handle console messages from drop zone for debugging
+    this.dropZoneWindow.webContents.on(
+      'console-message',
+      (event, level, message, _line, _sourceId) => {
+        // Forward console messages from drop zone to main logger
+        this.logger.debug(`📱 [Tray Drop Zone] ${message}`);
+      }
+    );
+
     // Handle file dialog requests from the drop zone
     this.dropZoneWindow.webContents.on(
       'ipc-message',
-      async (_event, channel, ..._args) => {
+      async (_event, channel, ...args) => {
+        this.logger.debug(`📱 IPC message from drop zone: ${channel}`, args);
+
         if (channel === 'open-file-dialog') {
           this.logger.info('📁 File dialog requested from drop zone');
 
@@ -566,6 +779,8 @@ export class TrayManager {
         }
       }
     );
+
+    this.logger.info('✅ Drop zone IPC handlers set up successfully');
   }
 
   /**
@@ -583,15 +798,35 @@ export class TrayManager {
         return;
       }
 
+      // Close drop zone first
+      this.closeDropZone();
+
       // Trigger the actual PRD processing pipeline through main process
       this.logger.info(`🚀 Sending file to secure ingest service: ${filePath}`);
 
-      // Emit IPC event to main process to open import modal with file
+      // Ensure main window is open and get it
+      personyxApp.createMainWindow();
       const mainWindow = personyxApp.getMainWindow();
+
       if (mainWindow) {
+        // Wait a bit for window to be ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Send message to renderer to open import modal with the file
         mainWindow.webContents.send('open-import-modal-with-file', {
           filePath,
         });
+
+        // Focus the main window and bring to front
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.moveTop();
+
+        this.logger.info('✅ Main window opened and focused with import modal');
+      } else {
+        this.logger.error(
+          '❌ Could not create main window for file processing'
+        );
       }
 
       // Show initial notification (final result will come from main process)
@@ -710,6 +945,17 @@ export class TrayManager {
       }
     } catch (error) {
       this.logger.error('❌ PRD import dialog failed', error);
+    }
+  }
+
+  /**
+   * Close the drop zone window if it's open
+   */
+  public closeDropZone(): void {
+    if (this.dropZoneWindow) {
+      this.dropZoneWindow.close();
+      this.dropZoneWindow = null;
+      this.logger.info('📂 Drop zone window closed');
     }
   }
 

@@ -337,16 +337,40 @@ class PersonyxApp {
     ipcMain.on('tray-file-drop', async (_event, data: { filePath: string }) => {
       this.logger.info(`🗂️ File dropped on tray zone: ${data.filePath}`);
 
-      // Ensure main window is open and focused
-      this.createMainWindow();
-      const mainWindow = this.getMainWindow();
+      try {
+        // Close the drop zone window first
+        if (this.trayManager) {
+          this.trayManager.closeDropZone();
+        }
 
-      if (mainWindow) {
-        // Send message to renderer to open import modal with the dropped file
-        mainWindow.webContents.send('open-import-modal-with-file', {
-          filePath: data.filePath,
-        });
-        this.logger.info('✅ Main window notified to open import modal');
+        // Ensure main window is open and focused
+        this.createMainWindow();
+        const mainWindow = this.getMainWindow();
+
+        if (mainWindow) {
+          // Wait a bit for window to be ready
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Send message to renderer to open import modal with the dropped file
+          mainWindow.webContents.send('open-import-modal-with-file', {
+            filePath: data.filePath,
+          });
+          this.logger.info('✅ Main window notified to open import modal');
+
+          // Focus the main window and bring to front
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.moveTop();
+
+          // On macOS, also activate the app
+          if (process.platform === 'darwin') {
+            app.focus({ steal: true });
+          }
+        } else {
+          this.logger.error('❌ Could not create main window for file drop');
+        }
+      } catch (error) {
+        this.logger.error('❌ Error handling tray file drop:', error);
       }
     });
 
@@ -358,19 +382,46 @@ class PersonyxApp {
           `🗂️ File dropped on tray zone with content: ${data.fileName}`
         );
 
-        // Ensure main window is open and focused
-        this.createMainWindow();
-        const mainWindow = this.getMainWindow();
+        try {
+          // Close the drop zone window first
+          if (this.trayManager) {
+            this.trayManager.closeDropZone();
+          }
 
-        if (mainWindow) {
-          // Send message to renderer to open import modal with the file content
-          mainWindow.webContents.send('open-import-modal-with-file-content', {
-            fileName: data.fileName,
-            fileContent: data.fileContent,
-            fileSize: data.fileContent.length,
-          });
-          this.logger.info(
-            '✅ Main window notified to open import modal with file content'
+          // Ensure main window is open and focused
+          this.createMainWindow();
+          const mainWindow = this.getMainWindow();
+
+          if (mainWindow) {
+            // Wait a bit for window to be ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Send message to renderer to open import modal with the file content
+            mainWindow.webContents.send('open-import-modal-with-file-content', {
+              fileName: data.fileName,
+              fileContent: data.fileContent,
+              fileSize: data.fileContent.length,
+            });
+            this.logger.info(
+              '✅ Main window notified to open import modal with file content'
+            );
+
+            // Focus the main window and bring to front
+            mainWindow.show();
+            mainWindow.focus();
+            mainWindow.moveTop();
+
+            // On macOS, also activate the app
+            if (process.platform === 'darwin') {
+              app.focus({ steal: true });
+            }
+          } else {
+            this.logger.error('❌ Could not create main window for file drop');
+          }
+        } catch (error) {
+          this.logger.error(
+            '❌ Error handling tray file drop with content:',
+            error
           );
         }
       }
