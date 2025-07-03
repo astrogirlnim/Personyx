@@ -40,3 +40,11 @@ personas:
       - copywriting
       - analytics
       - attribution modeling
+  - id: persona_1751560707952
+    name: New Persona
+    description: Description for the new persona
+    primaryGoal: Primary goal of this persona
+    mainPainPoint: Main pain point this persona faces
+    keywords:
+      - keyword1
+      - keyword2
