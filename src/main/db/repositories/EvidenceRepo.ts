@@ -102,33 +102,86 @@ export class EvidenceRepo {
   }
 
   /**
-   * Find evidence by persona ID
+   * Get all evidence for a specific persona
    */
   async findByPersonaId(personaId: string): Promise<Evidence[]> {
     try {
       logger.debug('🔍 Finding evidence by persona ID', { personaId });
 
       const db = getDatabase();
-      const result = await db
+      const results = await db
         .select()
         .from(evidence)
         .where(eq(evidence.personaId, personaId));
 
-      // Parse JSON fields for all evidence and cast types
-      const parsedEvidence: Evidence[] = result.map(
-        (item: typeof evidence.$inferSelect) => ({
-          ...item,
-          tags: JSON.parse(item.tags),
-          sourceType: item.sourceType as Evidence['sourceType'],
-          sentiment: item.sentiment as Evidence['sentiment'],
-        })
-      );
+      // 🐛🐛🐛 ENHANCED DEBUG LOGGING FOR DATABASE EVIDENCE 🐛🐛🐛
+      logger.info('🐛 [DEBUG] RAW DATABASE EVIDENCE RESULTS', {
+        personaId,
+        resultCount: results.length,
+        rawResults: results.map(result => ({
+          id: result.id,
+          timestamp: result.timestamp,
+          timestampType: typeof result.timestamp,
+          timestampConstructor: result.timestamp?.constructor?.name,
+          isDate: result.timestamp instanceof Date,
+          timestampValue: result.timestamp,
+          timestampString: result.timestamp
+            ? result.timestamp.toString()
+            : 'NULL',
+        })),
+      });
 
-      logger.debug(
-        `✅ Found ${parsedEvidence.length} evidence items for persona`,
-        { personaId }
-      );
-      return parsedEvidence;
+      logger.debug('✅ Found evidence items', {
+        personaId,
+        count: results.length,
+      });
+
+      // Convert each result using the fixed timestamp conversion method
+      const convertedResults: Evidence[] = [];
+      for (const result of results) {
+        try {
+          logger.info('🐛 [DEBUG] CONVERTING DATABASE EVIDENCE', {
+            evidenceId: result.id,
+            rawTimestamp: result.timestamp,
+            timestampType: typeof result.timestamp,
+          });
+
+          // Use the fixed convertDbEvidence method with proper timestamp conversion
+          const converted = this.convertDbEvidence(result);
+
+          logger.info('🐛 [DEBUG] EVIDENCE CONVERTED IN REPO', {
+            evidenceId: result.id,
+            timestampInConverted: converted.timestamp,
+            timestampTypeInConverted: typeof converted.timestamp,
+            timestampISO: converted.timestamp.toISOString(),
+            isValidTimestamp: !isNaN(converted.timestamp.getTime()),
+          });
+
+          convertedResults.push(converted);
+        } catch (conversionError) {
+          logger.error('🐛 [DEBUG] EVIDENCE CONVERSION ERROR IN REPO', {
+            evidenceId: result.id,
+            error:
+              conversionError instanceof Error
+                ? conversionError.message
+                : String(conversionError),
+            rawResult: result,
+          });
+        }
+      }
+
+      logger.info('🐛 [DEBUG] FINAL EVIDENCE REPO RESULTS', {
+        personaId,
+        convertedCount: convertedResults.length,
+        originalCount: results.length,
+        timestamps: convertedResults.map(r => ({
+          id: r.id,
+          timestamp: r.timestamp,
+          timestampType: typeof r.timestamp,
+        })),
+      });
+
+      return convertedResults;
     } catch (error) {
       logger.error('❌ Failed to find evidence by persona ID', error);
       throw error;
@@ -204,5 +257,74 @@ export class EvidenceRepo {
       logger.error('❌ Failed to count evidence for persona', error);
       throw error;
     }
+  }
+
+  /**
+   * Convert database evidence to domain model
+   */
+  private convertDbEvidence(
+    dbEvidence: typeof evidence.$inferSelect
+  ): Evidence {
+    // 🔧 FIX: Convert Unix seconds to JavaScript milliseconds
+    // Database stores Unix timestamps in seconds, but JavaScript Date expects milliseconds
+    let timestamp: Date;
+
+    if (typeof dbEvidence.timestamp === 'number') {
+      // Convert seconds to milliseconds for JavaScript Date
+      timestamp = new Date(dbEvidence.timestamp * 1000);
+      logger.debug('🔧 TIMESTAMP CONVERSION', {
+        evidenceId: dbEvidence.id,
+        unixSeconds: dbEvidence.timestamp,
+        unixMilliseconds: dbEvidence.timestamp * 1000,
+        convertedDate: timestamp.toISOString(),
+        isValidDate: !isNaN(timestamp.getTime()),
+      });
+    } else if (dbEvidence.timestamp instanceof Date) {
+      timestamp = dbEvidence.timestamp;
+      logger.debug('🔧 TIMESTAMP ALREADY DATE', {
+        evidenceId: dbEvidence.id,
+        existingDate: timestamp.toISOString(),
+        isValidDate: !isNaN(timestamp.getTime()),
+      });
+    } else {
+      // Fallback for unexpected types
+      logger.warn('🔧 TIMESTAMP TYPE UNEXPECTED', {
+        evidenceId: dbEvidence.id,
+        timestampValue: dbEvidence.timestamp,
+        timestampType: typeof dbEvidence.timestamp,
+      });
+      timestamp = new Date(); // Use current time as fallback
+    }
+
+    // Validate the converted timestamp
+    if (isNaN(timestamp.getTime())) {
+      logger.error('🔧 TIMESTAMP CONVERSION FAILED', {
+        evidenceId: dbEvidence.id,
+        originalTimestamp: dbEvidence.timestamp,
+        convertedTimestamp: timestamp,
+        fallbackToNow: true,
+      });
+      timestamp = new Date(); // Use current time as fallback
+    }
+
+    return {
+      id: dbEvidence.id,
+      personaId: dbEvidence.personaId,
+      content: dbEvidence.content,
+      source: dbEvidence.source,
+      sourceType: dbEvidence.sourceType as
+        | 'interview'
+        | 'prd'
+        | 'feedback'
+        | 'other',
+      timestamp: timestamp, // Now properly converted timestamp
+      tags: JSON.parse(dbEvidence.tags),
+      sentiment: dbEvidence.sentiment as
+        | 'positive'
+        | 'negative'
+        | 'neutral'
+        | undefined,
+      importance: dbEvidence.importance,
+    };
   }
 }

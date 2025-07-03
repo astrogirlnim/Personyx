@@ -124,6 +124,18 @@ export class EvidenceScoreService {
       tags = [];
     }
 
+    // 🐛🐛🐛 ENHANCED DEBUGGING FOR TIMESTAMP CONVERSION 🐛🐛🐛
+    logger.info('🐛 [DEBUG] STARTING TIMESTAMP CONVERSION', {
+      evidenceId: dbEvidence.id,
+      originalTimestamp: dbEvidence.timestamp,
+      timestampType: typeof dbEvidence.timestamp,
+      timestampConstructor: dbEvidence.timestamp?.constructor?.name,
+      isDate: dbEvidence.timestamp instanceof Date,
+      isNumber: typeof dbEvidence.timestamp === 'number',
+      isString: typeof dbEvidence.timestamp === 'string',
+      rawValue: dbEvidence.timestamp,
+    });
+
     // FIX: Enhanced timestamp conversion with better validation and debugging
     let timestamp: Date;
     try {
@@ -138,7 +150,15 @@ export class EvidenceScoreService {
       // If dbEvidence.timestamp is already a Date object
       if (dbEvidence.timestamp instanceof Date) {
         // Check if it's a valid Date
-        if (!isNaN(dbEvidence.timestamp.getTime())) {
+        const timeMs = dbEvidence.timestamp.getTime();
+        logger.info('🐛 [DEBUG] Date object detected', {
+          evidenceId: dbEvidence.id,
+          timeMs: timeMs,
+          isNaN: isNaN(timeMs),
+          dateString: dbEvidence.timestamp.toString(),
+        });
+
+        if (!isNaN(timeMs)) {
           timestamp = dbEvidence.timestamp;
           logger.debug('✅ Timestamp is valid Date object', {
             evidenceId: dbEvidence.id,
@@ -150,18 +170,43 @@ export class EvidenceScoreService {
           throw new Error('Date object is invalid (NaN getTime())');
         }
       } else if (typeof dbEvidence.timestamp === 'number') {
+        logger.info('🐛 [DEBUG] Number timestamp detected', {
+          evidenceId: dbEvidence.id,
+          numberValue: dbEvidence.timestamp,
+          isInteger: Number.isInteger(dbEvidence.timestamp),
+          isFinite: Number.isFinite(dbEvidence.timestamp),
+        });
+
         // Unix timestamp (seconds or milliseconds)
         let timestampMs: number;
         if (dbEvidence.timestamp > 1000000000000) {
           // Already in milliseconds
           timestampMs = dbEvidence.timestamp;
+          logger.info('🐛 [DEBUG] Timestamp already in milliseconds', {
+            evidenceId: dbEvidence.id,
+            timestampMs: timestampMs,
+          });
         } else {
           // In seconds, convert to milliseconds
           timestampMs = dbEvidence.timestamp * 1000;
+          logger.info('🐛 [DEBUG] Converting seconds to milliseconds', {
+            evidenceId: dbEvidence.id,
+            originalSeconds: dbEvidence.timestamp,
+            convertedMs: timestampMs,
+          });
         }
 
         timestamp = new Date(timestampMs);
-        if (isNaN(timestamp.getTime())) {
+        const resultTimeMs = timestamp.getTime();
+        logger.info('🐛 [DEBUG] Created Date from number', {
+          evidenceId: dbEvidence.id,
+          inputMs: timestampMs,
+          resultTimeMs: resultTimeMs,
+          isNaN: isNaN(resultTimeMs),
+          dateString: timestamp.toString(),
+        });
+
+        if (isNaN(resultTimeMs)) {
           throw new Error(`Invalid Unix timestamp: ${dbEvidence.timestamp}`);
         }
 
@@ -172,9 +217,24 @@ export class EvidenceScoreService {
           convertedDate: timestamp.toISOString(),
         });
       } else if (typeof dbEvidence.timestamp === 'string') {
+        logger.info('🐛 [DEBUG] String timestamp detected', {
+          evidenceId: dbEvidence.id,
+          stringValue: dbEvidence.timestamp,
+          stringLength: (dbEvidence.timestamp as string).length,
+        });
+
         // ISO date string
         timestamp = new Date(dbEvidence.timestamp);
-        if (isNaN(timestamp.getTime())) {
+        const resultTimeMs = timestamp.getTime();
+        logger.info('🐛 [DEBUG] Created Date from string', {
+          evidenceId: dbEvidence.id,
+          inputString: dbEvidence.timestamp,
+          resultTimeMs: resultTimeMs,
+          isNaN: isNaN(resultTimeMs),
+          dateString: timestamp.toString(),
+        });
+
+        if (isNaN(resultTimeMs)) {
           throw new Error(`Invalid ISO date string: ${dbEvidence.timestamp}`);
         }
 
@@ -184,14 +244,34 @@ export class EvidenceScoreService {
           convertedDate: timestamp.toISOString(),
         });
       } else {
+        logger.error('🐛 [DEBUG] Unknown timestamp format', {
+          evidenceId: dbEvidence.id,
+          timestampValue: dbEvidence.timestamp,
+          timestampType: typeof dbEvidence.timestamp,
+          isNull: dbEvidence.timestamp === null,
+          isUndefined: dbEvidence.timestamp === undefined,
+        });
         // Unknown format
         throw new Error(
           `Unknown timestamp format: ${typeof dbEvidence.timestamp} - ${dbEvidence.timestamp}`
         );
       }
 
+      // 🐛🐛🐛 FINAL VALIDATION WITH ENHANCED DEBUGGING 🐛🐛🐛
+      const finalTimeMs = timestamp.getTime();
+      logger.info('🐛 [DEBUG] FINAL TIMESTAMP VALIDATION', {
+        evidenceId: dbEvidence.id,
+        finalDate: timestamp,
+        finalTimeMs: finalTimeMs,
+        isNaN: isNaN(finalTimeMs),
+        dateString: timestamp.toString(),
+        isoString: isNaN(finalTimeMs)
+          ? 'CANNOT_CONVERT'
+          : timestamp.toISOString(),
+      });
+
       // Final validation: ensure the Date object is valid and reasonable
-      if (isNaN(timestamp.getTime())) {
+      if (isNaN(finalTimeMs)) {
         throw new Error('Final Date object validation failed (NaN)');
       }
 
@@ -211,6 +291,12 @@ export class EvidenceScoreService {
           }
         );
       }
+
+      logger.info('🐛 [DEBUG] TIMESTAMP CONVERSION SUCCESS', {
+        evidenceId: dbEvidence.id,
+        finalTimestamp: timestamp.toISOString(),
+        finalTimeMs: finalTimeMs,
+      });
     } catch (error) {
       // Last resort fallback with detailed logging
       const fallbackTimestamp = new Date();
@@ -232,7 +318,7 @@ export class EvidenceScoreService {
       timestamp = fallbackTimestamp;
     }
 
-    return {
+    const result: Evidence = {
       id: dbEvidence.id,
       personaId: dbEvidence.personaId,
       content: dbEvidence.content,
@@ -251,6 +337,14 @@ export class EvidenceScoreService {
         | undefined,
       importance: dbEvidence.importance,
     };
+
+    logger.info('🐛 [DEBUG] CONVERTED EVIDENCE COMPLETE', {
+      evidenceId: result.id,
+      timestampInResult: result.timestamp.toISOString(),
+      timestampMs: result.timestamp.getTime(),
+    });
+
+    return result;
   }
 
   /**
@@ -753,8 +847,31 @@ export class EvidenceScoreService {
       })),
     });
 
+    // 🐛🐛🐛 ENHANCED DEBUGGING FOR RECENCY CALCULATION 🐛🐛🐛
+    logger.info('🐛 [DEBUG] RECENCY CALCULATION - INPUT EVIDENCE ANALYSIS', {
+      evidenceCount: evidence.length,
+      evidenceDetails: evidence.map(e => ({
+        id: e.id,
+        timestamp: e.timestamp,
+        timestampConstructor: e.timestamp?.constructor?.name,
+        timestampType: typeof e.timestamp,
+        isDate: e.timestamp instanceof Date,
+        timestampString: e.timestamp ? e.timestamp.toString() : 'NULL',
+        timestampMs: e.timestamp ? e.timestamp.getTime() : 'NULL',
+        isNaN: e.timestamp ? isNaN(e.timestamp.getTime()) : 'NULL',
+      })),
+    });
+
     const recencyScores = evidence.map(item => {
       try {
+        logger.info('🐛 [DEBUG] PROCESSING EVIDENCE ITEM FOR RECENCY', {
+          evidenceId: item.id,
+          timestamp: item.timestamp,
+          timestampType: typeof item.timestamp,
+          isDate: item.timestamp instanceof Date,
+          timestampConstructor: item.timestamp?.constructor?.name,
+        });
+
         // Enhanced timestamp validation before calculation
         if (!item.timestamp) {
           logger.error(`❌ Missing timestamp for evidence ${item.id}`, {
@@ -774,7 +891,21 @@ export class EvidenceScoreService {
           return 50; // Fallback score for invalid timestamps
         }
 
+        // 🐛🐛🐛 CRITICAL DEBUG POINT - WHERE THE ERROR OCCURS 🐛🐛🐛
+        logger.info('🐛 [DEBUG] BEFORE getTime() CALL', {
+          evidenceId: item.id,
+          timestamp: item.timestamp,
+          timestampString: item.timestamp.toString(),
+        });
+
         const itemTimeMs = item.timestamp.getTime();
+
+        logger.info('🐛 [DEBUG] AFTER getTime() CALL', {
+          evidenceId: item.id,
+          itemTimeMs: itemTimeMs,
+          isNaN: isNaN(itemTimeMs),
+        });
+
         const nowTimeMs = now.getTime();
 
         if (isNaN(itemTimeMs) || isNaN(nowTimeMs)) {
@@ -783,9 +914,36 @@ export class EvidenceScoreService {
             itemTimeMs: itemTimeMs,
             nowTimeMs: nowTimeMs,
             timestamp: item.timestamp,
-            timestampISO: item.timestamp.toISOString(),
+            timestampISO: 'CANNOT_CONVERT_TO_ISO',
           });
           return 50; // Fallback score for NaN timestamps
+        }
+
+        // 🐛🐛🐛 CRITICAL DEBUG POINT - BEFORE toISOString() CALL 🐛🐛🐛
+        logger.info('🐛 [DEBUG] BEFORE toISOString() CALL', {
+          evidenceId: item.id,
+          timestamp: item.timestamp,
+          itemTimeMs: itemTimeMs,
+          isValidTime: !isNaN(itemTimeMs),
+        });
+
+        let timestampISO: string;
+        try {
+          timestampISO = item.timestamp.toISOString();
+          logger.info('🐛 [DEBUG] toISOString() SUCCESS', {
+            evidenceId: item.id,
+            timestampISO: timestampISO,
+          });
+        } catch (isoError) {
+          logger.error('🐛 [DEBUG] toISOString() FAILED', {
+            evidenceId: item.id,
+            error:
+              isoError instanceof Error ? isoError.message : String(isoError),
+            timestamp: item.timestamp,
+            timestampString: item.timestamp.toString(),
+            itemTimeMs: itemTimeMs,
+          });
+          return 50; // Fallback score for toISOString errors
         }
 
         const timeDiffMs = nowTimeMs - itemTimeMs;
@@ -807,7 +965,7 @@ export class EvidenceScoreService {
             {
               evidenceId: item.id,
               timestamp: item.timestamp,
-              timestampISO: item.timestamp.toISOString(),
+              timestampISO: timestampISO,
               timestampGetTime: itemTimeMs,
               nowGetTime: nowTimeMs,
               nowISO: now.toISOString(),
@@ -822,7 +980,7 @@ export class EvidenceScoreService {
           logger.warn(`⚠️ Future timestamp detected for evidence ${item.id}`, {
             evidenceId: item.id,
             ageInDays: ageInDays,
-            timestamp: item.timestamp.toISOString(),
+            timestamp: timestampISO,
             now: now.toISOString(),
           });
           return 100; // Treat future evidence as fresh
@@ -853,6 +1011,15 @@ export class EvidenceScoreService {
           });
           return 50; // Fallback score
         }
+
+        logger.info(
+          '🐛 [DEBUG] EVIDENCE RECENCY SCORE CALCULATED SUCCESSFULLY',
+          {
+            evidenceId: item.id,
+            finalScore: score,
+            ageInDays: ageInDays,
+          }
+        );
 
         return score;
       } catch (error) {
@@ -936,6 +1103,11 @@ export class EvidenceScoreService {
       });
       return 0; // Safe fallback to prevent NaN propagation
     }
+
+    logger.info('🐛 [DEBUG] RECENCY CALCULATION FINAL SUCCESS', {
+      finalRecencyScore,
+      evidenceCount: evidence.length,
+    });
 
     return finalRecencyScore;
   }
