@@ -208,6 +208,13 @@ export interface IPCEvents {
     success: boolean;
     error?: string;
   };
+  // Phase 2.7: Persona evolution events
+  'persona-evolved': {
+    personasUpdated: string[];
+    personasCreated: string[];
+    totalChanges: number;
+    timestamp: string;
+  };
 
   // Renderer to Main
   'import-prd': {

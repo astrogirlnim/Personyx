@@ -260,8 +260,30 @@ export function usePersonas(): PersonasState & PersonasActions {
       }
     };
 
-    // Register event listener
+    // Phase 2.7: Listen for persona evolution events
+    const handlePersonaEvolved = (data: unknown) => {
+      console.log('🧬 Persona evolved event received:', data);
+      const evolutionData = data as {
+        personasUpdated: string[];
+        personasCreated: string[];
+        totalChanges: number;
+        timestamp: string;
+      };
+
+      if (evolutionData?.totalChanges > 0) {
+        console.log('✨ Personas evolved, triggering reload...', {
+          personasUpdated: evolutionData.personasUpdated.length,
+          personasCreated: evolutionData.personasCreated.length,
+        });
+
+        // Trigger persona reload to get the latest state
+        reloadPersonas();
+      }
+    };
+
+    // Register event listeners
     window.electronAPI.onPersonasUpdated(handlePersonasUpdated);
+    window.electronAPI.onPersonaEvolved(handlePersonaEvolved);
 
     // Load initial configuration AND personas (both YAML and parsed data)
     console.log('🔄 Auto-loading personas and YAML on mount...');
@@ -275,6 +297,7 @@ export function usePersonas(): PersonasState & PersonasActions {
     return () => {
       console.log('🧹 Cleaning up personas event listeners');
       window.electronAPI.removeAllListeners('personas-updated');
+      window.electronAPI.removeAllListeners('persona-evolved');
     };
   }, [loadYamlConfig, reloadPersonas]);
 

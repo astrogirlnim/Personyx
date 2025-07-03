@@ -118,6 +118,19 @@ export const activityLog = sqliteTable('activity_log', {
     .notNull(),
 });
 
+// Persona history table - tracks persona evolution changes for Phase 2.7
+export const personaHistory = sqliteTable('persona_history', {
+  historyId: text('history_id').primaryKey(),
+  personaId: text('persona_id')
+    .notNull()
+    .references(() => personas.id),
+  previousData: text('previous_data').notNull(), // JSON string of previous persona data
+  newData: text('new_data').notNull(), // JSON string of new persona data
+  changeType: text('change_type').notNull(), // 'update' | 'create'
+  confidence: real('confidence').notNull(), // 0-1 confidence score
+  timestamp: integer('timestamp').notNull(), // Unix timestamp
+});
+
 // Export types for use in repositories
 export type Persona = typeof personas.$inferSelect;
 export type NewPersona = typeof personas.$inferInsert;
@@ -133,3 +146,5 @@ export type ApiToken = typeof apiTokens.$inferSelect;
 export type NewApiToken = typeof apiTokens.$inferInsert;
 export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
+export type PersonaHistory = typeof personaHistory.$inferSelect;
+export type NewPersonaHistory = typeof personaHistory.$inferInsert;

@@ -37,6 +37,10 @@ Personyx/
 │   └── shared/           # Shared types & constants
 ├── tailwind.config.js    # Tailwind CSS configuration ✅
 ├── tests/                # Test files & fixtures ✅
+│   ├── test_phase_2_7_persona_evolution.mjs        # Phase 2.7 integration tests ✅
+│   ├── test_production_readiness_phase_2_7.mjs     # Phase 2.7 production verification ✅
+│   ├── testing_phase_2_7_persona_evolution.md      # Phase 2.7 testing documentation ✅
+│   └── files/            # Test fixture files ✅
 ├── tsconfig.json         # Root TypeScript configuration ✅
 └── .gitleaks.toml        # Security scanning configuration ✅
 ```
@@ -53,6 +57,46 @@ src/main/
 ├── preload.ts            # Secure bridge to renderer ✅
 ├── tray.ts               # System tray management ✅
 ├── tsconfig.json         # Main process TypeScript config ✅
+├── db/                   # Database layer ✅
+│   ├── connection.ts     # Database connection & migration system ✅
+│   ├── schema.ts         # Drizzle ORM schema definitions ✅
+│   ├── migrations/       # Database migration files ✅
+│   │   ├── 0000_common_satana.sql
+│   │   ├── 0001_narrow_virginia_dare.sql
+│   │   ├── 0002_activity_log_table.sql
+│   │   └── 0003_soft_red_wolf.sql     # Phase 2.7 persona_history table ✅
+│   └── repositories/     # Data access layer ✅
+│       ├── ActivityLogRepo.ts
+│       ├── EmbeddingRepo.ts
+│       ├── EvidenceRepo.ts
+│       ├── EvidenceScoreRepo.ts
+│       ├── PersonaHistoryRepo.ts      # Phase 2.7 persona evolution tracking ✅
+│       ├── PersonaRepo.ts
+│       └── ProductDocumentRepo.ts
+├── security/             # Security utilities ✅
+│   └── tokenVault.ts     # AES-256-GCM encrypted token storage ✅
+├── services/             # Business logic layer ✅
+│   ├── ActivityLogService.ts
+│   ├── DeltaAnalyzer.ts              # Phase 2.7 persona change detection ✅
+│   ├── EmbeddingProviderManager.ts
+│   ├── EmbeddingRetrievalService.ts
+│   ├── EvidenceScoreService.ts
+│   ├── FirebaseAuth.ts
+│   ├── InterviewFolderWatcher.ts
+│   ├── LangGraphService.ts
+│   ├── PersonaConfigLoader.ts
+│   ├── PersonaEvolutionService.ts    # Phase 2.7 automatic persona evolution ✅
+│   ├── PersonaLoader.ts
+│   ├── PersonaManagerService.ts
+│   ├── PersonyxCloudService.ts
+│   ├── SecureFileIngestService.ts
+│   ├── SettingsService.ts
+│   ├── TranscriptIngestService.ts
+│   ├── WorkflowOrchestrator.ts
+│   └── providers/        # Embedding providers ✅
+│       ├── FirebaseEmbeddingProvider.ts
+│       ├── IEmbeddingProvider.ts
+│       └── OpenAIEmbeddingProvider.ts
 └── utils/
     ├── auto-updater.ts   # Update management service ✅
     └── logger.ts         # Logging utility ✅
@@ -67,8 +111,23 @@ src/renderer/
 ├── App.tsx               # Main React component ✅
 ├── index.html            # HTML entry point ✅
 ├── main.tsx              # React application bootstrap ✅
+├── global.d.ts           # TypeScript global declarations ✅
+├── components/           # React components ✅
+│   ├── ActivityLogPanel.tsx
+│   ├── AIServiceSettingsModal.tsx
+│   ├── EvidenceScoreGauge.tsx
+│   ├── GlobalErrorToast.tsx
+│   ├── GlobalSuccessToast.tsx
+│   ├── PersonaManagerModal.tsx
+│   └── TranscriptImportModal.tsx
+├── hooks/                # React hooks ✅
+│   ├── useEvidenceScores.ts
+│   ├── usePersonas.ts              # Phase 2.7 persona-evolved event handling ✅
+│   └── useSettings.ts
 ├── styles/
-│   └── index.css      # Tailwind + Personyx design system
+│   └── index.css         # Tailwind + Personyx design system ✅
+├── utils/                # Utility functions ✅
+│   └── localStorage.ts
 ├── tsconfig.json         # Renderer TypeScript config ✅
 └── vite.config.ts        # Vite configuration ✅
 ```
@@ -81,6 +140,10 @@ Type definitions and constants used by both main and renderer processes.
 src/shared/
 ├── constants.ts          # Application constants ✅
 └── types.ts              # TypeScript type definitions ✅
+                          # - IPC channel definitions
+                          # - persona-evolved event types (Phase 2.7) ✅
+                          # - PersonaHistory interface (Phase 2.7) ✅
+                          # - DeltaResult & EvolutionOutcome types (Phase 2.7) ✅
 ```
 
 ## Configuration Files

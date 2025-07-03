@@ -120,6 +120,9 @@ interface ElectronAPI {
   onPersonasUpdated: (callback: (data: unknown) => void) => void;
   onOpenPersonaManagerWindow: (callback: () => void) => void;
 
+  // Phase 2.7: Persona evolution event listeners
+  onPersonaEvolved: (callback: (data: unknown) => void) => void;
+
   // Cleanup
   removeAllListeners: (channel: string) => void;
 }
@@ -362,6 +365,11 @@ const electronAPI: ElectronAPI = {
 
   onOpenPersonaManagerWindow: (callback: () => void) => {
     ipcRenderer.on('open-persona-manager-window', () => callback());
+  },
+
+  // Phase 2.7: Persona evolution event listeners
+  onPersonaEvolved: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('persona-evolved', (_, data) => callback(data));
   },
 
   onOpenSettingsWindow: (callback: () => void) => {

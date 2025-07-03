@@ -95,6 +95,9 @@ interface ElectronAPI {
   // Phase 3.5.3: Persona manager event listeners
   onPersonasUpdated: (callback: (data: unknown) => void) => void;
   onOpenPersonaManagerWindow: (callback: () => void) => void;
+
+  // Phase 2.7: Persona evolution event listeners
+  onPersonaEvolved: (callback: (data: unknown) => void) => void;
   onOpenSettingsWindow: (callback: () => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (
