@@ -32,6 +32,13 @@ interface ElectronAPI {
     minSimilarity?: number
   ) => Promise<unknown>;
 
+  // Phase 3.5.1: Settings operations
+  getSettings: () => Promise<unknown>;
+  updateSettings: (updates: unknown) => Promise<unknown>;
+  configureAIService: (config: unknown) => Promise<unknown>;
+  testAPIKey: (provider: string, apiKey?: string) => Promise<unknown>;
+  getCloudSubscriptionInfo: () => Promise<unknown>;
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -66,6 +73,11 @@ interface ElectronAPI {
   onTranscriptSuccessToast: (callback: (data: unknown) => void) => void;
   // Phase 3.1.6: Activity log listener
   onActivityLogUpdated: (callback: (data: unknown) => void) => void;
+  // Phase 3.5.1: Settings event listeners
+  onSettingsUpdated: (callback: (data: unknown) => void) => void;
+  onApiKeyTestResult: (callback: (data: unknown) => void) => void;
+  onCloudSubscriptionInfo: (callback: (data: unknown) => void) => void;
+  onOpenSettingsWindow: (callback: () => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (
     callback: (data: { filePath: string }) => void
@@ -158,6 +170,32 @@ const electronAPI: ElectronAPI = {
     });
   },
 
+  // Phase 3.5.1: Settings operations
+  getSettings: () => {
+    console.log('📋 Getting settings');
+    return ipcRenderer.invoke('get-settings');
+  },
+
+  updateSettings: (updates: unknown) => {
+    console.log('📋 Updating settings');
+    return ipcRenderer.invoke('update-settings', { updates });
+  },
+
+  configureAIService: (config: unknown) => {
+    console.log('📋 Configuring AI service');
+    return ipcRenderer.invoke('configure-ai-service', { config });
+  },
+
+  testAPIKey: (provider: string, apiKey?: string) => {
+    console.log('📋 Testing API key');
+    return ipcRenderer.invoke('test-api-key', { provider, apiKey });
+  },
+
+  getCloudSubscriptionInfo: () => {
+    console.log('📋 Getting cloud subscription info');
+    return ipcRenderer.invoke('get-cloud-subscription-info');
+  },
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -229,6 +267,23 @@ const electronAPI: ElectronAPI = {
   // Phase 3.1.6: Activity log listener
   onActivityLogUpdated: (callback: (data: unknown) => void) => {
     ipcRenderer.on('activity-log-updated', (_, data) => callback(data));
+  },
+
+  // Phase 3.5.1: Settings event listeners
+  onSettingsUpdated: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('settings-updated', (_, data) => callback(data));
+  },
+
+  onApiKeyTestResult: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('api-key-test-result', (_, data) => callback(data));
+  },
+
+  onCloudSubscriptionInfo: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('cloud-subscription-info', (_, data) => callback(data));
+  },
+
+  onOpenSettingsWindow: (callback: () => void) => {
+    ipcRenderer.on('open-settings-window', () => callback());
   },
 
   onOpenChatWindow: (callback: () => void) => {

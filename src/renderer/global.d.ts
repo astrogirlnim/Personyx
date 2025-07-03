@@ -27,6 +27,13 @@ interface ElectronAPI {
     minSimilarity?: number
   ) => Promise<unknown>;
 
+  // Phase 3.5.1: Settings operations
+  getSettings: () => Promise<unknown>;
+  updateSettings: (updates: unknown) => Promise<unknown>;
+  configureAIService: (config: unknown) => Promise<unknown>;
+  testAPIKey: (provider: string, apiKey?: string) => Promise<unknown>;
+  getCloudSubscriptionInfo: () => Promise<unknown>;
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -61,6 +68,11 @@ interface ElectronAPI {
   onTranscriptSuccessToast: (callback: (data: unknown) => void) => void;
   // Phase 3.1.6: Activity log listener
   onActivityLogUpdated: (callback: (data: unknown) => void) => void;
+  // Phase 3.5.1: Settings event listeners
+  onSettingsUpdated: (callback: (data: unknown) => void) => void;
+  onApiKeyTestResult: (callback: (data: unknown) => void) => void;
+  onCloudSubscriptionInfo: (callback: (data: unknown) => void) => void;
+  onOpenSettingsWindow: (callback: () => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (
     callback: (data: { filePath: string }) => void

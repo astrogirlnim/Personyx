@@ -165,9 +165,17 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [ ] **4.3** Provide install script with required OAuth scopes.
 - [ ] **4.4** Add rate-limit guard (max 3 calls / min / workspace).
 
-[ ] **Feature 5 – Settings & Management**
+[X] **Feature 5 – Settings & Management**
 
-- [ ] **5.1** Implement "AI Service" settings modal (enter OpenAI key, select Firebase Cloud).
+- [x] **5.1** Implement "AI Service" settings modal (enter OpenAI key, select Firebase Cloud). ✅ COMPLETE
+  - [x] **5.1.1** Settings modal UI with Evidence Gate design compliance ✅ COMPLETE
+  - [x] **5.1.2** Local/Cloud provider switching with proper validation ✅ COMPLETE
+  - [x] **5.1.3** API key input with show/hide toggle and validation ✅ COMPLETE
+  - [x] **5.1.4** Connection testing with detailed error feedback ✅ COMPLETE
+  - [x] **5.1.5** Cloud subscription status display ✅ COMPLETE
+  - [x] **5.1.6** Keyboard shortcuts (Ctrl/Cmd+,) and tray integration ✅ COMPLETE
+  - [x] **5.1.7** Comprehensive test suite with 11 passing tests ✅ COMPLETE
+  - [x] **5.1.8** Validation error display fix for frontend feedback ✅ COMPLETE
 - [ ] **5.2** Validate & encrypt keys via TokenVault; surface missing-key warnings.
 - [ ] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart).
 - [ ] **5.4** Persist dark / light theme toggle to local prefs.

@@ -286,11 +286,23 @@ export class TrayManager {
           this.logger.info('📊 View scores - not implemented yet');
           break;
 
-        case 'open-settings':
+        case 'open-settings': {
           this.logger.debug('🔧 Executing: open-settings');
-          // TODO: Implement settings window
-          this.logger.info('⚙️ Open settings - not implemented yet');
+          personyxApp.createMainWindow();
+
+          // Send message to renderer to open settings modal
+          const mainWindow = personyxApp.getMainWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('open-settings-window');
+            this.logger.info('📢 Sent open-settings-window IPC to renderer');
+          } else {
+            this.logger.warn(
+              '⚠️ Could not send open-settings-window - main window not available'
+            );
+          }
+          this.logger.info('✅ open-settings completed');
           break;
+        }
 
         case 'check-updates':
           this.logger.debug('🔧 Executing: check-updates');
