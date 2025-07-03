@@ -10,9 +10,11 @@ import type {
   ChatResponse,
   ImportResult,
   EvidenceScore,
+  IPCEvents,
 } from '../shared/types';
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
 import { TranscriptImportModal } from './components/TranscriptImportModal';
+import { GlobalErrorToast, ErrorToast } from './components/GlobalErrorToast';
 import { useEvidenceScores } from './hooks/useEvidenceScores';
 import {
   getLastImportedPRD,
@@ -1207,6 +1209,9 @@ export function App(): JSX.Element {
     EvidenceScore[]
   >([]);
 
+  // Phase 3.1.4: Global error toast state
+  const [errorToasts, setErrorToasts] = useState<ErrorToast[]>([]);
+
   // Phase 4.3: Use evidence scores utility hook
   const { scores, maxScore, debugInfo } = useEvidenceScores(
     currentEvidenceScores
@@ -1214,6 +1219,17 @@ export function App(): JSX.Element {
 
   // Phase 4.2: Get current document ID for persistence
   const [, setCurrentDocumentId] = useState<string | null>(null);
+
+  // Phase 3.1.4: Error toast management
+  const addErrorToast = useCallback((toast: ErrorToast) => {
+    console.log('🚨 Adding error toast:', toast);
+    setErrorToasts(prev => [...prev, toast]);
+  }, []);
+
+  const dismissErrorToast = useCallback((toastId: string) => {
+    console.log('🗑️ Dismissing error toast:', toastId);
+    setErrorToasts(prev => prev.filter(toast => toast.id !== toastId));
+  }, []);
 
   useEffect(() => {
     console.log('🚀 Personyx App component mounted');
@@ -1362,6 +1378,25 @@ export function App(): JSX.Element {
           setIsTranscriptModalOpen(true);
         }
       );
+
+      // Phase 3.1.4: Listen for global error events
+      window.electronAPI.onGlobalError((data: unknown) => {
+        console.log('🚨 Global error received:', data);
+        const errorData = data as IPCEvents['global-error'];
+
+        // Create error toast from the error data
+        const errorToast: ErrorToast = {
+          id: `global-error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: errorData.type,
+          title: errorData.title,
+          message: errorData.message,
+          timestamp: new Date(errorData.timestamp),
+          dismissible: errorData.dismissible !== false,
+          autoDismissMs: errorData.autoDismissMs || 5000,
+        };
+
+        addErrorToast(errorToast);
+      });
 
       // Listen for evidence score events
       window.electronAPI.onPRDImported((data: unknown) => {
@@ -1517,7 +1552,7 @@ export function App(): JSX.Element {
       window.removeEventListener('keydown', handleKeyDown);
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
-  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen]);
+  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen, addErrorToast]);
 
   // Debug evidence scores state changes
   useEffect(() => {
@@ -2065,6 +2100,13 @@ export function App(): JSX.Element {
         }}
         initialFile={transcriptDraggedFile}
         initialFilePath={transcriptTrayFilePath}
+      />
+
+      {/* Phase 3.1.4: Global Error Toast */}
+      <GlobalErrorToast
+        toasts={errorToasts}
+        onDismiss={dismissErrorToast}
+        position="top-right"
       />
     </div>
   );

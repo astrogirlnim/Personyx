@@ -818,6 +818,16 @@ class PersonyxApp {
           validationErrors: ingestResult.validationErrors,
         });
 
+        // Phase 3.1.4: Emit global error for failed PRD import
+        this.emitGlobalError({
+          type: 'ingest-error',
+          title: 'PRD Import Failed',
+          message: ingestResult.error || 'File ingest failed',
+          operation: 'prd-import',
+          timestamp: new Date(),
+          autoDismissMs: 7000,
+        });
+
         return {
           success: false,
           error: ingestResult.error || 'File ingest failed',
@@ -825,6 +835,17 @@ class PersonyxApp {
       }
     } catch (error) {
       this.logger.error('❌ PRD import failed', error);
+
+      // Phase 3.1.4: Emit global error for PRD import exception
+      this.emitGlobalError({
+        type: 'ingest-error',
+        title: 'PRD Import Failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        operation: 'prd-import',
+        timestamp: new Date(),
+        autoDismissMs: 7000,
+      });
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -877,6 +898,16 @@ class PersonyxApp {
           error: result.error,
         });
 
+        // Phase 3.1.4: Emit global error for failed transcript import
+        this.emitGlobalError({
+          type: 'ingest-error',
+          title: 'Transcript Import Failed',
+          message: result.error || 'Transcript import failed',
+          operation: 'transcript-import',
+          timestamp: new Date(),
+          autoDismissMs: 7000,
+        });
+
         return {
           success: false,
           error: result.error || 'Transcript import failed',
@@ -884,6 +915,17 @@ class PersonyxApp {
       }
     } catch (error) {
       this.logger.error('❌ Transcript import failed', error);
+
+      // Phase 3.1.4: Emit global error for transcript import exception
+      this.emitGlobalError({
+        type: 'ingest-error',
+        title: 'Transcript Import Failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        operation: 'transcript-import',
+        timestamp: new Date(),
+        autoDismissMs: 7000,
+      });
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1439,6 +1481,25 @@ I'd love to help you think through this from both a strategic and tactical persp
         message,
         details: errorMessage,
       });
+    }
+  }
+
+  /**
+   * Phase 3.1.4: Emit global error event to renderer for error toast
+   */
+  private emitGlobalError(errorData: IPCEvents['global-error']): void {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.webContents.send(IPC_CHANNELS.GLOBAL_ERROR, errorData);
+      this.logger.debug('📢 Emitted global error event', {
+        type: errorData.type,
+        title: errorData.title,
+        operation: errorData.operation,
+      });
+    } else {
+      this.logger.warn(
+        '⚠️ Cannot emit global error - main window not available',
+        errorData
+      );
     }
   }
 

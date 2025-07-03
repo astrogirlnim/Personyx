@@ -92,6 +92,17 @@ export interface IPCEvents {
     message: string;
     details?: unknown;
   };
+  // Phase 3.1.4: Enhanced error events for global error toast
+  'global-error': {
+    type: 'ingest-error' | 'validation-error' | 'general-error';
+    title: string;
+    message: string;
+    fileName?: string; // For file-related errors
+    operation?: 'prd-import' | 'transcript-import' | 'general'; // Operation that failed
+    timestamp: Date;
+    dismissible?: boolean;
+    autoDismissMs?: number;
+  };
 
   // Renderer to Main
   'import-prd': {
