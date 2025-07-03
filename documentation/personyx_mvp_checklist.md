@@ -176,15 +176,15 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
   - [x] **5.1.6** Keyboard shortcuts (Ctrl/Cmd+,) and tray integration ✅ COMPLETE
   - [x] **5.1.7** Comprehensive test suite with 11 passing tests ✅ COMPLETE
   - [x] **5.1.8** Validation error display fix for frontend feedback ✅ COMPLETE
-- [~] **5.2** Validate & encrypt keys via TokenVault; surface missing-key warnings. ✅ COMPLETE (Phase 3.5.2 - **SCOPE CHANGE**: Focused on VSCode, Slack, Apple Notes. Notion & Linear moved to future scope for strategic focus.)
-  - [~] **5.2.1** Extend `TokenVault` with `validateToken` & `isTokenStored` for VSCode (GitHub PAT), Slack (xoxb-) and Apple Notes (placeholder) services
-  - [~] **5.2.2** Add new IPC channels & handlers for third-party token CRUD operations
-  - [~] **5.2.3** Enhance `SettingsService` with `configureThirdPartyToken`, `removeThirdPartyToken`, `getTokenStatus`, and `testThirdPartyToken` methods
-  - [ ] **5.2.4** Update **AI Service Settings Modal** UI: service picker, token inputs, validation errors, and connection-test buttons per service
-  - [ ] **5.2.5** Integrate front-end hook (`useSettings`) state management for new token workflows
-  - [ ] **5.2.6** Write unit tests for third-party token validation, storage, removal, and IPC round-trips
-  - [ ] **5.2.7** Add quick-verification vitest script `test_phase_3_5_2_quick_verification.mjs` covering happy path & edge cases
-  - [ ] **5.2.8** Update manual testing guide with new scenarios (valid/invalid tokens, removal, error states)
+- [x] **5.2** Validate & encrypt keys via TokenVault; surface missing-key warnings. ✅ COMPLETE (Phase 3.5.2 - **SCOPE CHANGE**: Focused on VSCode, Slack, Apple Notes. Notion & Linear moved to future scope for strategic focus.)
+  - [x] **5.2.1** Extend `TokenVault` with `validateToken` & `isTokenStored` for VSCode (GitHub PAT), Slack (xoxb-) and Apple Notes (placeholder) services ✅ COMPLETE
+  - [x] **5.2.2** Add new IPC channels & handlers for third-party token CRUD operations ✅ COMPLETE
+  - [x] **5.2.3** Enhance `SettingsService` with `configureThirdPartyToken`, `removeThirdPartyToken`, `getTokenStatus`, and `testThirdPartyToken` methods ✅ COMPLETE
+  - [x] **5.2.4** Update **AI Service Settings Modal** UI: service picker, token inputs, validation errors, and connection-test buttons per service ✅ COMPLETE
+  - [x] **5.2.5** Integrate front-end hook (`useSettings`) state management for new token workflows ✅ COMPLETE
+  - [x] **5.2.6** Write unit tests for third-party token validation, storage, removal, and IPC round-trips ✅ COMPLETE
+  - [x] **5.2.7** Add quick-verification vitest script `test_phase_3_5_2_quick_verification.mjs` covering happy path & edge cases ✅ COMPLETE
+  - [x] **5.2.8** Update manual testing guide with new scenarios (valid/invalid tokens, removal, error states) ✅ COMPLETE
 - [ ] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart).
 - [ ] **5.4** Persist dark / light theme toggle to local prefs.
 
