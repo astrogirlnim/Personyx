@@ -50,15 +50,22 @@ export function useEvidenceScores(
 
   // Update debug info when scores change
   useEffect(() => {
-    console.log('🔍 useEvidenceScores: Scores changed', {
-      newScoresCount: currentScores.length,
-      documentId,
-      scores: currentScores.map(s => ({
-        documentId: s.documentId,
-        personaId: s.personaId,
-        score: s.score,
-      })),
-    });
+    console.log(
+      '🔍 useEvidenceScores: Scores changed',
+      JSON.stringify(
+        {
+          newScoresCount: currentScores.length,
+          documentId,
+          scores: currentScores.map(s => ({
+            documentId: s.documentId,
+            personaId: s.personaId,
+            score: s.score,
+          })),
+        },
+        null,
+        2
+      )
+    );
 
     setDebugInfo(prev => {
       const newUniqueDocuments = new Set(prev.debugInfo.uniqueDocuments);

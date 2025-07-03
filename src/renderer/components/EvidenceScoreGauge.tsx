@@ -18,6 +18,25 @@ export function EvidenceScoreGauge({
   score,
   className = '',
 }: EvidenceScoreGaugeProps): JSX.Element {
+  // 🐛 DEBUG: Log incoming score prop details
+  console.log(
+    '🎯 EvidenceScoreGauge: Incoming prop analysis',
+    JSON.stringify(
+      {
+        score,
+        scoreType: typeof score,
+        scoreValue: score,
+        isNull: score === null,
+        isUndefined: score === undefined,
+        isNaN: score !== null ? Number.isNaN(score) : 'N/A',
+        scoreString: String(score),
+        scoreJSON: JSON.stringify(score),
+      },
+      null,
+      2
+    )
+  );
+
   const [displayScore, setDisplayScore] = useState<number | null>(null);
   const [shouldPulse, setShouldPulse] = useState(false);
   const prevScoreRef = useRef<number | null>(null);
@@ -26,20 +45,34 @@ export function EvidenceScoreGauge({
   useEffect(() => {
     const prevScore = prevScoreRef.current;
 
-    console.log('🎯 EvidenceScoreGauge: Score update triggered', {
-      newScore: score,
-      prevScore,
-      displayScore,
-      shouldTriggerPulse:
-        score !== null && score !== prevScore && prevScore !== null,
-    });
+    console.log(
+      '🎯 EvidenceScoreGauge: Score update triggered',
+      JSON.stringify(
+        {
+          newScore: score,
+          prevScore,
+          displayScore,
+          shouldTriggerPulse:
+            score !== null && score !== prevScore && prevScore !== null,
+        },
+        null,
+        2
+      )
+    );
 
     // Only trigger pulse on non-null score changes (not initial load)
     if (score !== null && score !== prevScore && prevScore !== null) {
-      console.log('🎯 EvidenceScoreGauge: Triggering pulse animation', {
-        from: prevScore,
-        to: score,
-      });
+      console.log(
+        '🎯 EvidenceScoreGauge: Triggering pulse animation',
+        JSON.stringify(
+          {
+            from: prevScore,
+            to: score,
+          },
+          null,
+          2
+        )
+      );
       setShouldPulse(true);
       // Remove pulse class after animation completes
       const timer = setTimeout(() => {
@@ -52,10 +85,17 @@ export function EvidenceScoreGauge({
     prevScoreRef.current = score;
     setDisplayScore(score);
 
-    console.log('🎯 EvidenceScoreGauge: Updated display score', {
-      displayScore: score,
-      prevScoreRef: prevScoreRef.current,
-    });
+    console.log(
+      '🎯 EvidenceScoreGauge: Updated display score',
+      JSON.stringify(
+        {
+          displayScore: score,
+          prevScoreRef: prevScoreRef.current,
+        },
+        null,
+        2
+      )
+    );
   }, [score, displayScore]);
 
   // Determine score color class based on value
@@ -81,13 +121,20 @@ export function EvidenceScoreGauge({
     '(prefers-reduced-motion: reduce)'
   ).matches;
 
-  console.log('🎯 EvidenceScoreGauge: Rendering', {
-    score,
-    displayScore,
-    shouldPulse,
-    strokeDashoffset,
-    colorClass: getScoreColorClass(displayScore),
-  });
+  console.log(
+    '🎯 EvidenceScoreGauge: Rendering',
+    JSON.stringify(
+      {
+        score,
+        displayScore,
+        shouldPulse,
+        strokeDashoffset,
+        colorClass: getScoreColorClass(displayScore),
+      },
+      null,
+      2
+    )
+  );
 
   return (
     <div className={`relative ${className}`}>

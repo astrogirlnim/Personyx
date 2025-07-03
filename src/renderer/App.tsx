@@ -1476,20 +1476,27 @@ export function App(): JSX.Element {
 
   // Debug evidence scores state changes
   useEffect(() => {
-    console.log('🎯 Current Evidence Scores State Changed:', {
-      scoresCount: currentEvidenceScores.length,
-      scores: currentEvidenceScores.map(s => ({
-        id: s.id,
-        documentId: s.documentId,
-        personaId: s.personaId,
-        score: s.score,
-        lastCalculated: s.lastCalculated,
-      })),
-      maxScore:
-        currentEvidenceScores.length > 0
-          ? Math.max(...currentEvidenceScores.map(s => s.score))
-          : null,
-    });
+    console.log(
+      '🎯 Current Evidence Scores State Changed:',
+      JSON.stringify(
+        {
+          scoresCount: currentEvidenceScores.length,
+          scores: currentEvidenceScores.map(s => ({
+            id: s.id,
+            documentId: s.documentId,
+            personaId: s.personaId,
+            score: s.score,
+            lastCalculated: s.lastCalculated,
+          })),
+          maxScore:
+            currentEvidenceScores.length > 0
+              ? Math.max(...currentEvidenceScores.map(s => s.score))
+              : null,
+        },
+        null,
+        2
+      )
+    );
   }, [currentEvidenceScores]);
 
   // Handle drag and drop for the main import card
@@ -1860,6 +1867,44 @@ export function App(): JSX.Element {
               </h3>
               <div className="text-center">
                 {/* Evidence Score Gauge */}
+                {(() => {
+                  console.log(
+                    '🔍 EvidenceScoreGauge DEBUG - Rendering context:',
+                    JSON.stringify(
+                      {
+                        currentEvidenceScoresLength:
+                          currentEvidenceScores.length,
+                        currentEvidenceScores: currentEvidenceScores.map(s => ({
+                          id: s.id,
+                          documentId: s.documentId,
+                          personaId: s.personaId,
+                          score: s.score,
+                          scoreType: typeof s.score,
+                          scoreValue: s.score,
+                        })),
+                        scoresFromHook: scores.map(s => ({
+                          id: s.id,
+                          documentId: s.documentId,
+                          personaId: s.personaId,
+                          score: s.score,
+                          scoreType: typeof s.score,
+                        })),
+                        maxScoreCalculation: {
+                          maxScore,
+                          maxScoreType: typeof maxScore,
+                          maxScoreValue: maxScore,
+                          manualMaxCalc:
+                            scores.length > 0
+                              ? Math.max(...scores.map(s => s.score))
+                              : null,
+                        },
+                      },
+                      null,
+                      2
+                    )
+                  );
+                  return null;
+                })()}
                 <EvidenceScoreGauge score={maxScore} className="mb-4" />
                 {/* Phase 4 Debug Info - Only show in development */}
                 {process.env.NODE_ENV === 'development' &&
