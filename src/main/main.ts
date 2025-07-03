@@ -57,6 +57,10 @@ class PersonyxApp {
   private langGraphService: LangGraphService | null = null;
   private logger: Logger;
   private isAppReady = false;
+  private fileToImportOnReady: {
+    fileName: string;
+    fileContent: string;
+  } | null = null;
 
   constructor() {
     this.logger = new Logger('main');
@@ -165,6 +169,23 @@ class PersonyxApp {
         // Set main window for secure file ingest service event emission
         if (this.secureFileIngestService) {
           this.secureFileIngestService.setMainWindow(this.mainWindow);
+        }
+
+        // If a file was dropped on the tray, send it to the modal now
+        if (this.fileToImportOnReady) {
+          this.logger.info(
+            '📂 Sending deferred file drop data to renderer',
+            this.fileToImportOnReady.fileName
+          );
+          this.mainWindow.webContents.send(
+            'open-import-modal-with-file-content',
+            {
+              fileName: this.fileToImportOnReady.fileName,
+              fileContent: this.fileToImportOnReady.fileContent,
+              fileSize: this.fileToImportOnReady.fileContent.length,
+            }
+          );
+          this.fileToImportOnReady = null; // Clear after sending
         }
       }
     });
@@ -388,24 +409,19 @@ class PersonyxApp {
             this.trayManager.closeDropZone();
           }
 
-          // Ensure main window is open and focused
+          // Defer sending file content until the window is ready
+          this.fileToImportOnReady = {
+            fileName: data.fileName,
+            fileContent: data.fileContent,
+          };
+          this.logger.info('📂 Deferred file drop until main window is ready.');
+
+          // Ensure main window is open and focused.
+          // The 'ready-to-show' event will handle sending the data.
           this.createMainWindow();
           const mainWindow = this.getMainWindow();
 
           if (mainWindow) {
-            // Wait a bit for window to be ready
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Send message to renderer to open import modal with the file content
-            mainWindow.webContents.send('open-import-modal-with-file-content', {
-              fileName: data.fileName,
-              fileContent: data.fileContent,
-              fileSize: data.fileContent.length,
-            });
-            this.logger.info(
-              '✅ Main window notified to open import modal with file content'
-            );
-
             // Focus the main window and bring to front
             mainWindow.show();
             mainWindow.focus();
