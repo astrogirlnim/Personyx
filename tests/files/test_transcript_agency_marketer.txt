@@ -1,0 +1,80 @@
+Interview Transcript - Agency Marketer
+
+Date: 2024-01-16
+Participant: Sarah Martinez, Marketing Director at GrowthAgency
+Interviewer: UX Research Team
+Duration: 50 minutes
+
+Background:
+Sarah leads a 12-person marketing agency that specializes in SaaS client campaigns. She manages multiple client projects simultaneously and focuses on data-driven results.
+
+Client Requirements Challenge:
+
+Q: What's your biggest frustration with client projects?
+
+A: Getting clear, actionable requirements from clients is like pulling teeth. They often say "make it pop" or "we need more conversions" without giving us specifics. We spend tons of time in discovery calls trying to pin down what they actually want. Last week a client said they wanted "viral content" but couldn't define what success looks like.
+
+Q: How do you handle unclear requirements?
+
+A: We've started using a structured requirements gathering process with specific questions about target audience, success metrics, and timeline. But clients still resist providing concrete details upfront.
+
+Multi-Client Management:
+
+Q: How do you handle multiple client projects?
+
+A: We use Monday.com and Slack, but honestly it's chaos. Each client has different communication preferences, different tools they want to use. We're constantly context-switching between Asana, Trello, Linear, you name it. Having a unified view of all client requirements would be a game-changer.
+
+Q: What's your ideal project management setup?
+
+A: I want one place where I can see all client requirements, campaign status, and performance metrics. Right now information is scattered across 5-6 different tools per client.
+
+Campaign Performance Tracking:
+
+Q: How do you measure campaign success?
+
+A: That's where we excel. We have Google Analytics, Facebook Ads Manager, HubSpot for lead tracking. But the challenge is translating those metrics back to the original requirements and showing clients the connection between what we built and their business results.
+
+Q: What metrics matter most to your clients?
+
+A: Conversion rates, CAC, LTV, engagement metrics. Our biggest win is when we can show a client how our campaign strategy directly improved their business KPIs. Clients want to see ROI, not just vanity metrics.
+
+Documentation Workflow:
+
+Q: How do you document client work?
+
+A: We create comprehensive campaign briefs and client onboarding documents. Everything is documented in Notion with clear approval workflows. The problem is keeping everything updated as client needs evolve. We spend 20% of our time just updating documentation.
+
+Q: What would improve your documentation process?
+
+A: Automated status updates and better integration between our tools. Right now we manually copy information between systems, which leads to outdated or inconsistent documentation.
+
+Team Collaboration:
+
+Q: How does your team collaborate on client work?
+
+A: We have weekly standup meetings and use Slack for daily communication. Each client has a dedicated channel, but with 15+ active clients, it gets overwhelming. We need better ways to surface priority items and client feedback.
+
+Success Stories and Challenges:
+
+Q: What's your biggest success story?
+
+A: We helped a SaaS client increase their conversion rate by 340% through systematic A/B testing and user research. The key was having clear requirements upfront and regular check-ins with stakeholders.
+
+Q: What's your biggest ongoing challenge?
+
+A: Scaling our processes as we take on more clients. What works for 5 clients breaks down at 15 clients. We need better systems for requirements gathering, project management, and performance reporting.
+
+Future Vision:
+
+Q: Where do you want your agency to be in 2 years?
+
+A: I want us to be the go-to agency for data-driven SaaS marketing. That means having bulletproof processes for requirements gathering, campaign execution, and results reporting. Clients should never have to ask "how are we doing?" because they can see real-time performance data.
+
+---
+
+Post-Interview Notes:
+- Strong focus on data-driven results and client communication
+- Struggles with tool fragmentation and process scaling
+- Clear need for unified client requirements and project management
+- Excellent at performance tracking but wants better client reporting
+- Values systematic approaches and documented workflows 
