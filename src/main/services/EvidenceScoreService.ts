@@ -4,6 +4,7 @@
  */
 
 import { BrowserWindow } from 'electron';
+import { createHash } from 'crypto';
 import { EvidenceScoreRepo } from '@main/db/repositories/EvidenceScoreRepo';
 import { EvidenceRepo } from '@main/db/repositories/EvidenceRepo';
 import { PersonaRepo } from '@main/db/repositories/PersonaRepo';
@@ -445,6 +446,21 @@ export class EvidenceScoreService {
         throw new Error(`Persona not found: ${personaId}`);
       }
 
+      // 🐛 CRITICAL DEBUG: Log the EXACT document content being scored
+      logger.info('🐛 [CRITICAL DEBUG] Document content being scored:', {
+        documentId: document.id,
+        documentTitle: document.title,
+        contentLength: document.content.length,
+        contentPreview: document.content.substring(0, 300),
+        contentLines: document.content.split('\n').slice(0, 10),
+        contentHash: createHash('md5').update(document.content).digest('hex'),
+        contentFirstWords: document.content
+          .toLowerCase()
+          .split(/\W+/)
+          .filter(w => w.length > 2)
+          .slice(0, 20),
+      });
+
       logger.debug('📄 PRD Details', {
         prdId,
         title: document.title,
@@ -474,6 +490,18 @@ export class EvidenceScoreService {
 
       // Filter evidence relevant to this PRD (based on content similarity)
       const convertedDocument = this.convertDbProductDocument(document);
+
+      // 🐛 CRITICAL DEBUG: Verify converted document content
+      logger.info('🐛 [CRITICAL DEBUG] Converted document for filtering:', {
+        originalContentLength: document.content.length,
+        convertedContentLength: convertedDocument.content.length,
+        contentMatches: document.content === convertedDocument.content,
+        convertedContentPreview: convertedDocument.content.substring(0, 200),
+        convertedContentHash: createHash('md5')
+          .update(convertedDocument.content)
+          .digest('hex'),
+      });
+
       const relevantEvidence = await this.filterRelevantEvidence(
         allEvidence,
         convertedDocument,
@@ -720,6 +748,23 @@ export class EvidenceScoreService {
     evidenceContent: string,
     prdContent: string
   ): boolean {
+    // 🐛 CRITICAL DEBUG: Log the EXACT PRD content being analyzed
+    logger.info('🐛 [CRITICAL DEBUG] checkContentRelevance called with:', {
+      evidenceContentLength: evidenceContent.length,
+      evidenceContentPreview: evidenceContent.substring(0, 150),
+      prdContentLength: prdContent.length,
+      prdContentPreview: prdContent.substring(0, 150),
+      prdContentHash: createHash('md5')
+        .update(prdContent)
+        .digest('hex')
+        .substring(0, 8),
+      prdContentFirstWords: prdContent
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(w => w.length > 2)
+        .slice(0, 15),
+    });
+
     const evidence = evidenceContent.toLowerCase();
     const prd = prdContent.toLowerCase();
 
@@ -770,23 +815,25 @@ export class EvidenceScoreService {
       .filter(word => word.length > 3 && !stopwords.has(word))
       .slice(0, 20); // Limit to first 20 meaningful words
 
-    // DEBUG: Log the PRD content being analyzed
-    logger.info('🐛 [DEBUG] PRD Content Analysis for Scoring:', {
+    // 🐛 ENHANCED DEBUG: Log the exact content analysis
+    logger.info('🐛 [CRITICAL DEBUG] PRD Content Analysis for Scoring:', {
       prdContentLength: prdContent.length,
-      prdContentPreview: prdContent.substring(0, 200),
-      prdLowercase: prd.substring(0, 200),
+      prdContentPreview: prdContent.substring(0, 300),
+      prdContentLines: prdContent.split('\n').slice(0, 5),
+      prdLowercase: prd.substring(0, 300),
       allPrdWords: prd
         .split(/\W+/)
         .filter(word => word.length > 3)
-        .slice(0, 30),
+        .slice(0, 50),
       filteredPrdWords: prdWords,
       evidenceContentPreview: evidenceContent.substring(0, 100),
+      prdHash: createHash('md5').update(prdContent).digest('hex'),
     });
 
     // Check how many PRD words appear in evidence
     const matches = prdWords.filter(word => evidence.includes(word));
     const relevanceScore = matches.length / prdWords.length;
-    const isRelevant = relevanceScore >= 0.2;
+    const isRelevant = relevanceScore >= 0.1;
 
     logger.debug('🔍 Content relevance check:', {
       prdWords: prdWords.slice(0, 10), // Show first 10 words
