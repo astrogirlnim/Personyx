@@ -219,6 +219,21 @@ export function logFileUpload(
 }
 
 /**
+ * Generate a cryptographically secure random session ID
+ */
+function generateSecureSessionId(): string {
+  // Use crypto.getRandomValues for secure random bytes
+  const array = new Uint8Array(12);
+  crypto.getRandomValues(array);
+
+  // Convert to base-36 string (similar to Math.random().toString(36))
+  return Array.from(array)
+    .map(b => b.toString(36))
+    .join('')
+    .substring(0, 15);
+}
+
+/**
  * Get session debug information
  */
 export function getSessionDebugInfo(): SessionDebugInfo {
@@ -233,7 +248,7 @@ export function getSessionDebugInfo(): SessionDebugInfo {
 
   // Create new session
   const newSession: SessionDebugInfo = {
-    sessionId: Math.random().toString(36).substring(2, 15),
+    sessionId: generateSecureSessionId(),
     startTime: new Date().toISOString(),
     fileUploads: [],
     scoreUpdates: [],
