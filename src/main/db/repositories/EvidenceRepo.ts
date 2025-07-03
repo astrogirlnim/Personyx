@@ -85,13 +85,7 @@ export class EvidenceRepo {
       }
 
       const evidenceData = result[0];
-      // Parse JSON fields and cast types
-      const parsedEvidence: Evidence = {
-        ...evidenceData,
-        tags: JSON.parse(evidenceData.tags),
-        sourceType: evidenceData.sourceType as Evidence['sourceType'],
-        sentiment: evidenceData.sentiment as Evidence['sentiment'],
-      };
+      const parsedEvidence = this.convertDbEvidence(evidenceData);
 
       logger.debug('✅ Evidence found', { id });
       return parsedEvidence;
@@ -122,12 +116,17 @@ export class EvidenceRepo {
           id: result.id,
           timestamp: result.timestamp,
           timestampType: typeof result.timestamp,
-          timestampConstructor: result.timestamp?.constructor?.name,
-          isDate: result.timestamp instanceof Date,
           timestampValue: result.timestamp,
-          timestampString: result.timestamp
-            ? result.timestamp.toString()
-            : 'NULL',
+          isNumber: typeof result.timestamp === 'number',
+          isDate: result.timestamp instanceof Date,
+          dateGetTime:
+            result.timestamp instanceof Date
+              ? result.timestamp.getTime()
+              : 'N/A',
+          asMilliseconds:
+            typeof result.timestamp === 'number'
+              ? result.timestamp * 1000
+              : 'N/A',
         })),
       });
 
@@ -199,13 +198,8 @@ export class EvidenceRepo {
       const result = await db.select().from(evidence);
 
       // Parse JSON fields for all evidence and cast types
-      const parsedEvidence: Evidence[] = result.map(
-        (item: typeof evidence.$inferSelect) => ({
-          ...item,
-          tags: JSON.parse(item.tags),
-          sourceType: item.sourceType as Evidence['sourceType'],
-          sentiment: item.sentiment as Evidence['sentiment'],
-        })
+      const parsedEvidence: Evidence[] = result.map(item =>
+        this.convertDbEvidence(item)
       );
 
       logger.debug(`✅ Found ${parsedEvidence.length} evidence items`);
@@ -261,6 +255,7 @@ export class EvidenceRepo {
 
   /**
    * Convert database evidence to domain model
+   * 🔧 COMPLETELY REWRITTEN to handle SQLite Unix seconds properly
    */
   private convertDbEvidence(
     dbEvidence: typeof evidence.$inferSelect
@@ -269,26 +264,87 @@ export class EvidenceRepo {
     // Database stores Unix timestamps in seconds, but JavaScript Date expects milliseconds
     let timestamp: Date;
 
-    if (typeof dbEvidence.timestamp === 'number') {
-      // Convert seconds to milliseconds for JavaScript Date
-      timestamp = new Date(dbEvidence.timestamp * 1000);
-      logger.debug('🔧 TIMESTAMP CONVERSION', {
+    logger.debug('🔧 TIMESTAMP CONVERSION START', {
+      evidenceId: dbEvidence.id,
+      originalTimestamp: dbEvidence.timestamp,
+      timestampType: typeof dbEvidence.timestamp,
+      isNumber: typeof dbEvidence.timestamp === 'number',
+      isDate: dbEvidence.timestamp instanceof Date,
+      dateGetTime:
+        dbEvidence.timestamp instanceof Date
+          ? dbEvidence.timestamp.getTime()
+          : 'N/A',
+    });
+
+    // Handle different timestamp formats from Drizzle
+    if (dbEvidence.timestamp instanceof Date) {
+      // If Drizzle returns a Date object, check if it's valid
+      const timeMs = dbEvidence.timestamp.getTime();
+      logger.info('🐛 [DEBUG] Date object detected from Drizzle', {
+        evidenceId: dbEvidence.id,
+        timeMs: timeMs,
+        isNaN: isNaN(timeMs),
+        dateString: dbEvidence.timestamp.toString(),
+      });
+
+      if (!isNaN(timeMs)) {
+        timestamp = dbEvidence.timestamp;
+        logger.debug('✅ Valid Date object from Drizzle', {
+          evidenceId: dbEvidence.id,
+          timestamp: timestamp.toISOString(),
+        });
+      } else {
+        // Invalid Date from Drizzle - this indicates the core issue
+        logger.error('❌ Invalid Date object from Drizzle - this is the bug!', {
+          evidenceId: dbEvidence.id,
+          invalidDate: dbEvidence.timestamp,
+          timeMs: timeMs,
+        });
+        // Fall back to current time
+        timestamp = new Date();
+      }
+    } else if (typeof dbEvidence.timestamp === 'number') {
+      // If Drizzle returns a number, treat as Unix seconds
+      const timestampMs = dbEvidence.timestamp * 1000;
+      timestamp = new Date(timestampMs);
+
+      logger.debug('🔧 TIMESTAMP CONVERSION FROM NUMBER', {
         evidenceId: dbEvidence.id,
         unixSeconds: dbEvidence.timestamp,
-        unixMilliseconds: dbEvidence.timestamp * 1000,
-        convertedDate: timestamp.toISOString(),
+        unixMilliseconds: timestampMs,
+        convertedDate: timestamp,
         isValidDate: !isNaN(timestamp.getTime()),
+        dateString: timestamp.toString(),
+        isoString: timestamp.toISOString(),
       });
-    } else if (dbEvidence.timestamp instanceof Date) {
-      timestamp = dbEvidence.timestamp;
-      logger.debug('🔧 TIMESTAMP ALREADY DATE', {
-        evidenceId: dbEvidence.id,
-        existingDate: timestamp.toISOString(),
-        isValidDate: !isNaN(timestamp.getTime()),
-      });
+    } else if (typeof dbEvidence.timestamp === 'string') {
+      // Try to parse as ISO string or Unix timestamp
+      const asNumber = parseInt(dbEvidence.timestamp);
+      if (!isNaN(asNumber)) {
+        // Probably Unix timestamp as string
+        const timestampMs = asNumber * 1000;
+        timestamp = new Date(timestampMs);
+        logger.debug('🔧 TIMESTAMP CONVERSION FROM STRING NUMBER', {
+          evidenceId: dbEvidence.id,
+          stringValue: dbEvidence.timestamp,
+          parsedNumber: asNumber,
+          timestampMs: timestampMs,
+          convertedDate: timestamp,
+          isValidDate: !isNaN(timestamp.getTime()),
+        });
+      } else {
+        // Try as ISO string
+        timestamp = new Date(dbEvidence.timestamp);
+        logger.debug('🔧 TIMESTAMP CONVERSION FROM ISO STRING', {
+          evidenceId: dbEvidence.id,
+          isoString: dbEvidence.timestamp,
+          convertedDate: timestamp,
+          isValidDate: !isNaN(timestamp.getTime()),
+        });
+      }
     } else {
       // Fallback for unexpected types
-      logger.warn('🔧 TIMESTAMP TYPE UNEXPECTED', {
+      logger.warn('🔧 TIMESTAMP TYPE UNEXPECTED - USING CURRENT TIME', {
         evidenceId: dbEvidence.id,
         timestampValue: dbEvidence.timestamp,
         timestampType: typeof dbEvidence.timestamp,
@@ -298,13 +354,38 @@ export class EvidenceRepo {
 
     // Validate the converted timestamp
     if (isNaN(timestamp.getTime())) {
-      logger.error('🔧 TIMESTAMP CONVERSION FAILED', {
+      logger.error('🔧 TIMESTAMP CONVERSION FAILED - USING CURRENT TIME', {
         evidenceId: dbEvidence.id,
         originalTimestamp: dbEvidence.timestamp,
         convertedTimestamp: timestamp,
         fallbackToNow: true,
       });
       timestamp = new Date(); // Use current time as fallback
+    }
+
+    logger.info('🔧 TIMESTAMP CONVERSION COMPLETE', {
+      evidenceId: dbEvidence.id,
+      finalTimestamp: timestamp,
+      finalISOString: timestamp.toISOString(),
+      finalMs: timestamp.getTime(),
+      isValid: !isNaN(timestamp.getTime()),
+    });
+
+    // Parse tags properly
+    let tags: string[] = [];
+    try {
+      if (typeof dbEvidence.tags === 'string') {
+        tags = JSON.parse(dbEvidence.tags);
+      } else if (Array.isArray(dbEvidence.tags)) {
+        tags = dbEvidence.tags;
+      }
+    } catch (error) {
+      logger.warn('⚠️ Failed to parse tags, using empty array', {
+        evidenceId: dbEvidence.id,
+        tagsValue: dbEvidence.tags,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      tags = [];
     }
 
     return {
@@ -318,7 +399,7 @@ export class EvidenceRepo {
         | 'feedback'
         | 'other',
       timestamp: timestamp, // Now properly converted timestamp
-      tags: JSON.parse(dbEvidence.tags),
+      tags: tags,
       sentiment: dbEvidence.sentiment as
         | 'positive'
         | 'negative'

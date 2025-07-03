@@ -46,9 +46,9 @@ export class EvidenceScoreService {
 
   // Scoring weights (must sum to 1.0)
   private static readonly WEIGHTS = {
-    recency: 0.25, // 25% weight for recency
-    coverage: 0.4, // 40% weight for coverage (most important)
-    relevance: 0.35, // 35% weight for relevance
+    recency: 0.05, // 5% weight for recency (minimal - good evidence doesn't expire)
+    coverage: 0.55, // 55% weight for coverage (most important - does evidence cover persona needs)
+    relevance: 0.4, // 40% weight for relevance (how well evidence relates to this specific PRD)
   };
 
   // Scoring thresholds
