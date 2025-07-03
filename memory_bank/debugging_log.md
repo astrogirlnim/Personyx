@@ -274,319 +274,6 @@ The issue was **NOT** a race condition or window management problem. The real pr
 - Completely rewrote `handleDrop()` with multiple processing methods
 - Added new functions: `handleDirectFileDrop()`, `handleURIListDrop()`, `handlePlainTextDrop()`, `sendFileToMainProcess()`
 
-### 📊 Expected Results
-
-**Before Fix:**
-
-- Drag from VS Code: ❌ No drop event triggered
-- Drop zone shows drag feedback but nothing happens on drop
-
-**After Fix:**
-
-- Drag from VS Code: ✅ Should detect `text/uri-list` and process the file URI
-- Drag from file manager: ✅ Should still work via direct file handling
-- Drag text content: ✅ Should work via plain text handling
-- All methods should trigger the main window with import modal
-
-### 🧪 Testing Required
-
-1. **Drag .md file from VS Code** → Should open main window with import modal
-2. **Drag .md file from Finder/Explorer** → Should work as before
-3. **Drag selected text content** → Should create file from text content
-4. **Check console logs** → Should see proper detection messages
-
-### 💡 Key Insight
-
-The original code was designed for file manager drag-and-drop but modern code editors use URI list format for security reasons. The fix maintains backwards compatibility while adding support for editor-based drag operations.
-
----
-
-> "Many data formats, there are. Handle them all, we must. Flexible the drop zone becomes, more powerful it is." — Yoda
-
-# Debugging Log - Tray Drop Zone Issue
-
-**Created**: 2025-01-03  
-**Issue**: Tray drop zone does not open main window when files are dropped  
-**Priority**: Critical - Core Phase 3.1.2 functionality broken
-
-## Issue Summary
-
-**Problem**: When users drag and drop files onto the purple tray drop zone (accessed via tray icon click), the main Personyx window does not appear and the import modal does not open.
-
-**Expected Behavior**:
-
-1. User drags file to tray drop zone
-2. Tray drop zone window closes
-3. Main Personyx window opens and comes to front
-4. Import modal opens automatically with dropped file
-5. Import processing begins immediately
-
-**Actual Behavior**:
-
-1. User drags file to tray drop zone
-2. Tray drop zone window closes ✅
-3. ❌ Main Personyx window does not appear
-4. ❌ No visible indication that anything happened
-5. ❌ No import processing begins
-
-## Working vs Broken Scenarios
-
-### ✅ Working Scenarios
-
-1. **Main App Drag & Drop**: Dragging files to main app import card works perfectly
-2. **Import Modal Drag & Drop**: Dragging files to import modal works perfectly
-3. **Tray Menu Import**: Clicking "Import PRD..." in tray menu opens file dialog correctly
-
-### ❌ Broken Scenario
-
-1. **Tray Drop Zone**: Dragging files to purple tray drop zone does not open main window
-
-## Technical Analysis
-
-### Architecture Overview
-
-```
-Tray Drop Zone (BrowserWindow)
-  ↓ (file drop event)
-HTML/JS FileReader API
-  ↓ (IPC: tray-file-drop-with-content)
-Main Process (main.ts)
-  ↓ (createMainWindow() + IPC: open-import-modal-with-file-content)
-Renderer Process (App.tsx)
-  ↓ (setIsImportModalOpen(true))
-Import Modal UI
-```
-
-### Failed Fix Attempts
-
-#### Fix Attempt 1: FileReader API Implementation
-
-**Commit**: `da01d19 - feat(phase-3.1.2): Fix drag & drop for import modal and tray zones`
-
-**Changes Made**:
-
-- Replaced non-existent `file.path` property with FileReader API
-- Added `tray-file-drop-with-content` IPC channel
-- Enhanced preload.ts with `handleTrayFileDropWithContent` method
-- Updated renderer to handle file content instead of file paths
-
-**HTML Implementation**:
-
-```javascript
-// In tray drop zone HTML
-const reader = new FileReader();
-reader.onload = function (e) {
-  const fileContent = e.target.result;
-  window.electronAPI.handleTrayFileDropWithContent(file.name, fileContent);
-};
-reader.readAsText(file);
-```
-
-**IPC Handler**:
-
-```typescript
-// In main.ts
-ipcMain.on('tray-file-drop-with-content', async (_event, data) => {
-  this.createMainWindow();
-  const mainWindow = this.getMainWindow();
-  if (mainWindow) {
-    mainWindow.webContents.send('open-import-modal-with-file-content', data);
-  }
-});
-```
-
-**Result**: ❌ FAILED - Issue persisted, main window still did not appear
-
-#### Fix Attempt 2: Enhanced Window Focusing
-
-**Commit**: `37203a0 - fix: Improve tray drop zone main window opening and focusing`
-
-**Changes Made**:
-
-- Added timing delays: `await new Promise(resolve => setTimeout(resolve, 100))`
-- Enhanced window focusing: `mainWindow.show()`, `mainWindow.focus()`, `mainWindow.moveTop()`
-- Added macOS-specific app activation: `app.focus({ steal: true })`
-- Added drop zone closure before main window creation
-- Enhanced error handling and logging
-
-**Window Focusing Code**:
-
-```typescript
-// Close drop zone first
-if (this.trayManager) {
-  this.trayManager.closeDropZone();
-}
-
-// Create and focus main window
-this.createMainWindow();
-const mainWindow = this.getMainWindow();
-if (mainWindow) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  mainWindow.show();
-  mainWindow.focus();
-  mainWindow.moveTop();
-
-  if (process.platform === 'darwin') {
-    app.focus({ steal: true });
-  }
-}
-```
-
-**Result**: ❌ FAILED - User confirmed issue persists
-
-## Debugging Questions
-
-### Process Communication
-
-1. **Are IPC messages being sent?** Need to verify `tray-file-drop-with-content` IPC is triggered
-2. **Is main process receiving messages?** Check main.ts IPC handler execution
-3. **Is createMainWindow() being called?** Verify main window creation attempt
-4. **Is renderer receiving IPC?** Check if `open-import-modal-with-file-content` reaches App.tsx
-
-### Window Management
-
-1. **Is main window actually being created?** Check BrowserWindow instantiation
-2. **Is main window being shown?** Verify `show()`, `focus()`, `moveTop()` execution
-3. **Is main window behind other windows?** Platform-specific window layering issues
-4. **Is main window created but invisible?** Check window properties and positioning
-
-### Platform-Specific Issues
-
-1. **macOS window management**: App activation and focus stealing behavior
-2. **Electron security restrictions**: Possible sandbox or security policy conflicts
-3. **Multiple BrowserWindow handling**: Tray window vs main window lifecycle conflicts
-
-## Required Investigation Steps
-
-### 1. Console Log Analysis
-
-- **Tray Window Console**: Check HTML console for drop event and FileReader execution
-- **Main Process Console**: Verify IPC message reception and window creation calls
-- **Renderer Console**: Check if IPC events reach the App component
-
-### 2. IPC Message Tracing
-
-```typescript
-// Add comprehensive logging to all IPC handlers
-this.logger.info('🔍 IPC TRACE: tray-file-drop-with-content received', {
-  fileName: data.fileName,
-});
-this.logger.info('🔍 IPC TRACE: createMainWindow called');
-this.logger.info('🔍 IPC TRACE: mainWindow reference obtained', {
-  exists: !!mainWindow,
-});
-this.logger.info('🔍 IPC TRACE: sending open-import-modal-with-file-content');
-```
-
-### 3. Window State Verification
-
-```typescript
-// Add window state logging
-if (mainWindow) {
-  this.logger.info('🔍 WINDOW STATE:', {
-    isVisible: mainWindow.isVisible(),
-    isFocused: mainWindow.isFocused(),
-    isMinimized: mainWindow.isMinimized(),
-    bounds: mainWindow.getBounds(),
-  });
-}
-```
-
-### 4. Process Timing Analysis
-
-- Check if createMainWindow() completes before IPC send
-- Verify renderer process is ready to receive IPC messages
-- Analyze async timing between tray window close and main window open
-
-## Hypotheses
-
-### Hypothesis 1: Window Focus/Activation Issue
-
-**Theory**: Main window is created but not properly activated or brought to front
-**Test**: Add more aggressive window activation strategies
-**Evidence**: Previous fix attempt focused on this area but failed
-
-### Hypothesis 2: IPC Timing Issue
-
-**Theory**: IPC message sent before main window renderer is ready
-**Test**: Add longer delays or wait for window events
-**Evidence**: FileReader and window creation are both async operations
-
-### Hypothesis 3: Process Lifecycle Conflict
-
-**Theory**: Tray window close conflicts with main window creation
-**Test**: Delay main window creation after tray window close
-**Evidence**: Drop zone closure happens before main window creation
-
-### Hypothesis 4: macOS-Specific Window Management
-
-**Theory**: macOS has different window activation behavior than expected
-**Test**: Test on different platforms, add macOS-specific solutions
-**Evidence**: Previous fix included macOS-specific `app.focus({ steal: true })`
-
-### Hypothesis 5: Renderer Not Ready for IPC
-
-**Theory**: Main window renderer process not initialized when IPC sent
-**Test**: Wait for 'ready-to-show' event before sending IPC
-**Evidence**: Window creation and IPC sending happen in rapid succession
-
-## Next Steps
-
-1. **Add Comprehensive Logging**: Instrument every step of the pipeline with detailed logs
-2. **Test IPC Communication**: Verify each IPC message is sent and received
-3. **Check Window Lifecycle**: Ensure proper window creation and activation sequence
-4. **Platform Testing**: Test behavior on different operating systems
-5. **Timing Analysis**: Add delays and event listeners to understand async timing
-6. **Alternative Approaches**: Consider different window management strategies
-
-## Impact Assessment
-
-**User Experience**: Critical - Core tray functionality is broken
-**Development Progress**: Blocking Phase 3.1.2 completion
-**Release Readiness**: Cannot ship with this bug
-**Workaround**: Users can use main app drag & drop or tray menu import
-
-## Resolution Required
-
-This issue must be resolved before Phase 3.1.2 can be marked complete. The tray drop zone is a core part of the Personyx user experience and represents a fundamental workflow for the application.
-
----
-
-# FINAL RESOLUTION (2025-07-03) - DRAG & DROP REMOVED
-
-## ✅ **ULTIMATE SOLUTION: Simplified Click-Only Interface**
-
-After extensive troubleshooting with multiple drag and drop approaches, **the most reliable solution was to REMOVE drag and drop entirely** and implement a simple click-to-browse interface.
-
-### 🎯 **Why This Approach Won**
-
-1. **Reliability Over Complexity** - Click-to-browse always works, drag and drop was inconsistent
-2. **Cross-Platform Consistency** - File dialogs work identically across all operating systems
-3. **User Expectation** - Most users expect click-to-browse in file selection interfaces
-4. **Maintenance** - Much simpler codebase without complex drag event handling
-
-### 📝 **Changes Made**
-
-**UI Changes:**
-
-- Updated subtitle from "Drag & drop files here or click to browse" → "Click to browse for files"
-- Removed all drag-over visual states and CSS classes
-
-**Code Removal:**
-
-- Removed all drag event listeners (`dragover`, `dragenter`, `dragleave`, `drop`)
-- Removed all drag-related functions:
-  - `handleDragOver()`
-  - `handleDragEnter()`
-  - `handleDragLeave()`
-  - `handleDrop()`
-  - `handleDirectFileDrop()`
-  - `handleURIListDrop()`
-  - `handlePlainTextDrop()`
-  - `sendFileToMainProcess()`
-- Removed `dragCounter` variable and `.drag-over` CSS styles
-- Simplified `setupEventListeners()` to only handle click events
-
 **Preserved Functionality:**
 
 - ✅ Click-to-browse file dialog
@@ -716,184 +403,91 @@ finalScore = (recency * 0.4) + (coverage * 0.3) + (relevance * 0.3)
 
 Phase 3.1.3 Evidence Score Banner UI is production-ready. Scoring algorithm needs recency calculation fix to be functional.
 
-# Evidence Score Update Issue - Multiple PRD Uploads - ROOT CAUSE FOUND
+# Evidence Score Update Issue - FILE UPLOAD CONTENT PROBLEM
 
 **Date**: 2025-01-07  
-**Issue**: Evidence scores not updating when multiple PRDs are uploaded consecutively  
-**Status**: ✅ **ROOT CAUSE IDENTIFIED AND RESOLVED**
+**Issue**: Evidence scores staying identical despite uploading different PRDs  
+**Status**: 🔍 **CRITICAL FINDING: FILE CONTENT NOT CHANGING**
 
-## Issue Summary
+## New Critical Discovery
 
-User reported that uploading different PRDs (test_prd_1.md, test_prd_2.md) resulted in identical evidence scores. The logs showed the same `documentId` being reused repeatedly: `"doc-1751514502734-vogxsv7xl"`, suggesting new documents weren't being created.
+Despite the database schema being fixed and new document IDs being generated (`doc-1751514806017-b4hq55fku`), the evidence scores remain identical. Analysis of detailed logs reveals **the scoring algorithm may not be receiving different file content**.
 
-## Root Cause Discovery
+## Evidence from Console Logs
 
-### **PRIMARY ISSUE: Missing Database Schema**
-
-The fundamental problem was that the database schema was **completely missing**:
+### ✅ What's Working:
 
 ```bash
-# Database file existed but was empty
-$ ls -la data/personyx.db
--rw-r--r--@ 1 ns staff 0 Jul 2 22:40 personyx.db  # 0 bytes!
+# New documents ARE being created
+➕ Creating new product document: doc-1751514806017-b4hq55fku
 
-# No tables existed
-$ sqlite3 data/personyx.db ".tables"
-# (no output - no tables)
+# Content IS being analyzed
+🔍 Content relevance check: {
+  prdWords: ['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score'],
+  ...
+}
 
-$ sqlite3 data/personyx.db "SELECT * FROM product_documents;"
-Error: no such table: product_documents
-```
-
-### **Secondary Issue: Failed Migration System**
-
-The Drizzle migration system wasn't working properly:
-
-- `npx drizzle-kit push` was failing silently
-- Node.js/Electron native module version conflicts (NODE_MODULE_VERSION 119 vs 115)
-- Database initialization not happening during application startup
-
-### **Symptoms Explained**
-
-1. **Same DocumentId Reused**: Since `ProductDocumentRepo.create()` couldn't insert into non-existent tables, the application was likely using cached/in-memory document objects
-2. **Identical Scores**: Without new documents being created, the scoring algorithm was processing the same cached document content repeatedly
-3. **IPC Events Working**: The UI communication was working correctly, but always with the same stale data
-
-## Complete Solution Applied
-
-### **Step 1: Manual Database Schema Creation**
-
-```bash
-# Fixed native module version conflicts
-pnpm rebuild better-sqlite3
-
-# Applied migrations manually (since drizzle-kit push was failing)
-sqlite3 data/personyx.db < src/main/db/migrations/0000_common_satana.sql
-sqlite3 data/personyx.db < src/main/db/migrations/0001_narrow_virginia_dare.sql
-
-# Verified schema creation
-sqlite3 data/personyx.db ".tables"
-# Output: api_tokens, embeddings, evidence, evidence_scores, personas, product_documents
-```
-
-### **Step 2: Database Population**
-
-```bash
-# Populated with seed data
-sqlite3 data/personyx.db < scripts/seed-test-data.sql
-# Output: Personas created:2, Solo Founder evidence:6, Agency Marketer evidence:6
-```
-
-### **Step 3: Verified Resolution**
-
-```bash
-# Database now properly sized and functional
-ls -la data/personyx.db
-# Output: -rw-r--r--@ 1 ns staff 53248 Jul 2 22:51 personyx.db  # 53KB with data!
-```
-
-## Technical Deep Dive
-
-### **Document Creation Process (Fixed)**
-
-```typescript
-// ProductDocumentRepo.create() - NOW WORKING
-const documentId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-// Each call generates unique IDs like:
-// - doc-1751514502734-vogxsv7xl (first upload)
-// - doc-1751514523891-abc2def4x (second upload) ← NEW unique IDs now possible
-```
-
-### **Evidence Scoring Flow (Now Functional)**
-
-```typescript
-// 1. NEW document created in database ✅
-const document = await this.productDocumentRepo.create({...});
-
-// 2. Evidence scores calculated against NEW document ✅
-const evidenceScores = await this.calculateEvidenceScores(document.id);
-
-// 3. IPC events emitted with NEW scores ✅
-this.mainWindow.webContents.send('prd-imported', {
-  documentId: document.id,  // ← NOW truly unique
-  evidenceScores           // ← NOW calculated against new content
-});
-```
-
-## Prevention Measures
-
-### **1. Database Startup Validation**
-
-Add to application startup:
-
-```typescript
-// Verify database schema exists on startup
-const tables = await db.execute(
-  "SELECT name FROM sqlite_master WHERE type='table'"
-);
-if (!tables.some(t => t.name === 'product_documents')) {
-  logger.error('❌ Database schema missing - run migrations');
-  throw new Error('Database not initialized');
+# Scores ARE being calculated
+✅ Evidence score calculated successfully {
+  prdId: 'doc-1751514806017-b4hq55fku',
+  personaId: 'solo_founder',
+  score: 74.1
 }
 ```
 
-### **2. Enhanced Error Handling**
+### 🚨 **The Problem:**
 
-```typescript
-// ProductDocumentRepo.create() should fail fast if table missing
-try {
-  await db.insert(productDocuments).values(newDocument);
-} catch (error) {
-  if (error.message.includes('no such table')) {
-    logger.error('❌ Database schema missing', { table: 'product_documents' });
-    throw new Error('Database not initialized - please run migrations');
-  }
-  throw error;
-}
-```
+The `prdWords` array shows **generic test content words** that appear identical across uploads:
 
-### **3. Dev Script Improvements**
+- `['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score']`
 
-Update `dev.sh` to verify database before starting:
+This suggests either:
+
+## Potential Root Causes
+
+### **1. File Upload Process Failing**
+
+- Files aren't actually being read from disk
+- Same cached/default content being used repeatedly
+- File paths not resolving correctly
+
+### **2. Content Extraction Issue**
+
+- File reading succeeds but content extraction fails
+- Default/placeholder content being used instead of actual file content
+- Text parsing reverting to template content
+
+### **3. Temporary File Management Problem**
 
 ```bash
-# Check if database exists and has tables
-if [ ! -s "data/personyx.db" ] || ! sqlite3 data/personyx.db ".tables" | grep -q product_documents; then
-  echo "🔧 Database schema missing - applying migrations..."
-  sqlite3 data/personyx.db < src/main/db/migrations/0000_common_satana.sql
-  sqlite3 data/personyx.db < src/main/db/migrations/0001_narrow_virginia_dare.sql
-  sqlite3 data/personyx.db < scripts/seed-test-data.sql
-fi
+# Log shows: temp_prd_1751514806016.md
+# But actual uploaded files might not be reaching this temp location
 ```
 
-## Expected Behavior After Fix
+## Technical Analysis Needed
 
-### **First PRD Upload:**
+The scoring algorithm is working correctly, but it appears to be processing **identical content** each time, not the different PRD files being uploaded. Key investigation areas:
 
+1. **File Upload Handler**: Is the actual file content being written to the temporary file?
+2. **Content Reading**: Is the temporary file being read properly?
+3. **Text Extraction**: Is the PRD content being extracted correctly from the uploaded file?
+
+## Evidence Score Breakdown Analysis
+
+```bash
+# Both personas getting nearly identical scores:
+Solo Founder: 74.1 (coverage: 90%, relevance: 37.43%, recency: 100%)
+Agency Marketer: 74.77 (coverage: 90%, relevance: 39.35%, recency: 100%)
+
+# Low relevance scores indicate generic content being processed
+# High coverage (90%) suggests template/default evidence matching
+# Perfect recency (100%) confirms fresh timestamp generation works
 ```
-📄 Starting PRD file ingest: test_prd_1.md
-➕ Creating new product document: doc-1751615234567-abc123xyz
-📊 Calculated evidence scores: Solo Founder: 75.2, Agency Marketer: 72.8
-📢 Emitting PRDImported event: doc-1751615234567-abc123xyz
-```
 
-### **Second PRD Upload:**
+## Status: 🔍 INVESTIGATION REQUIRED
 
-```
-📄 Starting PRD file ingest: test_prd_2.md
-➕ Creating new product document: doc-1751615267890-def456uvw  ← NEW unique ID
-📊 Calculated evidence scores: Solo Founder: 68.4, Agency Marketer: 81.3  ← DIFFERENT scores
-📢 Emitting PRDImported event: doc-1751615267890-def456uvw  ← NEW document
-```
+The database and UI systems are working correctly. The issue is likely in the **file upload and content processing pipeline** where different uploaded files may not actually be reaching the scoring algorithm.
 
-## Status: ✅ RESOLVED
-
-- ✅ Database schema created and functional
-- ✅ Document creation working with unique IDs
-- ✅ Evidence scoring calculating against new content
-- ✅ UI receiving and displaying updated scores
-- ✅ Multiple PRD uploads now generate different scores
-
-The evidence score update system is now fully functional. Each PRD upload creates a new document with a unique ID, triggers fresh evidence score calculations, and updates the UI appropriately.
+**Next Investigation**: Verify that uploaded file content is actually being read and processed, not replaced with template/cached content.
 
 ---
