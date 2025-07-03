@@ -15,6 +15,9 @@ import {
   type PersonaClassification,
 } from './LangGraphService';
 import { EmbeddingProviderManager } from './EmbeddingProviderManager';
+import { PersonaEvolutionService } from './PersonaEvolutionService';
+import { PersonaManagerService } from './PersonaManagerService';
+import { ActivityLogService } from './ActivityLogService';
 import type { Evidence, Persona } from '@shared/types';
 import type { TranscriptFileEvent } from './InterviewFolderWatcher';
 
@@ -50,6 +53,7 @@ export class TranscriptIngestService {
   private evidenceScoreService: EvidenceScoreService;
   private langGraphService: LangGraphService;
   private embeddingManager: EmbeddingProviderManager;
+  private personaEvolutionService: PersonaEvolutionService | null = null;
   private mainWindow: BrowserWindow | null;
   private isInitialized = false;
 
@@ -160,6 +164,16 @@ export class TranscriptIngestService {
         new Set(classificationResults.map(r => r.classification.personaId))
       );
       await this.recalculateEvidenceScores(personasAffected);
+
+      // Phase 2.7: Trigger persona evolution analysis
+      await this.triggerPersonaEvolution({
+        transcriptFileName: transcriptEvent.fileName,
+        totalChunks: chunks.length,
+        processedChunks: classificationResults.length,
+        evidenceCreated: evidenceIds,
+        personasAffected,
+        processingTime: 0, // Will be calculated later
+      });
 
       const processingTime = Date.now() - startTime;
 
@@ -618,6 +632,92 @@ export class TranscriptIngestService {
       logger.warn(
         '⚠️ Cannot emit evidence-created - main window not available'
       );
+    }
+  }
+
+  /**
+   * Phase 2.7: Trigger persona evolution analysis after transcript processing
+   * @private
+   */
+  private async triggerPersonaEvolution(
+    transcriptResult: TranscriptIngestResult
+  ): Promise<void> {
+    try {
+      // Initialize persona evolution service if not already done
+      if (!this.personaEvolutionService) {
+        // For simplicity, create minimal dependencies for PersonaEvolutionService
+        // In a production system, these would be injected via dependency injection
+        const personaManagerService = new PersonaManagerService(
+          new ActivityLogService(),
+          this.evidenceScoreService
+        );
+        const activityLogService = new ActivityLogService();
+
+        this.personaEvolutionService = new PersonaEvolutionService(
+          personaManagerService,
+          activityLogService
+        );
+
+        await this.personaEvolutionService.initialize();
+      }
+
+      logger.info('🧬 Triggering persona evolution analysis', {
+        transcriptFileName: transcriptResult.transcriptFileName,
+        evidenceCreated: transcriptResult.evidenceCreated.length,
+      });
+
+      // Trigger persona evolution
+      const evolutionResult =
+        await this.personaEvolutionService.evolveFromTranscript(
+          transcriptResult
+        );
+
+      if (evolutionResult.success && evolutionResult.totalChanges > 0) {
+        logger.info('✅ Persona evolution completed with changes', {
+          personasUpdated: evolutionResult.personasUpdated.length,
+          personasCreated: evolutionResult.personasCreated.length,
+          totalChanges: evolutionResult.totalChanges,
+        });
+
+        // Emit persona-evolved event if any changes were made
+        this.emitPersonaEvolved(evolutionResult);
+      } else {
+        logger.debug('📊 Persona evolution completed with no changes', {
+          reason: evolutionResult.error || 'No significant changes detected',
+        });
+      }
+    } catch (error) {
+      logger.error('❌ Persona evolution analysis failed', {
+        transcriptFileName: transcriptResult.transcriptFileName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Don't throw error to avoid breaking the main transcript processing flow
+    }
+  }
+
+  /**
+   * Emit persona-evolved IPC event
+   * @private
+   */
+  private emitPersonaEvolved(evolutionResult: {
+    personasUpdated: string[];
+    personasCreated: string[];
+    totalChanges: number;
+  }): void {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.webContents.send('persona-evolved', {
+        personasUpdated: evolutionResult.personasUpdated,
+        personasCreated: evolutionResult.personasCreated,
+        totalChanges: evolutionResult.totalChanges,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.debug('📢 Emitted persona-evolved event', {
+        personasUpdated: evolutionResult.personasUpdated.length,
+        personasCreated: evolutionResult.personasCreated.length,
+      });
+    } else {
+      logger.warn('⚠️ Cannot emit persona-evolved - main window not available');
     }
   }
 
