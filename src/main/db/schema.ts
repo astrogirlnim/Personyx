@@ -31,7 +31,7 @@ export const evidence = sqliteTable('evidence', {
   content: text('content').notNull(),
   source: text('source').notNull(),
   sourceType: text('source_type').notNull(), // 'interview' | 'prd' | 'feedback' | 'other'
-  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+  timestamp: integer('timestamp').notNull(),
   tags: text('tags').notNull(), // JSON string array
   sentiment: text('sentiment'), // 'positive' | 'negative' | 'neutral' | null
   importance: integer('importance').notNull(), // 1-10 scale

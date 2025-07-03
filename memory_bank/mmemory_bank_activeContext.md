@@ -2,6 +2,161 @@
 
 _Current focus & immediate tasks_
 
+## 🚨 CRITICAL: File Upload Content Corruption Bug (Phase 3.1.3)
+
+**Date: 2025-01-07**  
+**Status: ACTIVE INVESTIGATION - Critical Bug Identified**
+
+### 🔍 CURRENT CRITICAL ISSUE: File Upload Content Corruption
+
+**PROBLEM**: Despite uploading different PRD files, the evidence scoring system consistently processes content from `tests/files/test_prd_update_1.md` (326 bytes, "Test PRD for Evidence Score Updates"), resulting in identical scores across all uploads:
+
+- Solo Founder: 74.1
+- Agency Marketer: 74.77
+
+### 🕵️ INVESTIGATION FINDINGS
+
+**✅ CONFIRMED: Scoring Algorithm Works Correctly**
+
+- Database schema: ✅ Working
+- Evidence scoring calculation: ✅ Working
+- UI components: ✅ Working
+- IPC communication: ✅ Working
+
+**🚨 ROOT CAUSE IDENTIFIED: Content Pipeline Corruption**
+
+- Different uploaded files → Same processed content
+- Debug logs show: `prdWords: ['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score']`
+- New document IDs generated correctly, but content remains identical
+- File processing receives corrupted/cached content instead of actual uploaded file content
+
+### 🛠️ DEBUG INFRASTRUCTURE IMPLEMENTED
+
+**Comprehensive Logging Added**:
+
+- ✅ File upload pipeline tracking
+- ✅ Cache detection and clearing logic
+- ✅ Content flow monitoring throughout IPC
+- ✅ Temporary file creation verification
+- ✅ Main process content handling validation
+
+**Key Debug Points**:
+
+```javascript
+// Added to main.ts
+console.log(
+  '🔍 Cache Status:',
+  this.fileToImportOnReady ? 'HAS CACHED CONTENT' : 'NO CACHE'
+);
+console.log('📄 Processing content length:', content.length);
+console.log('🎯 First 100 chars:', content.substring(0, 100));
+```
+
+### 🎯 CACHE CLEARING LOGIC PARTIALLY IMPLEMENTED
+
+**Added Cache Detection & Clearing**:
+
+- Modified `handleImportPRD()` to detect cached content
+- Clear `fileToImportOnReady` before processing new uploads
+- Warning logs when cached content detected
+- Proper cache lifecycle management
+
+**Code Changes Applied**:
+
+```typescript
+// Detect and clear any cached content that might interfere
+if (this.fileToImportOnReady) {
+  console.warn(
+    '⚠️ Found cached file content, clearing before processing new upload'
+  );
+  this.fileToImportOnReady = null;
+}
+```
+
+### 🔍 REMAINING INVESTIGATION AREAS
+
+**Suspected Frontend Issues**:
+
+- `selectedFile.text()` may be returning cached content
+- Browser File API caching mechanisms
+- React state management with stale file references
+- Drag/drop event handlers creating conflicts
+
+**Evidence from Latest Testing**:
+
+- Debug logs show content corruption still occurring
+- Cache clearing attempts didn't resolve the issue
+- Issue appears earlier in frontend file reading process
+- File objects may be reused or cached by browser
+
+### 📋 DEBUGGING WORKFLOW ESTABLISHED
+
+**Test Infrastructure**:
+
+- Created test files with unique content for verification
+- Manual testing commands for log monitoring
+- Real-time debugging setup for file upload flow
+- Comprehensive debug output throughout pipeline
+
+**Log Monitoring Commands**:
+
+```bash
+# Real-time log monitoring
+tail -f "/Users/ns/Library/Application Support/personyx/logs/main.log"
+
+# Evidence score verification
+grep -A 5 -B 5 "Evidence score calculated" logs/main.log
+```
+
+### 🎯 NEXT STEPS IDENTIFIED
+
+1. **Frontend File Object Investigation**
+   - Debug `selectedFile.text()` calls in renderer
+   - Check for File API caching issues
+   - Audit React state management for file references
+
+2. **File Reading Process Analysis**
+   - Add debug logging to frontend file reading
+   - Verify File object integrity before IPC calls
+   - Check drag/drop vs file picker differences
+
+3. **Content Validation Enhancement**
+   - Add content checksum verification
+   - Implement file fingerprinting
+   - Create file content comparison utilities
+
+### 🏗️ CURRENT ARCHITECTURE STATUS
+
+**✅ WORKING COMPONENTS**:
+
+- EvidenceScoreGauge.tsx UI component
+- Database evidence score storage
+- IPC event communication
+- Evidence scoring algorithm
+- File validation and security
+
+**🚨 BROKEN COMPONENT**:
+
+- File upload content extraction/processing
+- Frontend to backend content transfer integrity
+
+### 📊 PHASE STATUS UPDATE
+
+- **Phase 3.1.3 Evidence Score Banner UI**: ✅ 100% COMPLETE
+- **Phase 3.1.3 Evidence Score Calculation**: 🚨 CRITICAL BUG (content corruption)
+- **Overall Phase 3.1.3**: 🔄 BLOCKED on file upload content integrity
+
+## 🎯 Previous Achievement: Phase 3.1.2 Import PRD Modal 100% COMPLETE ✅
+
+**FINAL SOLUTION**: Successfully implemented reliable file import through simplified interface approach:
+
+- ✅ Main app drag & drop → Works perfectly
+- ✅ Import modal drag & drop → Works perfectly
+- ✅ Tray click-to-browse → Works reliably
+- ✅ All file validation and processing → Works correctly
+
+**Key Decision**: Removed complex drag & drop from tray, kept simple click-to-browse for maximum reliability.
+
 ## Current Status: Phase 3.1.2 Import PRD Modal 100% COMPLETE ✅
 
 **Date: 2025-01-03**  

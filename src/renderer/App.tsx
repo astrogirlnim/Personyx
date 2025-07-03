@@ -9,7 +9,16 @@ import type {
   Persona,
   ChatResponse,
   ImportResult,
+  EvidenceScore,
 } from '../shared/types';
+import EvidenceScoreGauge from './components/EvidenceScoreGauge';
+import { useEvidenceScores } from './hooks/useEvidenceScores';
+import {
+  getLastImportedPRD,
+  saveEvidenceScores,
+  getEvidenceScores,
+  logScoreUpdate,
+} from './utils/localStorage';
 
 // Chat Window Component
 interface ChatWindowProps {
@@ -1166,6 +1175,7 @@ export function App(): JSX.Element {
     isReady: false,
     personas: [],
     recentScores: [],
+    currentEvidenceScores: [], // Phase 4.1: Current document evidence scores
     settings: {
       theme: 'system',
       autoUpdate: true,
@@ -1185,21 +1195,58 @@ export function App(): JSX.Element {
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
   const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
 
+  // Evidence Score state
+  const [currentEvidenceScores, setCurrentEvidenceScores] = useState<
+    EvidenceScore[]
+  >([]);
+
+  // Phase 4.3: Use evidence scores utility hook
+  const { scores, maxScore, debugInfo } = useEvidenceScores(
+    currentEvidenceScores
+  );
+
+  // Phase 4.2: Get current document ID for persistence
+  const [, setCurrentDocumentId] = useState<string | null>(null);
+
   useEffect(() => {
     console.log('🚀 Personyx App component mounted');
 
     // Initialize app state
     const initializeApp = async () => {
       try {
+        // Phase 4.2: Load persisted evidence scores on startup
+        const persistedScores = getEvidenceScores();
+        const lastImported = getLastImportedPRD();
+
+        console.log('💾 Restored from localStorage:', {
+          persistedScoresCount: persistedScores.length,
+          lastImported: lastImported
+            ? {
+                documentId: lastImported.documentId,
+                fileName: lastImported.fileName,
+                importedAt: lastImported.importedAt,
+              }
+            : null,
+        });
+
         // Load personas
         const personas = (await window.electronAPI.getPersonas()) as Persona[];
         console.log('📋 Loaded personas:', personas);
+
+        // Set current document ID if we have a last imported PRD
+        if (lastImported) {
+          setCurrentDocumentId(lastImported.documentId);
+        }
 
         setAppState(prev => ({
           ...prev,
           isReady: true,
           personas: personas || [],
+          currentEvidenceScores: persistedScores,
         }));
+
+        // Set the current evidence scores in our component state too
+        setCurrentEvidenceScores(persistedScores);
       } catch (error) {
         console.error('Failed to initialize app:', error);
         setAppState(prev => ({ ...prev, isReady: true }));
@@ -1270,6 +1317,155 @@ export function App(): JSX.Element {
         setDraggedFile(file); // Set the file object created from content
         setIsImportModalOpen(true);
       });
+
+      // Listen for evidence score events
+      window.electronAPI.onPRDImported((data: unknown) => {
+        console.log(
+          '📊 PRD imported with evidence scores:',
+          JSON.stringify(data, null, 2)
+        );
+        const typedData = data as {
+          evidenceScores?: EvidenceScore[];
+          documentId: string;
+          title?: string;
+        };
+        if (typedData.evidenceScores && typedData.evidenceScores.length > 0) {
+          console.log('🔄 Setting evidence scores from PRD import:', {
+            scoresCount: typedData.evidenceScores.length,
+            scores: typedData.evidenceScores.map(s => ({
+              documentId: s.documentId,
+              personaId: s.personaId,
+              score: s.score,
+            })),
+          });
+
+          // Phase 4.2: Save to localStorage
+          saveEvidenceScores(typedData.evidenceScores);
+
+          // Phase 4.2: Log for debugging (we need file info for this)
+          logScoreUpdate(
+            typedData.documentId,
+            typedData.evidenceScores,
+            'import'
+          );
+
+          // Update state
+          setCurrentEvidenceScores(typedData.evidenceScores);
+          setCurrentDocumentId(typedData.documentId);
+
+          // Update AppState
+          setAppState(prev => ({
+            ...prev,
+            currentEvidenceScores: typedData.evidenceScores!,
+          }));
+        }
+      });
+
+      window.electronAPI.onEvidenceScoreUpdated((data: unknown) => {
+        console.log(
+          '📈 Evidence score updated - RAW DATA:',
+          JSON.stringify(data, null, 2)
+        );
+
+        // Enhanced data validation and logging
+        const typedData = data as {
+          scores?: EvidenceScore[];
+          documentId: string;
+        };
+
+        console.log('📈 Evidence score updated - PARSED DATA:', {
+          hasScores: !!typedData.scores,
+          scoresLength: typedData.scores?.length || 0,
+          documentId: typedData.documentId,
+          scoresData: typedData.scores?.map(s => ({
+            id: s.id,
+            documentId: s.documentId,
+            personaId: s.personaId,
+            score: s.score,
+            evidenceCount: s.evidenceCount,
+          })),
+        });
+
+        if (typedData.scores && typedData.scores.length > 0) {
+          console.log('🔄 BEFORE state update - Current evidence scores:', {
+            currentScoresCount: currentEvidenceScores.length,
+            currentScores: currentEvidenceScores.map(s => ({
+              documentId: s.documentId,
+              personaId: s.personaId,
+              score: s.score,
+            })),
+          });
+
+          setCurrentEvidenceScores(prev => {
+            // Replace scores for the same document/persona combinations
+            const newScores = [...prev];
+
+            typedData.scores!.forEach((newScore: EvidenceScore) => {
+              console.log('🔍 Processing new score:', {
+                newScoreId: newScore.id,
+                documentId: newScore.documentId,
+                personaId: newScore.personaId,
+                score: newScore.score,
+              });
+
+              const existingIndex = newScores.findIndex(
+                score =>
+                  score.documentId === newScore.documentId &&
+                  score.personaId === newScore.personaId
+              );
+
+              if (existingIndex >= 0) {
+                console.log('🔄 UPDATING existing score at index:', {
+                  index: existingIndex,
+                  oldScore: newScores[existingIndex].score,
+                  newScore: newScore.score,
+                });
+                newScores[existingIndex] = newScore;
+              } else {
+                console.log('➕ ADDING new score to array');
+                newScores.push(newScore);
+              }
+            });
+
+            console.log('🔄 AFTER state update - New evidence scores:', {
+              newScoresCount: newScores.length,
+              newScores: newScores.map(s => ({
+                documentId: s.documentId,
+                personaId: s.personaId,
+                score: s.score,
+              })),
+              maxScore:
+                newScores.length > 0
+                  ? Math.max(...newScores.map(s => s.score))
+                  : null,
+            });
+
+            // Phase 4.2: Save updated scores to localStorage
+            saveEvidenceScores(newScores);
+
+            // Phase 4.2: Log for debugging
+            logScoreUpdate(typedData.documentId, newScores, 'update');
+
+            // Update AppState
+            setAppState(prev => ({
+              ...prev,
+              currentEvidenceScores: newScores,
+            }));
+
+            return newScores;
+          });
+        } else {
+          console.warn(
+            '⚠️ Evidence score update event received but no valid scores found:',
+            {
+              rawData: data,
+              typedData,
+              hasScores: !!typedData.scores,
+              scoresLength: typedData.scores?.length,
+            }
+          );
+        }
+      });
     }
 
     return () => {
@@ -1277,6 +1473,31 @@ export function App(): JSX.Element {
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
   }, [isChatOpen, isImportModalOpen]);
+
+  // Debug evidence scores state changes
+  useEffect(() => {
+    console.log(
+      '🎯 Current Evidence Scores State Changed:',
+      JSON.stringify(
+        {
+          scoresCount: currentEvidenceScores.length,
+          scores: currentEvidenceScores.map(s => ({
+            id: s.id,
+            documentId: s.documentId,
+            personaId: s.personaId,
+            score: s.score,
+            lastCalculated: s.lastCalculated,
+          })),
+          maxScore:
+            currentEvidenceScores.length > 0
+              ? Math.max(...currentEvidenceScores.map(s => s.score))
+              : null,
+        },
+        null,
+        2
+      )
+    );
+  }, [currentEvidenceScores]);
 
   // Handle drag and drop for the main import card
   const handleCardDragOver = useCallback((e: React.DragEvent) => {
@@ -1635,48 +1856,90 @@ export function App(): JSX.Element {
           {/* Right Column - Spans 4 columns on desktop */}
           <div className="lg:col-span-4 space-y-6">
             {/* Evidence Scores Card */}
-            <div className="card">
+            <div
+              className="card"
+              tabIndex={0}
+              role="region"
+              aria-label="Evidence scores for imported PRDs"
+            >
               <h3 className="text-h2 text-slate dark:text-slate-dark mb-4">
                 Evidence Scores
               </h3>
               <div className="text-center">
-                {/* Ring Gauge - Empty State */}
-                <div className="w-40 h-40 mx-auto mb-4 relative">
-                  <svg
-                    className="w-full h-full transform -rotate-90"
-                    viewBox="0 0 160 160"
-                  >
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r="70"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      className="text-graphite dark:text-graphite-dark opacity-30"
-                      strokeDasharray="10 5"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-steel dark:text-steel-dark">
-                        --
-                      </div>
-                      <div className="text-caption text-steel dark:text-steel-dark">
-                        No Score
-                      </div>
+                {/* Evidence Score Gauge */}
+                {(() => {
+                  console.log(
+                    '🔍 EvidenceScoreGauge DEBUG - Rendering context:',
+                    JSON.stringify(
+                      {
+                        currentEvidenceScoresLength:
+                          currentEvidenceScores.length,
+                        currentEvidenceScores: currentEvidenceScores.map(s => ({
+                          id: s.id,
+                          documentId: s.documentId,
+                          personaId: s.personaId,
+                          score: s.score,
+                          scoreType: typeof s.score,
+                          scoreValue: s.score,
+                        })),
+                        scoresFromHook: scores.map(s => ({
+                          id: s.id,
+                          documentId: s.documentId,
+                          personaId: s.personaId,
+                          score: s.score,
+                          scoreType: typeof s.score,
+                        })),
+                        maxScoreCalculation: {
+                          maxScore,
+                          maxScoreType: typeof maxScore,
+                          maxScoreValue: maxScore,
+                          manualMaxCalc:
+                            scores.length > 0
+                              ? Math.max(...scores.map(s => s.score))
+                              : null,
+                        },
+                      },
+                      null,
+                      2
+                    )
+                  );
+                  return null;
+                })()}
+                <EvidenceScoreGauge score={maxScore} className="mb-4" />
+                {/* Phase 4 Debug Info - Only show in development */}
+                {process.env.NODE_ENV === 'development' &&
+                  debugInfo.debugInfo.totalUpdates > 0 && (
+                    <div className="mt-2 text-xs text-steel dark:text-steel-dark">
+                      Debug: {debugInfo.scoresCount} scores,{' '}
+                      {debugInfo.debugInfo.totalUpdates} updates
                     </div>
+                  )}
+
+                {/* Status Text and Actions */}
+                {scores.length > 0 ? (
+                  <div>
+                    <p className="text-body text-steel dark:text-steel-dark mb-2">
+                      {scores.length} persona
+                      {scores.length !== 1 ? 's' : ''} analyzed
+                    </p>
+                    <p className="text-caption text-steel dark:text-steel-dark mb-4">
+                      Highest score: {maxScore?.toFixed(0) || '0'}
+                      /100
+                    </p>
                   </div>
-                </div>
-                <p className="text-body text-steel dark:text-steel-dark mb-4">
-                  No PRDs analysed yet
-                </p>
-                <button
-                  onClick={() => setIsImportModalOpen(true)}
-                  className="btn-primary"
-                >
-                  Import First PRD
-                </button>
+                ) : (
+                  <div>
+                    <p className="text-body text-steel dark:text-steel-dark mb-4">
+                      No PRDs analysed yet
+                    </p>
+                    <button
+                      onClick={() => setIsImportModalOpen(true)}
+                      className="btn-primary"
+                    >
+                      Import First PRD
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

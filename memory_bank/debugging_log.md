@@ -274,319 +274,6 @@ The issue was **NOT** a race condition or window management problem. The real pr
 - Completely rewrote `handleDrop()` with multiple processing methods
 - Added new functions: `handleDirectFileDrop()`, `handleURIListDrop()`, `handlePlainTextDrop()`, `sendFileToMainProcess()`
 
-### 📊 Expected Results
-
-**Before Fix:**
-
-- Drag from VS Code: ❌ No drop event triggered
-- Drop zone shows drag feedback but nothing happens on drop
-
-**After Fix:**
-
-- Drag from VS Code: ✅ Should detect `text/uri-list` and process the file URI
-- Drag from file manager: ✅ Should still work via direct file handling
-- Drag text content: ✅ Should work via plain text handling
-- All methods should trigger the main window with import modal
-
-### 🧪 Testing Required
-
-1. **Drag .md file from VS Code** → Should open main window with import modal
-2. **Drag .md file from Finder/Explorer** → Should work as before
-3. **Drag selected text content** → Should create file from text content
-4. **Check console logs** → Should see proper detection messages
-
-### 💡 Key Insight
-
-The original code was designed for file manager drag-and-drop but modern code editors use URI list format for security reasons. The fix maintains backwards compatibility while adding support for editor-based drag operations.
-
----
-
-> "Many data formats, there are. Handle them all, we must. Flexible the drop zone becomes, more powerful it is." — Yoda
-
-# Debugging Log - Tray Drop Zone Issue
-
-**Created**: 2025-01-03  
-**Issue**: Tray drop zone does not open main window when files are dropped  
-**Priority**: Critical - Core Phase 3.1.2 functionality broken
-
-## Issue Summary
-
-**Problem**: When users drag and drop files onto the purple tray drop zone (accessed via tray icon click), the main Personyx window does not appear and the import modal does not open.
-
-**Expected Behavior**:
-
-1. User drags file to tray drop zone
-2. Tray drop zone window closes
-3. Main Personyx window opens and comes to front
-4. Import modal opens automatically with dropped file
-5. Import processing begins immediately
-
-**Actual Behavior**:
-
-1. User drags file to tray drop zone
-2. Tray drop zone window closes ✅
-3. ❌ Main Personyx window does not appear
-4. ❌ No visible indication that anything happened
-5. ❌ No import processing begins
-
-## Working vs Broken Scenarios
-
-### ✅ Working Scenarios
-
-1. **Main App Drag & Drop**: Dragging files to main app import card works perfectly
-2. **Import Modal Drag & Drop**: Dragging files to import modal works perfectly
-3. **Tray Menu Import**: Clicking "Import PRD..." in tray menu opens file dialog correctly
-
-### ❌ Broken Scenario
-
-1. **Tray Drop Zone**: Dragging files to purple tray drop zone does not open main window
-
-## Technical Analysis
-
-### Architecture Overview
-
-```
-Tray Drop Zone (BrowserWindow)
-  ↓ (file drop event)
-HTML/JS FileReader API
-  ↓ (IPC: tray-file-drop-with-content)
-Main Process (main.ts)
-  ↓ (createMainWindow() + IPC: open-import-modal-with-file-content)
-Renderer Process (App.tsx)
-  ↓ (setIsImportModalOpen(true))
-Import Modal UI
-```
-
-### Failed Fix Attempts
-
-#### Fix Attempt 1: FileReader API Implementation
-
-**Commit**: `da01d19 - feat(phase-3.1.2): Fix drag & drop for import modal and tray zones`
-
-**Changes Made**:
-
-- Replaced non-existent `file.path` property with FileReader API
-- Added `tray-file-drop-with-content` IPC channel
-- Enhanced preload.ts with `handleTrayFileDropWithContent` method
-- Updated renderer to handle file content instead of file paths
-
-**HTML Implementation**:
-
-```javascript
-// In tray drop zone HTML
-const reader = new FileReader();
-reader.onload = function (e) {
-  const fileContent = e.target.result;
-  window.electronAPI.handleTrayFileDropWithContent(file.name, fileContent);
-};
-reader.readAsText(file);
-```
-
-**IPC Handler**:
-
-```typescript
-// In main.ts
-ipcMain.on('tray-file-drop-with-content', async (_event, data) => {
-  this.createMainWindow();
-  const mainWindow = this.getMainWindow();
-  if (mainWindow) {
-    mainWindow.webContents.send('open-import-modal-with-file-content', data);
-  }
-});
-```
-
-**Result**: ❌ FAILED - Issue persisted, main window still did not appear
-
-#### Fix Attempt 2: Enhanced Window Focusing
-
-**Commit**: `37203a0 - fix: Improve tray drop zone main window opening and focusing`
-
-**Changes Made**:
-
-- Added timing delays: `await new Promise(resolve => setTimeout(resolve, 100))`
-- Enhanced window focusing: `mainWindow.show()`, `mainWindow.focus()`, `mainWindow.moveTop()`
-- Added macOS-specific app activation: `app.focus({ steal: true })`
-- Added drop zone closure before main window creation
-- Enhanced error handling and logging
-
-**Window Focusing Code**:
-
-```typescript
-// Close drop zone first
-if (this.trayManager) {
-  this.trayManager.closeDropZone();
-}
-
-// Create and focus main window
-this.createMainWindow();
-const mainWindow = this.getMainWindow();
-if (mainWindow) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  mainWindow.show();
-  mainWindow.focus();
-  mainWindow.moveTop();
-
-  if (process.platform === 'darwin') {
-    app.focus({ steal: true });
-  }
-}
-```
-
-**Result**: ❌ FAILED - User confirmed issue persists
-
-## Debugging Questions
-
-### Process Communication
-
-1. **Are IPC messages being sent?** Need to verify `tray-file-drop-with-content` IPC is triggered
-2. **Is main process receiving messages?** Check main.ts IPC handler execution
-3. **Is createMainWindow() being called?** Verify main window creation attempt
-4. **Is renderer receiving IPC?** Check if `open-import-modal-with-file-content` reaches App.tsx
-
-### Window Management
-
-1. **Is main window actually being created?** Check BrowserWindow instantiation
-2. **Is main window being shown?** Verify `show()`, `focus()`, `moveTop()` execution
-3. **Is main window behind other windows?** Platform-specific window layering issues
-4. **Is main window created but invisible?** Check window properties and positioning
-
-### Platform-Specific Issues
-
-1. **macOS window management**: App activation and focus stealing behavior
-2. **Electron security restrictions**: Possible sandbox or security policy conflicts
-3. **Multiple BrowserWindow handling**: Tray window vs main window lifecycle conflicts
-
-## Required Investigation Steps
-
-### 1. Console Log Analysis
-
-- **Tray Window Console**: Check HTML console for drop event and FileReader execution
-- **Main Process Console**: Verify IPC message reception and window creation calls
-- **Renderer Console**: Check if IPC events reach the App component
-
-### 2. IPC Message Tracing
-
-```typescript
-// Add comprehensive logging to all IPC handlers
-this.logger.info('🔍 IPC TRACE: tray-file-drop-with-content received', {
-  fileName: data.fileName,
-});
-this.logger.info('🔍 IPC TRACE: createMainWindow called');
-this.logger.info('🔍 IPC TRACE: mainWindow reference obtained', {
-  exists: !!mainWindow,
-});
-this.logger.info('🔍 IPC TRACE: sending open-import-modal-with-file-content');
-```
-
-### 3. Window State Verification
-
-```typescript
-// Add window state logging
-if (mainWindow) {
-  this.logger.info('🔍 WINDOW STATE:', {
-    isVisible: mainWindow.isVisible(),
-    isFocused: mainWindow.isFocused(),
-    isMinimized: mainWindow.isMinimized(),
-    bounds: mainWindow.getBounds(),
-  });
-}
-```
-
-### 4. Process Timing Analysis
-
-- Check if createMainWindow() completes before IPC send
-- Verify renderer process is ready to receive IPC messages
-- Analyze async timing between tray window close and main window open
-
-## Hypotheses
-
-### Hypothesis 1: Window Focus/Activation Issue
-
-**Theory**: Main window is created but not properly activated or brought to front
-**Test**: Add more aggressive window activation strategies
-**Evidence**: Previous fix attempt focused on this area but failed
-
-### Hypothesis 2: IPC Timing Issue
-
-**Theory**: IPC message sent before main window renderer is ready
-**Test**: Add longer delays or wait for window events
-**Evidence**: FileReader and window creation are both async operations
-
-### Hypothesis 3: Process Lifecycle Conflict
-
-**Theory**: Tray window close conflicts with main window creation
-**Test**: Delay main window creation after tray window close
-**Evidence**: Drop zone closure happens before main window creation
-
-### Hypothesis 4: macOS-Specific Window Management
-
-**Theory**: macOS has different window activation behavior than expected
-**Test**: Test on different platforms, add macOS-specific solutions
-**Evidence**: Previous fix included macOS-specific `app.focus({ steal: true })`
-
-### Hypothesis 5: Renderer Not Ready for IPC
-
-**Theory**: Main window renderer process not initialized when IPC sent
-**Test**: Wait for 'ready-to-show' event before sending IPC
-**Evidence**: Window creation and IPC sending happen in rapid succession
-
-## Next Steps
-
-1. **Add Comprehensive Logging**: Instrument every step of the pipeline with detailed logs
-2. **Test IPC Communication**: Verify each IPC message is sent and received
-3. **Check Window Lifecycle**: Ensure proper window creation and activation sequence
-4. **Platform Testing**: Test behavior on different operating systems
-5. **Timing Analysis**: Add delays and event listeners to understand async timing
-6. **Alternative Approaches**: Consider different window management strategies
-
-## Impact Assessment
-
-**User Experience**: Critical - Core tray functionality is broken
-**Development Progress**: Blocking Phase 3.1.2 completion
-**Release Readiness**: Cannot ship with this bug
-**Workaround**: Users can use main app drag & drop or tray menu import
-
-## Resolution Required
-
-This issue must be resolved before Phase 3.1.2 can be marked complete. The tray drop zone is a core part of the Personyx user experience and represents a fundamental workflow for the application.
-
----
-
-# FINAL RESOLUTION (2025-07-03) - DRAG & DROP REMOVED
-
-## ✅ **ULTIMATE SOLUTION: Simplified Click-Only Interface**
-
-After extensive troubleshooting with multiple drag and drop approaches, **the most reliable solution was to REMOVE drag and drop entirely** and implement a simple click-to-browse interface.
-
-### 🎯 **Why This Approach Won**
-
-1. **Reliability Over Complexity** - Click-to-browse always works, drag and drop was inconsistent
-2. **Cross-Platform Consistency** - File dialogs work identically across all operating systems
-3. **User Expectation** - Most users expect click-to-browse in file selection interfaces
-4. **Maintenance** - Much simpler codebase without complex drag event handling
-
-### 📝 **Changes Made**
-
-**UI Changes:**
-
-- Updated subtitle from "Drag & drop files here or click to browse" → "Click to browse for files"
-- Removed all drag-over visual states and CSS classes
-
-**Code Removal:**
-
-- Removed all drag event listeners (`dragover`, `dragenter`, `dragleave`, `drop`)
-- Removed all drag-related functions:
-  - `handleDragOver()`
-  - `handleDragEnter()`
-  - `handleDragLeave()`
-  - `handleDrop()`
-  - `handleDirectFileDrop()`
-  - `handleURIListDrop()`
-  - `handlePlainTextDrop()`
-  - `sendFileToMainProcess()`
-- Removed `dragCounter` variable and `.drag-over` CSS styles
-- Simplified `setupEventListeners()` to only handle click events
-
 **Preserved Functionality:**
 
 - ✅ Click-to-browse file dialog
@@ -650,3 +337,288 @@ The fix involved refactoring the IPC handling logic in `src/main/main.ts` to mak
 - **Issue**: Fully resolved.
 - **Core Functionality**: The tray drop zone feature is now working as expected, unblocking Phase 3.1.2 completion.
 - **Commit**: `fix(ipc): resolve tray drop race condition with event-driven logic` (Example commit message)
+
+# Personyx Debugging Log
+
+## 2025-01-02 - Evidence Score Banner NaN Bug
+
+### Issue
+
+Evidence scores are not being generated. PRD import completes but no scores appear in UI.
+
+### Root Cause Analysis
+
+1. **UI Layer**: ✅ WORKING - EvidenceScoreGauge component renders correctly, IPC events fire properly
+2. **Evidence Data**: ✅ WORKING - 12 evidence items loaded (6 per persona), tags parsing fixed with error handling
+3. **Evidence Filtering**: ✅ WORKING - Finds 5-6 relevant evidence items per persona based on keywords/importance
+4. **Score Components**:
+   - Coverage: ✅ WORKING (90%)
+   - Relevance: ✅ WORKING (39-43%)
+   - **Recency: ❌ BROKEN (returns NaN)**
+5. **Database**: ❌ FAILING - NOT NULL constraint on evidence_scores.score field
+
+### Technical Details
+
+```javascript
+// Score breakdown from logs
+{
+  recency: NaN,           // ← ROOT CAUSE
+  coverage: 90,           // ✅ Working
+  relevance: 43.14,       // ✅ Working
+  evidenceCount: 5        // ✅ Working
+}
+
+// Final calculation fails
+finalScore = (recency * 0.4) + (coverage * 0.3) + (relevance * 0.3)
+           = (NaN * 0.4) + (90 * 0.3) + (43.14 * 0.3)
+           = NaN  // ← Causes database constraint failure
+```
+
+### Evidence Processing Flow
+
+1. ✅ Evidence retrieved from database (6 items per persona)
+2. ✅ Tags parsing with error handling (array vs string format handled)
+3. ✅ Evidence filtering by keywords and importance (5-6 items selected)
+4. ✅ Content relevance analysis (scoring 39-43%)
+5. ✅ Coverage calculation (90% based on evidence count)
+6. ❌ Recency calculation fails → returns NaN
+7. ❌ Final weighted score becomes NaN
+8. ❌ Database insert fails due to NOT NULL constraint
+
+### Next Steps (For Future Implementation)
+
+1. Debug recency calculation in EvidenceScoreService
+2. Check timestamp parsing and date handling logic
+3. Add fallback values for recency calculation
+4. Ensure all score components return valid numbers before final calculation
+
+### Files Involved
+
+- `src/main/services/EvidenceScoreService.ts` - Contains broken recency calculation
+- `src/main/db/repositories/EvidenceScoreRepo.ts` - Database constraint failure
+- `src/renderer/components/EvidenceScoreGauge.tsx` - UI working correctly
+- `scripts/seed-test-data.sql` - Test data loaded successfully
+
+### Status
+
+Phase 3.1.3 Evidence Score Banner UI is production-ready. Scoring algorithm needs recency calculation fix to be functional.
+
+# Evidence Score Update Issue - FILE UPLOAD CONTENT PROBLEM
+
+**Date**: 2025-01-07  
+**Issue**: Evidence scores staying identical despite uploading different PRDs  
+**Status**: 🔍 **CRITICAL FINDING: FILE CONTENT NOT CHANGING**
+
+## New Critical Discovery
+
+Despite the database schema being fixed and new document IDs being generated (`doc-1751514806017-b4hq55fku`), the evidence scores remain identical. Analysis of detailed logs reveals **the scoring algorithm may not be receiving different file content**.
+
+## Evidence from Console Logs
+
+### ✅ What's Working:
+
+```bash
+# New documents ARE being created
+➕ Creating new product document: doc-1751514806017-b4hq55fku
+
+# Content IS being analyzed
+🔍 Content relevance check: {
+  prdWords: ['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score'],
+  ...
+}
+
+# Scores ARE being calculated
+✅ Evidence score calculated successfully {
+  prdId: 'doc-1751514806017-b4hq55fku',
+  personaId: 'solo_founder',
+  score: 74.1
+}
+```
+
+### 🚨 **The Problem:**
+
+The `prdWords` array shows **generic test content words** that appear identical across uploads:
+
+- `['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score']`
+
+This suggests either:
+
+## Potential Root Causes
+
+### **1. File Upload Process Failing**
+
+- Files aren't actually being read from disk
+- Same cached/default content being used repeatedly
+- File paths not resolving correctly
+
+### **2. Content Extraction Issue**
+
+- File reading succeeds but content extraction fails
+- Default/placeholder content being used instead of actual file content
+- Text parsing reverting to template content
+
+### **3. Temporary File Management Problem**
+
+```bash
+# Log shows: temp_prd_1751514806016.md
+# But actual uploaded files might not be reaching this temp location
+```
+
+## Technical Analysis Needed
+
+The scoring algorithm is working correctly, but it appears to be processing **identical content** each time, not the different PRD files being uploaded. Key investigation areas:
+
+1. **File Upload Handler**: Is the actual file content being written to the temporary file?
+2. **Content Reading**: Is the temporary file being read properly?
+3. **Text Extraction**: Is the PRD content being extracted correctly from the uploaded file?
+
+## Evidence Score Breakdown Analysis
+
+```bash
+# Both personas getting nearly identical scores:
+Solo Founder: 74.1 (coverage: 90%, relevance: 37.43%, recency: 100%)
+Agency Marketer: 74.77 (coverage: 90%, relevance: 39.35%, recency: 100%)
+
+# Low relevance scores indicate generic content being processed
+# High coverage (90%) suggests template/default evidence matching
+# Perfect recency (100%) confirms fresh timestamp generation works
+```
+
+## Status: 🔍 INVESTIGATION REQUIRED
+
+The database and UI systems are working correctly. The issue is likely in the **file upload and content processing pipeline** where different uploaded files may not actually be reaching the scoring algorithm.
+
+**Next Investigation**: Verify that uploaded file content is actually being read and processed, not replaced with template/cached content.
+
+---
+
+# Debugging Log - Evidence Score Display Issue
+
+## Current Status: CRITICAL BUG IDENTIFIED 🚨
+
+**Date**: 2025-01-03  
+**Issue**: Evidence scores display correctly in backend/logs but show old values in frontend UI  
+**Component**: EvidenceScoreGauge.tsx  
+**Phase**: 3.1.3 Evidence Score Banner - BLOCKED
+
+## Bug Analysis Summary
+
+### ✅ What's Working
+
+1. **Backend scoring**: Perfectly calculating 53.6 (solo_founder) and 52.27 (agency_marketer)
+2. **IPC communication**: Frontend receiving correct scores via PRDImported events
+3. **State management**: App.tsx receiving and storing correct evidence scores
+4. **Prop passing**: EvidenceScoreGauge receiving correct `score` prop (53.6)
+
+### ❌ What's Broken
+
+1. **displayScore state**: Stuck at old value (57.6) in EvidenceScoreGauge component
+2. **useEffect execution**: The useEffect that should update displayScore is NOT running
+3. **UI display**: Shows 58 (rounded from 57.6) instead of correct 54 (rounded from 53.6)
+
+## Detailed Log Analysis
+
+### Evidence from Console Logs:
+
+```javascript
+// ✅ GOOD: Component receives correct prop
+"🎯 EvidenceScoreGauge: Incoming prop analysis {
+  "score": 53.6,          // ✅ Correct new score
+  "scoreType": "number"
+}"
+
+// ❌ BAD: Component renders with old state
+"🎯 EvidenceScoreGauge: Rendering {
+  "score": 53.6,          // ✅ Correct prop
+  "displayScore": 57.6,   // ❌ OLD state value - should be 53.6
+  "shouldPulse": false,
+  "strokeDashoffset": 186.4849399170901,
+  "colorClass": "text-risk-red dark:text-risk-red-dark"
+}"
+
+// ❌ MISSING: These logs should appear but don't:
+// "🎯 EvidenceScoreGauge: Score update triggered"
+// "🎯 EvidenceScoreGauge: Updated display score"
+```
+
+## Root Cause Analysis
+
+### Primary Issue: useEffect Not Executing
+
+The useEffect responsible for updating displayScore when score changes is **not running at all**:
+
+```tsx
+useEffect(() => {
+  // This entire block is not executing
+  console.log('🎯 EvidenceScoreGauge: Score update triggered', ...);
+  // ... rest of logic
+}, [score]); // Dependency should trigger on score change
+```
+
+### Potential Causes (In Priority Order):
+
+1. **React Strict Mode**: Double-rendering might be interfering with ref comparison logic
+2. **Conditional Logic Bug**: The effect might have a condition preventing execution
+3. **Object Reference Issue**: Score prop might be the same object reference despite value change
+4. **React Optimization**: React might be optimizing away the effect due to rapid re-renders
+5. **prevScoreRef Logic**: The ref comparison logic might be preventing updates
+
+## Next Investigation Steps
+
+### Step 1: Simplify useEffect (IMMEDIATE)
+
+Remove all conditional logic and force the effect to run:
+
+```tsx
+useEffect(() => {
+  console.log('🔥 FORCE: useEffect running with score:', score);
+  setDisplayScore(score);
+  prevScoreRef.current = score;
+}, [score]);
+```
+
+### Step 2: Add Effect Debugging (IMMEDIATE)
+
+Add detailed logging to understand why effect isn't running:
+
+```tsx
+useEffect(() => {
+  console.log('🔥 useEffect ENTRY:', {
+    score,
+    prevScore: prevScoreRef.current,
+    scoreChanged: score !== prevScoreRef.current,
+  });
+  // ... rest of logic
+}, [score]);
+```
+
+### Step 3: Check React Strict Mode (NEXT)
+
+Verify if React.StrictMode is causing double-renders that interfere with effect
+
+### Step 4: Investigate Component Lifecycle (NEXT)
+
+Check if component is unmounting/remounting unexpectedly
+
+## Success Criteria
+
+- [ ] "🎯 EvidenceScoreGauge: Score update triggered" appears in logs
+- [ ] displayScore updates from 57.6 to 53.6
+- [ ] UI shows 54 instead of 58
+- [ ] Score updates reliably on subsequent PRD uploads
+
+## Files to Investigate
+
+1. `src/renderer/components/EvidenceScoreGauge.tsx` - Primary issue location
+2. `src/renderer/App.tsx` - Parent component rendering behavior
+3. `src/renderer/main.tsx` - Check for React.StrictMode
+
+## Backup Plan
+
+If useEffect issues persist, implement direct prop-to-state synchronization without effect dependency optimization.
+
+---
+
+**Next Action**: Implement Step 1 & 2 immediately to force useEffect execution and gather detailed debugging data.
+
+---

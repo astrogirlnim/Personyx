@@ -65,6 +65,13 @@ class PersonyxApp {
   constructor() {
     this.logger = new Logger('main');
     this.logger.info('🚀 Personyx starting up...');
+
+    // DEBUG: Ensure fileToImportOnReady starts clean
+    this.fileToImportOnReady = null;
+    this.logger.info(
+      `🐛 [DEBUG] Initialized fileToImportOnReady cache as null`
+    );
+
     this.setupAppEventHandlers();
     this.setupIpcHandlers();
     this.logger.info('✅ Personyx ready');
@@ -173,10 +180,19 @@ class PersonyxApp {
 
         // If a file was dropped on the tray, send it to the modal now
         if (this.fileToImportOnReady) {
-          this.logger.info(
-            '📂 Sending deferred file drop data to renderer',
-            this.fileToImportOnReady.fileName
+          this.logger.warn(
+            `🐛 [CONTENT CORRUPTION TRACKING] About to send cached file content to renderer:`,
+            {
+              fileName: this.fileToImportOnReady.fileName,
+              contentLength: this.fileToImportOnReady.fileContent.length,
+              contentPreview: this.fileToImportOnReady.fileContent.substring(
+                0,
+                100
+              ),
+              event: 'open-import-modal-with-file-content',
+            }
           );
+
           this.mainWindow.webContents.send(
             'open-import-modal-with-file-content',
             {
@@ -185,7 +201,15 @@ class PersonyxApp {
               fileSize: this.fileToImportOnReady.fileContent.length,
             }
           );
+
+          this.logger.info(
+            '🐛 [DEBUG] Clearing cached file content after sending to renderer'
+          );
           this.fileToImportOnReady = null; // Clear after sending
+        } else {
+          this.logger.info(
+            '🐛 [DEBUG] No cached file content to send on window ready'
+          );
         }
       }
     });
@@ -399,8 +423,14 @@ class PersonyxApp {
     ipcMain.on(
       'tray-file-drop-with-content',
       async (_event, data: { fileName: string; fileContent: string }) => {
-        this.logger.info(
-          `🗂️ File dropped on tray zone with content: ${data.fileName}`
+        this.logger.warn(
+          `🐛 [CONTENT CORRUPTION TRACKING] Setting cached file content from tray drop:`,
+          {
+            fileName: data.fileName,
+            contentLength: data.fileContent.length,
+            contentPreview: data.fileContent.substring(0, 100),
+            event: 'tray-file-drop-with-content',
+          }
         );
 
         try {
@@ -414,7 +444,9 @@ class PersonyxApp {
             fileName: data.fileName,
             fileContent: data.fileContent,
           };
-          this.logger.info('📂 Deferred file drop until main window is ready.');
+          this.logger.warn(
+            `🐛 [CONTENT CORRUPTION TRACKING] Cached content set - will be sent when window is ready!`
+          );
 
           // Ensure main window is open and focused.
           // The 'ready-to-show' event will handle sending the data.
@@ -559,11 +591,13 @@ class PersonyxApp {
         this.logger.info('ℹ️ Using local AI service configuration');
       }
 
-      // Initialize workflow orchestrator (Phase 1.3)
+      // Initialize workflow orchestrator (Phase 1.3 + Phase 2.6)
       this.logger.info('🔄 Initializing workflow orchestrator...');
       this.workflowOrchestrator = new WorkflowOrchestrator();
-      await this.workflowOrchestrator.initialize();
-      this.logger.info('✅ Workflow orchestrator initialized');
+      await this.workflowOrchestrator.start();
+      this.logger.info(
+        '✅ Workflow orchestrator initialized with transcript ingest service'
+      );
 
       // Load personas configuration (Phase 1.4)
       this.logger.info('🎭 Loading personas from YAML configuration...');
@@ -623,6 +657,39 @@ class PersonyxApp {
     try {
       this.logger.info(`📥 Processing PRD import`);
 
+      // DEBUG: Log initial input to trace content corruption
+      this.logger.info(`🐛 [DEBUG] Initial input received:`, {
+        inputType: typeof filePathOrContent,
+        inputLength: filePathOrContent.length,
+        firstChars: filePathOrContent.substring(0, 100),
+        lastChars: filePathOrContent.substring(
+          Math.max(0, filePathOrContent.length - 100)
+        ),
+        hasNewlines: filePathOrContent.includes('\n'),
+        isLikelyPath:
+          !filePathOrContent.includes('\n') && filePathOrContent.length <= 500,
+      });
+
+      // DEBUG: Check if we have cached file content that might be interfering
+      if (this.fileToImportOnReady) {
+        this.logger.warn(
+          `🐛 [CONTENT CORRUPTION BUG] Detected cached file content from previous operation:`,
+          {
+            cachedFileName: this.fileToImportOnReady.fileName,
+            cachedContentLength: this.fileToImportOnReady.fileContent.length,
+            cachedContentPreview:
+              this.fileToImportOnReady.fileContent.substring(0, 100),
+            willClearCache: true,
+          }
+        );
+
+        // CRITICAL FIX: Clear the cached content to prevent corruption
+        this.fileToImportOnReady = null;
+        this.logger.info(
+          `🐛 [FIX] Cleared cached file content to prevent corruption`
+        );
+      }
+
       if (!this.secureFileIngestService) {
         this.logger.warn('⚠️ SecureFileIngestService not initialized');
         throw new Error('Secure file ingest service not available');
@@ -634,6 +701,10 @@ class PersonyxApp {
       // Check if the input is a file path or file content
       if (filePathOrContent.includes('\n') || filePathOrContent.length > 500) {
         // Likely file content, create a temporary file
+        this.logger.info(
+          `🐛 [DEBUG] Detected as file content, creating temporary file`
+        );
+
         const fs = await import('fs');
         const path = await import('path');
         const os = await import('os');
@@ -642,13 +713,60 @@ class PersonyxApp {
         const tempFileName = `temp_prd_${Date.now()}.md`;
         filePath = path.join(tempDir, tempFileName);
 
+        // DEBUG: Log what we're writing to the temp file
+        this.logger.info(`🐛 [DEBUG] Writing content to temporary file:`, {
+          tempFilePath: filePath,
+          contentLength: filePathOrContent.length,
+          contentPreview:
+            filePathOrContent.substring(0, 200) +
+            (filePathOrContent.length > 200 ? '...' : ''),
+        });
+
         fs.writeFileSync(filePath, filePathOrContent, 'utf8');
         isTemporaryFile = true;
         this.logger.info(`📝 Created temporary file: ${filePath}`);
+
+        // DEBUG: Verify what we actually wrote to the file
+        try {
+          const verifyContent = fs.readFileSync(filePath, 'utf8');
+          this.logger.info(
+            `🐛 [DEBUG] Verification - content written to temp file:`,
+            {
+              writtenLength: verifyContent.length,
+              writtenPreview:
+                verifyContent.substring(0, 200) +
+                (verifyContent.length > 200 ? '...' : ''),
+              matches: verifyContent === filePathOrContent,
+            }
+          );
+        } catch (verifyError) {
+          this.logger.error(
+            `🐛 [DEBUG] Failed to verify temp file content:`,
+            verifyError
+          );
+        }
       } else {
         // Assume it's a file path
         filePath = filePathOrContent;
         this.logger.info(`📂 Using file path: ${filePath}`);
+
+        // DEBUG: If it's a file path, let's see what's in that file
+        try {
+          const fs = await import('fs');
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          this.logger.info(`🐛 [DEBUG] Content from provided file path:`, {
+            filePath,
+            contentLength: fileContent.length,
+            contentPreview:
+              fileContent.substring(0, 200) +
+              (fileContent.length > 200 ? '...' : ''),
+          });
+        } catch (readError) {
+          this.logger.error(
+            `🐛 [DEBUG] Failed to read provided file path:`,
+            readError
+          );
+        }
       }
 
       // Use the new secure file ingest service (Phase 2.3)

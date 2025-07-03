@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[~] **Phase 2:** Data Layer 🔄 NEARLY COMPLETE (4.75/5 features)  
+[X] **Phase 2:** Data Layer ✅ COMPLETE (6/6 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -94,20 +94,31 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **5.3** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
 - [x] **5.4** Unit-test key retrieval, cloud fallback & error states
 
+[X] **Feature 6 – Interview Evidence Generator** ✅ COMPLETE
+
+- [x] **6.1** Implement `TranscriptIngestService` to monitor `/interviews` and emit `transcript-imported`. ✅ COMPLETE
+- [x] **6.2** Extract & chunk transcript text into analysable blocks. ✅ COMPLETE
+- [x] **6.3** Classify chunks by persona and generate embeddings via LangGraph/OpenAI. ✅ COMPLETE
+- [x] **6.4** Persist evidence rows with embeddings to SQLite and emit `evidence-created`. ✅ COMPLETE
+- [x] **6.5** Trigger `EvidenceScoreService.recalculateAll` and broadcast `evidence-score-updated`. ✅ COMPLETE
+- [x] **6.6** Unit & integration tests covering ingest → evidence → score delta. ✅ COMPLETE
+
 ---
 
 ## Phase 3 – **Interface Layer**
 
 _Criteria: user-facing components; each relies on Phases 1 & 2._
 
-[ ] **Feature 1 – Tray UI Core Screens**
+[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (3/8 sub-features)
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
-- [ ] **1.3** Display real-time Evidence Score banner after import.
+- [x] **1.3** Display real-time Evidence Score banner after import. ✅ COMPLETE (with advanced state management & persistence)
 - [ ] **1.4** Show global error toast for failed ingest events.
 - [ ] **1.5** Add "Import Interview Transcript" modal with drag-&-drop + "Open Folder" fallback.
 - [ ] **1.6** Implement Activity Log panel (ingest successes, errors, score updates).
+- [ ] **1.7** Show success toast "Transcript analysed – evidence added" on completion.
+- [ ] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts.
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
 

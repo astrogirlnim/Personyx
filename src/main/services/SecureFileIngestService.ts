@@ -80,7 +80,7 @@ export class SecureFileIngestService {
     this.productDocumentRepo = new ProductDocumentRepo();
     this.evidenceRepo = new EvidenceRepo();
     this.embeddingRepo = new EmbeddingRepo();
-    this.evidenceScoreService = new EvidenceScoreService();
+    this.evidenceScoreService = new EvidenceScoreService(this.mainWindow);
     this.langGraphService = new LangGraphService();
     this.personaRepo = new PersonaRepo();
   }
@@ -90,7 +90,11 @@ export class SecureFileIngestService {
    */
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
-    logger.debug('🪟 Main window set for PRD event emission');
+    // Update the evidence score service with the main window reference
+    this.evidenceScoreService = new EvidenceScoreService(this.mainWindow);
+    logger.debug(
+      '🪟 Main window set for PRD event emission and evidence score updates'
+    );
   }
 
   /**
@@ -266,6 +270,25 @@ export class SecureFileIngestService {
       logger.debug('✅ File content read successfully', {
         contentLength: content.length,
       });
+
+      // DEBUG: Log detailed content info to trace corruption
+      logger.info('🐛 [DEBUG] File content read from disk:', {
+        filePath: basename(filePath),
+        fullPath: filePath,
+        contentLength: content.length,
+        firstChars: content.substring(0, 150),
+        lastChars: content.substring(Math.max(0, content.length - 100)),
+        linesCount: content.split('\n').length,
+        containsSpecificWords: {
+          hasTest: content.toLowerCase().includes('test'),
+          hasEvidence: content.toLowerCase().includes('evidence'),
+          hasScore: content.toLowerCase().includes('score'),
+          hasAnalytics: content.toLowerCase().includes('analytics'),
+          hasCampaign: content.toLowerCase().includes('campaign'),
+          hasMarketing: content.toLowerCase().includes('marketing'),
+        },
+      });
+
       return content;
     } catch (error) {
       logger.error('❌ Failed to read file content', error);
@@ -278,6 +301,17 @@ export class SecureFileIngestService {
    */
   private extractPRDSections(content: string): PRDSection[] {
     logger.debug('📋 Extracting sections from PRD content');
+
+    // DEBUG: Log the content we're extracting from
+    logger.info('🐛 [DEBUG] Content being extracted:', {
+      contentLength: content.length,
+      contentPreview: content.substring(0, 300),
+      wordsExtracted: content
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(w => w.length > 2)
+        .slice(0, 20),
+    });
 
     const sections: PRDSection[] = [];
     const lines = content.split('\n');
@@ -332,6 +366,16 @@ export class SecureFileIngestService {
 
     logger.info(`📋 Extracted ${sections.length} sections from PRD`, {
       sectionTitles: sections.map(s => s.title),
+    });
+
+    // DEBUG: Log the sections we extracted
+    logger.info('🐛 [DEBUG] Sections extracted:', {
+      sectionsCount: sections.length,
+      sectionDetails: sections.map(s => ({
+        title: s.title,
+        contentLength: s.content.length,
+        contentPreview: s.content.substring(0, 100),
+      })),
     });
 
     return sections;
@@ -518,57 +562,28 @@ export class SecureFileIngestService {
   ): Promise<void> {
     logger.debug('💾 Storing evidence and embeddings');
 
-    // Get all personas for evidence association
-    const personas = await this.personaRepo.list();
+    // BUGFIX: Do not create evidence entries from PRD content
+    // PRD content should be scored AGAINST existing evidence, not treated as evidence itself
+    // The original logic incorrectly created evidence entries for each persona from PRD chunks
+    // This caused all personas to have identical evidence, resulting in identical scores (74)
 
-    for (const chunk of chunks) {
-      // Find corresponding embedding
-      const embeddingData = embeddings.find(e => e.chunkIndex === chunk.index);
-      if (!embeddingData) {
-        logger.warn(`⚠️ No embedding found for chunk ${chunk.index}`);
-        continue;
-      }
+    logger.info(
+      '📝 PRD content stored as document only - not creating evidence entries from PRD chunks'
+    );
+    logger.debug(
+      '🔍 Evidence scoring will use existing interview/feedback evidence against this PRD'
+    );
 
-      // Create evidence entry for each persona (PRD is relevant to all personas)
-      for (const persona of personas) {
-        try {
-          const evidence = await this.evidenceRepo.create({
-            personaId: persona.id,
-            content: chunk.content,
-            source: document.title,
-            sourceType: 'prd',
-            timestamp: new Date(),
-            tags: JSON.stringify([
-              'prd',
-              'requirements',
-              chunk.section.toLowerCase(),
-            ]),
-            importance: 8, // PRD content is high importance
-          });
+    // Skip storing PRD embeddings since they're not used in current scoring algorithm
+    // PRD embeddings would require evidence entries due to foreign key constraints
+    // Future enhancement: Create separate prd_embeddings table if PRD similarity search is needed
 
-          // Store embedding linked to evidence
-          await this.embeddingRepo.create({
-            evidenceId: evidence.id,
-            embedding: JSON.stringify(embeddingData.embedding),
-            model: 'text-embedding-3-small',
-            dimensions: embeddingData.embedding.length,
-            chunkIndex: chunk.index,
-            chunkCount: chunk.totalChunks,
-          });
-
-          logger.debug(
-            `💾 Stored evidence and embedding for persona ${persona.name}, chunk ${chunk.index}`
-          );
-        } catch (error) {
-          logger.error(
-            `❌ Failed to store evidence/embedding for persona ${persona.id}, chunk ${chunk.index}`,
-            error
-          );
-        }
-      }
-    }
-
-    logger.info('✅ Evidence and embeddings stored successfully');
+    logger.info(
+      '✅ PRD processed without creating evidence entries or embeddings (prevents foreign key constraint errors)'
+    );
+    logger.debug(
+      `🧠 Generated ${embeddings.length} embeddings from ${chunks.length} chunks (not persisted)`
+    );
   }
 
   /**

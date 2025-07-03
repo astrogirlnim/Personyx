@@ -181,6 +181,7 @@ export interface AppState {
   personas: Persona[];
   currentDocument?: ProductDocument;
   recentScores: EvidenceScore[];
+  currentEvidenceScores: EvidenceScore[];
   settings: AppSettings;
 }
 
