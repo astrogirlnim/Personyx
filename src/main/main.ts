@@ -581,6 +581,43 @@ class PersonyxApp {
     ipcMain.handle(IPC_CHANNELS.LOG_GENERAL_ACTIVITY, async (_, data) => {
       return this.handleLogGeneralActivity(data);
     });
+
+    // Phase 3.5.2: Third-party token management IPC handlers
+    ipcMain.handle(
+      IPC_CHANNELS.SET_THIRD_PARTY_TOKEN,
+      async (_, data: IPCEvents['set-third-party-token']) => {
+        this.logger.info(`🔐 Set third-party token request: ${data.service}`);
+        return await this.handleSetThirdPartyToken(data.service, data.token);
+      }
+    );
+
+    ipcMain.handle(IPC_CHANNELS.GET_TOKEN_STATUS, async () => {
+      this.logger.info('📊 Get token status request');
+      return await this.handleGetTokenStatus();
+    });
+
+    ipcMain.handle(
+      IPC_CHANNELS.TEST_THIRD_PARTY_TOKEN,
+      async (_, data: IPCEvents['test-third-party-token']) => {
+        this.logger.info(`🧪 Test third-party token request: ${data.service}`);
+        return await this.handleTestThirdPartyToken(data.service, data.token);
+      }
+    );
+
+    ipcMain.handle(
+      IPC_CHANNELS.REMOVE_THIRD_PARTY_TOKEN,
+      async (_, data: IPCEvents['remove-third-party-token']) => {
+        this.logger.info(
+          `🗑️ Remove third-party token request: ${data.service}`
+        );
+        return await this.handleRemoveThirdPartyToken(data.service);
+      }
+    );
+
+    ipcMain.handle(IPC_CHANNELS.GET_MISSING_TOKEN_WARNINGS, async () => {
+      this.logger.info('⚠️ Get missing token warnings request');
+      return await this.handleGetMissingTokenWarnings();
+    });
   }
 
   /**
@@ -1737,7 +1774,7 @@ I'd love to help you think through this from both a strategic and tactical persp
   }
 
   /**
-   * Handle log general activity request
+   * Phase 3.1.6: Handle log general activity request
    */
   private async handleLogGeneralActivity(data: {
     type: string;
@@ -1747,15 +1784,14 @@ I'd love to help you think through this from both a strategic and tactical persp
     metadata?: unknown;
   }) {
     try {
-      this.logger.info('📝 Logging general activity', {
+      this.logger.info('📤 Logging general activity', {
         type: data.type,
         title: data.title,
-        source: data.source,
       });
 
       if (!this.activityLogService) {
         this.logger.warn('⚠️ ActivityLogService not initialized');
-        return { success: false, error: 'Activity log service not available' };
+        throw new Error('Activity log service not available');
       }
 
       await this.activityLogService.logGeneralActivity(
@@ -1768,7 +1804,198 @@ I'd love to help you think through this from both a strategic and tactical persp
       return { success: true };
     } catch (error) {
       this.logger.error('❌ Failed to log general activity', error);
-      return { success: false, error: 'Failed to log general activity' };
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.2: Handle set third-party token request
+   */
+  private async handleSetThirdPartyToken(service: string, token: string) {
+    try {
+      this.logger.info(`🔐 Setting third-party token for service: ${service}`);
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      // Convert string to ApiService type (with validation)
+      if (
+        !['openai', 'notion', 'slack', 'linear', 'firebase-cloud'].includes(
+          service
+        )
+      ) {
+        throw new Error(`Unsupported service: ${service}`);
+      }
+
+      await this.settingsService.configureThirdPartyToken(
+        service as 'openai' | 'notion' | 'slack' | 'linear' | 'firebase-cloud',
+        token
+      );
+
+      // Emit token status update to renderer
+      const tokenStatus = await this.settingsService.getTokenStatus();
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(IPC_CHANNELS.TOKEN_STATUS_UPDATED, {
+          status: tokenStatus,
+        });
+      }
+
+      this.logger.info(`✅ Third-party token set successfully for ${service}`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to set third-party token for ${service}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.2: Handle get token status request
+   */
+  private async handleGetTokenStatus() {
+    try {
+      this.logger.info('📊 Getting token status for all services');
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      const status = await this.settingsService.getTokenStatus();
+
+      this.logger.info(
+        `✅ Token status retrieved for ${status.length} services`
+      );
+      return { status };
+    } catch (error) {
+      this.logger.error('❌ Failed to get token status', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.2: Handle test third-party token request
+   */
+  private async handleTestThirdPartyToken(service: string, token?: string) {
+    try {
+      this.logger.info(`🧪 Testing third-party token for service: ${service}`);
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      // Convert string to ApiService type (with validation)
+      if (
+        !['openai', 'notion', 'slack', 'linear', 'firebase-cloud'].includes(
+          service
+        )
+      ) {
+        throw new Error(`Unsupported service: ${service}`);
+      }
+
+      const result = await this.settingsService.testThirdPartyToken(
+        service as 'openai' | 'notion' | 'slack' | 'linear' | 'firebase-cloud',
+        token
+      );
+
+      // Emit test result to renderer
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(
+          IPC_CHANNELS.THIRD_PARTY_TOKEN_TEST_RESULT,
+          {
+            service,
+            success: result.success,
+            error: result.error,
+            details: result.details,
+          }
+        );
+      }
+
+      this.logger.info(`✅ Third-party token test completed for ${service}`, {
+        success: result.success,
+      });
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `❌ Third-party token test failed for ${service}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.2: Handle remove third-party token request
+   */
+  private async handleRemoveThirdPartyToken(service: string) {
+    try {
+      this.logger.info(`🗑️ Removing third-party token for service: ${service}`);
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      // Convert string to ApiService type (with validation)
+      if (
+        !['openai', 'notion', 'slack', 'linear', 'firebase-cloud'].includes(
+          service
+        )
+      ) {
+        throw new Error(`Unsupported service: ${service}`);
+      }
+
+      await this.settingsService.removeThirdPartyToken(
+        service as 'openai' | 'notion' | 'slack' | 'linear' | 'firebase-cloud'
+      );
+
+      // Emit token status update to renderer
+      const tokenStatus = await this.settingsService.getTokenStatus();
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send(IPC_CHANNELS.TOKEN_STATUS_UPDATED, {
+          status: tokenStatus,
+        });
+      }
+
+      this.logger.info(
+        `✅ Third-party token removed successfully for ${service}`
+      );
+      return { success: true };
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to remove third-party token for ${service}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.2: Handle get missing token warnings request
+   */
+  private async handleGetMissingTokenWarnings() {
+    try {
+      this.logger.info('⚠️ Getting missing token warnings');
+
+      if (!this.settingsService) {
+        this.logger.warn('⚠️ SettingsService not initialized');
+        throw new Error('Settings service not available');
+      }
+
+      const warnings = await this.settingsService.getMissingTokenWarnings();
+
+      this.logger.info(
+        `✅ Missing token warnings retrieved: ${warnings.length} warnings`
+      );
+      return { warnings };
+    } catch (error) {
+      this.logger.error('❌ Failed to get missing token warnings', error);
+      throw error;
     }
   }
 

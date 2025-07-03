@@ -23,6 +23,9 @@ export const IPC_CHANNELS = {
   GLOBAL_ERROR: 'global-error', // Phase 3.1.4: Global error toast events
   TRANSCRIPT_SUCCESS_TOAST: 'transcript-success-toast', // Phase 3.1.7: Success toast events
   ACTIVITY_LOG_UPDATED: 'activity-log-updated', // Phase 3.1.6: Activity log events
+  // Phase 3.5.2: Third-party token management
+  TOKEN_STATUS_UPDATED: 'token-status-updated',
+  THIRD_PARTY_TOKEN_TEST_RESULT: 'third-party-token-test-result',
 
   // Renderer to Main
   IMPORT_PRD: 'import-prd',
@@ -42,6 +45,12 @@ export const IPC_CHANNELS = {
   CLEAR_ACTIVITY_LOG: 'clear-activity-log',
   EXPORT_ACTIVITY_LOG: 'export-activity-log',
   LOG_GENERAL_ACTIVITY: 'log-general-activity', // Phase 3.1.6: Log general activity
+  // Phase 3.5.2: Third-party token management channels
+  SET_THIRD_PARTY_TOKEN: 'set-third-party-token',
+  GET_TOKEN_STATUS: 'get-token-status',
+  TEST_THIRD_PARTY_TOKEN: 'test-third-party-token',
+  REMOVE_THIRD_PARTY_TOKEN: 'remove-third-party-token',
+  GET_MISSING_TOKEN_WARNINGS: 'get-missing-token-warnings',
 } as const;
 
 // File paths and directories

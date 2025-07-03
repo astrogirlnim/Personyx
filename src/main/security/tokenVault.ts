@@ -293,3 +293,72 @@ export async function testTokenVault(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Validate token format for different services
+ */
+export function validateToken(service: ApiService, token: string): boolean {
+  if (!token || token.trim() === '') {
+    return false;
+  }
+
+  const trimmedToken = token.trim();
+
+  switch (service) {
+    case 'openai':
+      // OpenAI API keys start with 'sk-' and should be at least 40 characters
+      return trimmedToken.startsWith('sk-') && trimmedToken.length >= 40;
+
+    case 'notion':
+      // Notion integration tokens start with 'secret_' and are longer
+      return trimmedToken.startsWith('secret_') && trimmedToken.length >= 45;
+
+    case 'slack':
+      // Slack bot tokens start with 'xoxb-' and are typically 56+ characters
+      return trimmedToken.startsWith('xoxb-') && trimmedToken.length >= 50;
+
+    case 'linear':
+      // Linear API keys are UUIDs or start with 'lin_api_' and are 40+ characters
+      return (
+        (trimmedToken.length === 36 && /^[0-9a-f-]+$/i.test(trimmedToken)) ||
+        (trimmedToken.startsWith('lin_api_') && trimmedToken.length >= 40)
+      );
+
+    case 'firebase-cloud':
+      // Firebase Cloud keys are typically JWT-like or long random strings
+      return trimmedToken.length >= 32;
+
+    default:
+      // Unknown service - basic length check
+      return trimmedToken.length >= 20;
+  }
+}
+
+/**
+ * Check if a token is stored for a service (without revealing the token)
+ */
+export async function isTokenStored(service: ApiService): Promise<boolean> {
+  try {
+    logger.debug(`🔍 Checking if token is stored for service: ${service}`);
+
+    const db = getDatabase();
+    const result = await db
+      .select({ service: apiTokens.service })
+      .from(apiTokens)
+      .where(eq(apiTokens.service, service))
+      .limit(1);
+
+    const exists = result.length > 0;
+    logger.debug(
+      `${exists ? '✅' : '📭'} Token ${exists ? 'exists' : 'not found'} for service: ${service}`
+    );
+
+    return exists;
+  } catch (error) {
+    logger.error(
+      `❌ Failed to check token existence for service: ${service}`,
+      error
+    );
+    return false;
+  }
+}
