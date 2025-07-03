@@ -28,6 +28,10 @@ export interface TranscriptProcessingResult {
     fileName: string;
     contentLength: number;
     timestamp: Date;
+    evidenceCreated?: string[];
+    personasAffected?: string[];
+    processingTime?: number;
+    evidenceCountByPersona?: Record<string, number>;
   };
   error?: string;
 }
@@ -360,11 +364,23 @@ export class WorkflowOrchestrator extends EventEmitter {
         });
       }
 
-      // Process the transcript using the existing pipeline
-      await this.processTranscriptWithIngestService(transcriptEvent, 'manual');
+      // Phase 3.1.8: Process transcript and capture detailed results
+      // Process transcript through the complete pipeline
+      const ingestResult =
+        await this.transcriptIngestService.processTranscript(transcriptEvent);
+
+      // Calculate evidence counts by persona
+      const evidenceCountByPersona =
+        await this.calculateEvidenceCountsByPersona(
+          ingestResult.evidenceCreated,
+          ingestResult.personasAffected
+        );
 
       logger.info('✅ Manual transcript processing completed successfully', {
         fileName: transcriptEvent.fileName,
+        evidenceCreated: ingestResult.evidenceCreated.length,
+        personasAffected: ingestResult.personasAffected.length,
+        processingTime: ingestResult.processingTime,
       });
 
       return {
@@ -373,6 +389,10 @@ export class WorkflowOrchestrator extends EventEmitter {
           fileName: transcriptEvent.fileName,
           contentLength: transcriptEvent.content.length,
           timestamp: transcriptEvent.timestamp,
+          evidenceCreated: ingestResult.evidenceCreated,
+          personasAffected: ingestResult.personasAffected,
+          processingTime: ingestResult.processingTime,
+          evidenceCountByPersona,
         },
       };
     } catch (error) {
@@ -384,6 +404,61 @@ export class WorkflowOrchestrator extends EventEmitter {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Phase 3.1.8: Calculate evidence counts by persona
+   */
+  private async calculateEvidenceCountsByPersona(
+    evidenceIds: string[],
+    personasAffected: string[]
+  ): Promise<Record<string, number>> {
+    try {
+      logger.debug('🔢 Calculating evidence counts by persona', {
+        evidenceIds: evidenceIds.length,
+        personasAffected: personasAffected.length,
+      });
+
+      // Import the EvidenceRepo to query evidence
+      const { EvidenceRepo } = await import(
+        '@main/db/repositories/EvidenceRepo'
+      );
+      const evidenceRepo = new EvidenceRepo();
+
+      const evidenceCountByPersona: Record<string, number> = {};
+
+      // Initialize counts for all affected personas
+      for (const personaId of personasAffected) {
+        evidenceCountByPersona[personaId] = 0;
+      }
+
+      // Count evidence for each persona
+      for (const evidenceId of evidenceIds) {
+        try {
+          const evidence = await evidenceRepo.findById(evidenceId);
+          if (evidence && evidence.personaId) {
+            evidenceCountByPersona[evidence.personaId] =
+              (evidenceCountByPersona[evidence.personaId] || 0) + 1;
+          }
+        } catch (error) {
+          logger.warn('⚠️ Failed to fetch evidence for counting', {
+            evidenceId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      logger.debug('✅ Evidence counts calculated', evidenceCountByPersona);
+      return evidenceCountByPersona;
+    } catch (error) {
+      logger.error('❌ Failed to calculate evidence counts by persona', error);
+      // Return empty counts as fallback
+      const fallbackCounts: Record<string, number> = {};
+      for (const personaId of personasAffected) {
+        fallbackCounts[personaId] = 0;
+      }
+      return fallbackCounts;
     }
   }
 

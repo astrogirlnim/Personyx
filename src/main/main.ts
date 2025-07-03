@@ -987,23 +987,41 @@ class PersonyxApp {
           contentLength: result.result?.contentLength,
         });
 
-        // Phase 3.1.6: Log transcript import success to activity log
-        // Note: Using basic information from result since detailed pipeline info
-        // is logged separately by WorkflowOrchestrator
+        // Phase 3.1.8: Log interview import with detailed evidence counts
         if (this.activityLogService && result.result) {
-          this.activityLogService
-            .logTranscriptImportSuccess(
-              result.result.fileName || 'Unknown Transcript',
-              0, // Evidence count will be logged by the pipeline
-              [], // Personas affected will be logged by the pipeline
-              undefined // Processing time will be available from pipeline
-            )
-            .catch(error => {
-              this.logger.warn(
-                '⚠️ Failed to log transcript import success activity',
-                error
-              );
-            });
+          // Use detailed evidence data if available from enhanced result
+          if (
+            result.result.evidenceCountByPersona &&
+            Object.keys(result.result.evidenceCountByPersona).length > 0
+          ) {
+            this.activityLogService
+              .logInterviewImported(
+                result.result.fileName || 'Unknown Transcript',
+                result.result.evidenceCountByPersona,
+                result.result.processingTime
+              )
+              .catch(error => {
+                this.logger.warn(
+                  '⚠️ Failed to log interview import with detailed evidence counts',
+                  error
+                );
+              });
+          } else {
+            // Fallback to basic logging if detailed data unavailable
+            this.activityLogService
+              .logTranscriptImportSuccess(
+                result.result.fileName || 'Unknown Transcript',
+                result.result.evidenceCreated?.length || 0,
+                result.result.personasAffected || [],
+                result.result.processingTime
+              )
+              .catch(error => {
+                this.logger.warn(
+                  '⚠️ Failed to log transcript import success activity',
+                  error
+                );
+              });
+          }
         }
 
         return {

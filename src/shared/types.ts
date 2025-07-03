@@ -85,6 +85,13 @@ export interface ActivityLogMetadata {
   errorMessage?: string;
   scores?: EvidenceScore[];
   documentId?: string;
+
+  // Phase 3.1.8: Enhanced interview import metadata
+  evidenceCountByPersona?: Record<string, number>;
+  personaNames?: Array<{ id: string; name: string }>;
+  totalEvidenceCount?: number;
+  personasAffectedCount?: number;
+
   [key: string]: unknown; // Allow additional metadata
 }
 

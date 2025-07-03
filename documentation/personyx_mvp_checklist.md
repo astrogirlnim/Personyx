@@ -128,20 +128,20 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
   - [x] **1.6.9** Add activity log performance optimizations and archival ✅ COMPLETE
   - [x] **1.6.10** Integrate activity log into main tray UI with keyboard shortcuts ✅ COMPLETE
 - [x] **1.7** Show success toast "Transcript analysed – evidence added" on completion. ✅ COMPLETE
-- [ ] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts.
-  - [ ] **1.8.1** Update `TranscriptProcessingResult` interface to include detailed evidence data
-  - [ ] **1.8.2** Modify `WorkflowOrchestrator.processTranscriptManual()` to return detailed results
-  - [ ] **1.8.3** Update `main.ts.handleImportTranscript()` to receive and process detailed results
-  - [ ] **1.8.4** Create new `logInterviewImported()` method in `ActivityLogService`
-  - [ ] **1.8.5** Add persona name mapping functionality to `ActivityLogService`
-  - [ ] **1.8.6** Update activity log metadata interface for persona evidence details
-  - [ ] **1.8.7** Update `transcript-imported` IPC event to include evidence counts
-  - [ ] **1.8.8** Enhance activity log broadcasting with detailed persona information
-  - [ ] **1.8.9** Update `ActivityLogPanel` to display detailed persona evidence counts
-  - [ ] **1.8.10** Add persona-specific metadata display in activity log entries
-  - [ ] **1.8.11** Create comprehensive unit tests for new activity logging
-  - [ ] **1.8.12** Add integration tests for complete interview import → activity log flow
-  - [ ] **1.8.13** Manual testing verification and documentation updates
+- [x] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts. ✅ COMPLETE
+  - [x] **1.8.1** Update `TranscriptProcessingResult` interface to include detailed evidence data ✅ COMPLETE
+  - [x] **1.8.2** Modify `WorkflowOrchestrator.processTranscriptManual()` to return detailed results ✅ COMPLETE
+  - [x] **1.8.3** Update `main.ts.handleImportTranscript()` to receive and process detailed results ✅ COMPLETE
+  - [x] **1.8.4** Create new `logInterviewImported()` method in `ActivityLogService` ✅ COMPLETE
+  - [x] **1.8.5** Add persona name mapping functionality to `ActivityLogService` ✅ COMPLETE
+  - [x] **1.8.6** Update activity log metadata interface for persona evidence details ✅ COMPLETE
+  - [x] **1.8.7** Update `transcript-imported` IPC event to include evidence counts ✅ COMPLETE
+  - [x] **1.8.8** Enhance activity log broadcasting with detailed persona information ✅ COMPLETE
+  - [x] **1.8.9** Update `ActivityLogPanel` to display detailed persona evidence counts ✅ COMPLETE
+  - [x] **1.8.10** Add persona-specific metadata display in activity log entries ✅ COMPLETE
+  - [x] **1.8.11** Create comprehensive unit tests for new activity logging ✅ COMPLETE
+  - [x] **1.8.12** Add integration tests for complete interview import → activity log flow ✅ COMPLETE
+  - [x] **1.8.13** Manual testing verification and documentation updates ✅ COMPLETE
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
 
