@@ -178,7 +178,7 @@ export function PersonaManagerModal({
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div className="bg-paper dark:bg-paper-dark rounded-lg shadow-md border border-graphite dark:border-graphite-dark w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-paper dark:bg-paper-dark rounded-lg shadow-md border border-graphite dark:border-graphite-dark w-full max-w-4xl max-h-[75vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-graphite dark:border-graphite-dark">
           <div className="flex items-center space-x-3">
@@ -405,7 +405,7 @@ export function PersonaManagerModal({
  */
 function VisualEditor({ personas }: { personas: any[] }) {
   return (
-    <div className="p-6">
+    <div className="p-6 h-full overflow-y-auto">
       <div className="grid gap-4">
         {personas.length > 0 ? (
           personas.map(persona => (

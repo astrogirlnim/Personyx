@@ -263,15 +263,16 @@ export function usePersonas(): PersonasState & PersonasActions {
     // Register event listener
     window.electronAPI.onPersonasUpdated(handlePersonasUpdated);
 
-    // Load initial YAML configuration
-    loadYamlConfig();
+    // Load initial configuration AND personas (not just YAML)
+    console.log('🔄 Auto-loading personas on mount...');
+    reloadPersonas();
 
     // Cleanup function
     return () => {
       console.log('🧹 Cleaning up personas event listeners');
       window.electronAPI.removeAllListeners('personas-updated');
     };
-  }, [loadYamlConfig]);
+  }, [reloadPersonas]);
 
   return {
     ...state,
