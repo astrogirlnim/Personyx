@@ -1228,22 +1228,12 @@ export function App(): JSX.Element {
   const [, setCurrentDocumentId] = useState<string | null>(null);
 
   // Phase 3.1.4: Error toast management
-  const addErrorToast = useCallback((toast: ErrorToast) => {
-    console.log('🚨 Adding error toast:', toast);
-    setErrorToasts(prev => [...prev, toast]);
-  }, []);
-
   const dismissErrorToast = useCallback((toastId: string) => {
     console.log('🗑️ Dismissing error toast:', toastId);
     setErrorToasts(prev => prev.filter(toast => toast.id !== toastId));
   }, []);
 
   // Phase 3.1.7: Success toast management
-  const addSuccessToast = useCallback((toast: SuccessToast) => {
-    console.log('✅ Adding success toast:', toast);
-    setSuccessToasts(prev => [...prev, toast]);
-  }, []);
-
   const dismissSuccessToast = useCallback((toastId: string) => {
     console.log('🗑️ Dismissing success toast:', toastId);
     setSuccessToasts(prev => prev.filter(toast => toast.id !== toastId));
@@ -1413,7 +1403,8 @@ export function App(): JSX.Element {
           autoDismissMs: errorData.autoDismissMs || 5000,
         };
 
-        addErrorToast(errorToast);
+        // Use callback form to avoid stale closure issues
+        setErrorToasts(prev => [...prev, errorToast]);
       });
 
       // Phase 3.1.7: Listen for transcript success toast events
@@ -1436,7 +1427,8 @@ export function App(): JSX.Element {
           processingTime: successData.processingTime,
         };
 
-        addSuccessToast(successToast);
+        // Use callback form to avoid stale closure issues
+        setSuccessToasts(prev => [...prev, successToast]);
       });
 
       // Listen for evidence score events
@@ -1593,13 +1585,7 @@ export function App(): JSX.Element {
       window.removeEventListener('keydown', handleKeyDown);
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
-  }, [
-    isChatOpen,
-    isImportModalOpen,
-    isTranscriptModalOpen,
-    addErrorToast,
-    addSuccessToast,
-  ]);
+  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen]);
 
   // Debug evidence scores state changes
   useEffect(() => {
