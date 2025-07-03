@@ -40,6 +40,15 @@ interface ElectronAPI {
     filter?: unknown
   ) => Promise<unknown>;
 
+  // Phase 3.1.6: Log general activity
+  logGeneralActivity: (data: {
+    type: string;
+    title: string;
+    description?: string;
+    source: string;
+    metadata?: unknown;
+  }) => Promise<unknown>;
+
   // Event listeners
   onEvidenceScoreUpdated: (callback: (data: unknown) => void) => void;
   onTranscriptIngested: (callback: (data: unknown) => void) => void;

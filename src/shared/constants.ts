@@ -41,6 +41,7 @@ export const IPC_CHANNELS = {
   ACTIVITY_LOG_STATS: 'activity-log-stats',
   CLEAR_ACTIVITY_LOG: 'clear-activity-log',
   EXPORT_ACTIVITY_LOG: 'export-activity-log',
+  LOG_GENERAL_ACTIVITY: 'log-general-activity', // Phase 3.1.6: Log general activity
 } as const;
 
 // File paths and directories

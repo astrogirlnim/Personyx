@@ -572,6 +572,25 @@ function ImportPRDModal({
       const errorMsg = 'File cannot be empty';
       console.log('❌ Empty file detected:', errorMsg);
       setError(errorMsg);
+
+      // Log validation error to activity log
+      if (window.electronAPI?.logGeneralActivity) {
+        window.electronAPI
+          .logGeneralActivity({
+            type: 'import-error',
+            title: 'PRD Import Failed',
+            description: `Validation failed: ${errorMsg}`,
+            source: 'prd-import',
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              errorMessage: errorMsg,
+              errorType: 'validation-error',
+            },
+          })
+          .catch(err => console.warn('Failed to log validation error:', err));
+      }
+
       return false;
     }
 
@@ -580,6 +599,25 @@ function ImportPRDModal({
       const errorMsg = 'File size must be less than 10MB';
       console.log('❌ File too large:', errorMsg);
       setError(errorMsg);
+
+      // Log validation error to activity log
+      if (window.electronAPI?.logGeneralActivity) {
+        window.electronAPI
+          .logGeneralActivity({
+            type: 'import-error',
+            title: 'PRD Import Failed',
+            description: `Validation failed: ${errorMsg}`,
+            source: 'prd-import',
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              errorMessage: errorMsg,
+              errorType: 'validation-error',
+            },
+          })
+          .catch(err => console.warn('Failed to log validation error:', err));
+      }
+
       return false;
     }
 
@@ -604,6 +642,26 @@ function ImportPRDModal({
         'Please select a valid PRD file (.md, .txt, or .markdown)';
       console.log('❌ Invalid file type:', errorMsg);
       setError(errorMsg);
+
+      // Log validation error to activity log
+      if (window.electronAPI?.logGeneralActivity) {
+        window.electronAPI
+          .logGeneralActivity({
+            type: 'import-error',
+            title: 'PRD Import Failed',
+            description: `Validation failed: ${errorMsg}`,
+            source: 'prd-import',
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              errorMessage: errorMsg,
+              errorType: 'validation-error',
+            },
+          })
+          .catch(err => console.warn('Failed to log validation error:', err));
+      }
+
       return false;
     }
 

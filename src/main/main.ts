@@ -42,6 +42,7 @@ import type {
   AIServiceConfig,
   Evidence,
   Persona,
+  ActivityLogMetadata,
 } from '@shared/types';
 
 // Environment detection for main process
@@ -575,6 +576,11 @@ class PersonyxApp {
         return await this.handleExportActivityLog(data);
       }
     );
+
+    // Phase 3.1.6: Log general activity IPC handler
+    ipcMain.handle(IPC_CHANNELS.LOG_GENERAL_ACTIVITY, async (_, data) => {
+      return this.handleLogGeneralActivity(data);
+    });
   }
 
   /**
@@ -1682,7 +1688,7 @@ I'd love to help you think through this from both a strategic and tactical persp
   }
 
   /**
-   * Handle export activity log request (Phase 3.1.6)
+   * Handle export activity log request
    */
   private async handleExportActivityLog(
     data: IPCEvents['export-activity-log']
@@ -1692,7 +1698,7 @@ I'd love to help you think through this from both a strategic and tactical persp
 
       if (!this.activityLogService) {
         this.logger.warn('⚠️ ActivityLogService not initialized');
-        throw new Error('Activity log service not available');
+        return { success: false, error: 'Activity log service not available' };
       }
 
       const exportData = await this.activityLogService.exportActivityLog(
@@ -1702,13 +1708,49 @@ I'd love to help you think through this from both a strategic and tactical persp
 
       this.logger.info('✅ Activity log exported', {
         format: data.format,
-        dataSize: exportData.length,
+        recordCount: exportData.length,
       });
 
       return { success: true, data: exportData };
     } catch (error) {
       this.logger.error('❌ Failed to export activity log', error);
-      throw error;
+      return { success: false, error: 'Failed to export activity log' };
+    }
+  }
+
+  /**
+   * Handle log general activity request
+   */
+  private async handleLogGeneralActivity(data: {
+    type: string;
+    title: string;
+    description?: string;
+    source: string;
+    metadata?: unknown;
+  }) {
+    try {
+      this.logger.info('📝 Logging general activity', {
+        type: data.type,
+        title: data.title,
+        source: data.source,
+      });
+
+      if (!this.activityLogService) {
+        this.logger.warn('⚠️ ActivityLogService not initialized');
+        return { success: false, error: 'Activity log service not available' };
+      }
+
+      await this.activityLogService.logGeneralActivity(
+        data.title,
+        data.description,
+        data.metadata as ActivityLogMetadata
+      );
+
+      this.logger.info('✅ General activity logged successfully');
+      return { success: true };
+    } catch (error) {
+      this.logger.error('❌ Failed to log general activity', error);
+      return { success: false, error: 'Failed to log general activity' };
     }
   }
 

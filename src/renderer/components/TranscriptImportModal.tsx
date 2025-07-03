@@ -299,6 +299,27 @@ export function TranscriptImportModal({
       const errorMsg = 'File cannot be empty';
       console.log('❌ Empty transcript file detected:', errorMsg);
       setError(errorMsg);
+
+      // Log validation error to activity log
+      if (window.electronAPI?.logGeneralActivity) {
+        window.electronAPI
+          .logGeneralActivity({
+            type: 'import-error',
+            title: 'Transcript Import Failed',
+            description: `Validation failed: ${errorMsg}`,
+            source: 'transcript-import',
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              errorMessage: errorMsg,
+              errorType: 'validation-error',
+            },
+          })
+          .catch((err: unknown) =>
+            console.warn('Failed to log validation error:', err)
+          );
+      }
+
       return false;
     }
 
@@ -307,6 +328,27 @@ export function TranscriptImportModal({
       const errorMsg = 'File size must be less than 10MB';
       console.log('❌ Transcript file too large:', errorMsg);
       setError(errorMsg);
+
+      // Log validation error to activity log
+      if (window.electronAPI?.logGeneralActivity) {
+        window.electronAPI
+          .logGeneralActivity({
+            type: 'import-error',
+            title: 'Transcript Import Failed',
+            description: `Validation failed: ${errorMsg}`,
+            source: 'transcript-import',
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              errorMessage: errorMsg,
+              errorType: 'validation-error',
+            },
+          })
+          .catch((err: unknown) =>
+            console.warn('Failed to log validation error:', err)
+          );
+      }
+
       return false;
     }
 
@@ -331,6 +373,28 @@ export function TranscriptImportModal({
         'Please select a valid transcript file (.md, .txt, or .markdown)';
       console.log('❌ Invalid transcript file type:', errorMsg);
       setError(errorMsg);
+
+      // Log validation error to activity log
+      if (window.electronAPI?.logGeneralActivity) {
+        window.electronAPI
+          .logGeneralActivity({
+            type: 'import-error',
+            title: 'Transcript Import Failed',
+            description: `Validation failed: ${errorMsg}`,
+            source: 'transcript-import',
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              errorMessage: errorMsg,
+              errorType: 'validation-error',
+            },
+          })
+          .catch((err: unknown) =>
+            console.warn('Failed to log validation error:', err)
+          );
+      }
+
       return false;
     }
 
