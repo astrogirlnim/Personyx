@@ -106,6 +106,7 @@ function applyMigrationSQL(): void {
     ];
     const migration0001Tables = ['embeddings'];
     const migration0002Tables = ['activity_log'];
+    const migration0003Tables = ['persona_history']; // Phase 2.7: Persona Evolution
 
     // Check if we need to run each migration
     const needsMigration0000 = migration0000Tables.some(
@@ -115,6 +116,9 @@ function applyMigrationSQL(): void {
       table => !existingTables.includes(table)
     );
     const needsMigration0002 = migration0002Tables.some(
+      table => !existingTables.includes(table)
+    );
+    const needsMigration0003 = migration0003Tables.some(
       table => !existingTables.includes(table)
     );
 
@@ -145,6 +149,15 @@ function applyMigrationSQL(): void {
       );
     }
 
+    // Run migration 0003 if needed (Persona History - Phase 2.7)
+    if (needsMigration0003) {
+      totalStatements += runSingleMigration('0003_soft_red_wolf.sql');
+    } else {
+      logger.info(
+        '⏭️ Migration 0003 skipped - persona_history table already exists'
+      );
+    }
+
     if (totalStatements === 0 && existingTables.length === 0) {
       // If no tables exist at all and no migrations ran, create manually
       logger.info(
@@ -158,6 +171,7 @@ function applyMigrationSQL(): void {
         needsMigration0000,
         needsMigration0001,
         needsMigration0002,
+        needsMigration0003,
       });
     }
   } catch (error) {
@@ -310,6 +324,23 @@ function createTablesManually(): void {
       CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log (timestamp);
       CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log (type);
       CREATE INDEX IF NOT EXISTS idx_activity_log_source ON activity_log (source);
+
+      -- Persona history table for persona evolution tracking (Phase 2.7)
+      CREATE TABLE IF NOT EXISTS persona_history (
+        history_id text PRIMARY KEY NOT NULL,
+        persona_id text NOT NULL,
+        previous_data text NOT NULL,
+        new_data text NOT NULL,
+        change_type text NOT NULL,
+        confidence real NOT NULL,
+        timestamp integer NOT NULL,
+        FOREIGN KEY (persona_id) REFERENCES personas(id) ON UPDATE no action ON DELETE no action
+      );
+
+      -- Create indexes for persona_history performance
+      CREATE INDEX IF NOT EXISTS idx_persona_history_persona_id ON persona_history (persona_id);
+      CREATE INDEX IF NOT EXISTS idx_persona_history_timestamp ON persona_history (timestamp);
+      CREATE INDEX IF NOT EXISTS idx_persona_history_change_type ON persona_history (change_type);
     `;
 
     logger.info('🔧 Creating tables manually');
