@@ -80,7 +80,7 @@ export class SecureFileIngestService {
     this.productDocumentRepo = new ProductDocumentRepo();
     this.evidenceRepo = new EvidenceRepo();
     this.embeddingRepo = new EmbeddingRepo();
-    this.evidenceScoreService = new EvidenceScoreService();
+    this.evidenceScoreService = new EvidenceScoreService(this.mainWindow);
     this.langGraphService = new LangGraphService();
     this.personaRepo = new PersonaRepo();
   }
@@ -90,7 +90,11 @@ export class SecureFileIngestService {
    */
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
-    logger.debug('🪟 Main window set for PRD event emission');
+    // Update the evidence score service with the main window reference
+    this.evidenceScoreService = new EvidenceScoreService(this.mainWindow);
+    logger.debug(
+      '🪟 Main window set for PRD event emission and evidence score updates'
+    );
   }
 
   /**

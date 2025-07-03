@@ -3,6 +3,7 @@
  * Calculates 0-100 evidence scores based on recency, coverage, and relevance heuristics
  */
 
+import { BrowserWindow } from 'electron';
 import { EvidenceScoreRepo } from '@main/db/repositories/EvidenceScoreRepo';
 import { EvidenceRepo } from '@main/db/repositories/EvidenceRepo';
 import { PersonaRepo } from '@main/db/repositories/PersonaRepo';
@@ -41,6 +42,7 @@ export class EvidenceScoreService {
   private evidenceRepo: EvidenceRepo;
   private personaRepo: PersonaRepo;
   private productDocumentRepo: ProductDocumentRepo;
+  private mainWindow: BrowserWindow | null;
 
   // Scoring weights (must sum to 1.0)
   private static readonly WEIGHTS = {
@@ -57,11 +59,12 @@ export class EvidenceScoreService {
     maxTopQuotes: 5, // Maximum top quotes to return
   };
 
-  constructor() {
+  constructor(mainWindow: BrowserWindow | null = null) {
     this.evidenceScoreRepo = new EvidenceScoreRepo();
     this.evidenceRepo = new EvidenceRepo();
     this.personaRepo = new PersonaRepo();
     this.productDocumentRepo = new ProductDocumentRepo();
+    this.mainWindow = mainWindow;
   }
 
   /**
@@ -296,6 +299,22 @@ export class EvidenceScoreService {
         scoreId: savedScore.id,
         score: savedScore.score,
       });
+
+      // Emit evidence-score-updated event for real-time UI updates
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send('evidence-score-updated', {
+          documentId: prdId,
+          scores: [savedScore],
+        });
+        logger.debug('📢 Emitted evidence-score-updated event', {
+          documentId: prdId,
+          score: savedScore.score,
+        });
+      } else {
+        logger.warn(
+          '⚠️ Cannot emit evidence-score-updated - main window not available'
+        );
+      }
 
       return savedScore;
     } catch (error) {

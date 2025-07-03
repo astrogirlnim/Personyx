@@ -9,7 +9,9 @@ import type {
   Persona,
   ChatResponse,
   ImportResult,
+  EvidenceScore,
 } from '../shared/types';
+import EvidenceScoreGauge from './components/EvidenceScoreGauge';
 
 // Chat Window Component
 interface ChatWindowProps {
@@ -1185,6 +1187,11 @@ export function App(): JSX.Element {
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
   const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
 
+  // Evidence Score state
+  const [currentEvidenceScores, setCurrentEvidenceScores] = useState<
+    EvidenceScore[]
+  >([]);
+
   useEffect(() => {
     console.log('🚀 Personyx App component mounted');
 
@@ -1269,6 +1276,45 @@ export function App(): JSX.Element {
         setTrayFilePath(null); // Clear any existing tray file path
         setDraggedFile(file); // Set the file object created from content
         setIsImportModalOpen(true);
+      });
+
+      // Listen for evidence score events
+      window.electronAPI.onPRDImported((data: unknown) => {
+        console.log('📊 PRD imported with evidence scores:', data);
+        const typedData = data as {
+          evidenceScores?: EvidenceScore[];
+          documentId: string;
+        };
+        if (typedData.evidenceScores && typedData.evidenceScores.length > 0) {
+          setCurrentEvidenceScores(typedData.evidenceScores);
+        }
+      });
+
+      window.electronAPI.onEvidenceScoreUpdated((data: unknown) => {
+        console.log('📈 Evidence score updated:', data);
+        const typedData = data as {
+          scores?: EvidenceScore[];
+          documentId: string;
+        };
+        if (typedData.scores && typedData.scores.length > 0) {
+          setCurrentEvidenceScores(prev => {
+            // Replace scores for the same document/persona combinations
+            const newScores = [...prev];
+            typedData.scores!.forEach((newScore: EvidenceScore) => {
+              const existingIndex = newScores.findIndex(
+                score =>
+                  score.documentId === newScore.documentId &&
+                  score.personaId === newScore.personaId
+              );
+              if (existingIndex >= 0) {
+                newScores[existingIndex] = newScore;
+              } else {
+                newScores.push(newScore);
+              }
+            });
+            return newScores;
+          });
+        }
       });
     }
 
@@ -1635,48 +1681,54 @@ export function App(): JSX.Element {
           {/* Right Column - Spans 4 columns on desktop */}
           <div className="lg:col-span-4 space-y-6">
             {/* Evidence Scores Card */}
-            <div className="card">
+            <div
+              className="card"
+              tabIndex={0}
+              role="region"
+              aria-label="Evidence scores for imported PRDs"
+            >
               <h3 className="text-h2 text-slate dark:text-slate-dark mb-4">
                 Evidence Scores
               </h3>
               <div className="text-center">
-                {/* Ring Gauge - Empty State */}
-                <div className="w-40 h-40 mx-auto mb-4 relative">
-                  <svg
-                    className="w-full h-full transform -rotate-90"
-                    viewBox="0 0 160 160"
-                  >
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r="70"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      className="text-graphite dark:text-graphite-dark opacity-30"
-                      strokeDasharray="10 5"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-steel dark:text-steel-dark">
-                        --
-                      </div>
-                      <div className="text-caption text-steel dark:text-steel-dark">
-                        No Score
-                      </div>
-                    </div>
+                {/* Evidence Score Gauge */}
+                <EvidenceScoreGauge
+                  score={
+                    currentEvidenceScores.length > 0
+                      ? Math.max(...currentEvidenceScores.map(s => s.score))
+                      : null
+                  }
+                  className="mb-4"
+                />
+
+                {/* Status Text and Actions */}
+                {currentEvidenceScores.length > 0 ? (
+                  <div>
+                    <p className="text-body text-steel dark:text-steel-dark mb-2">
+                      {currentEvidenceScores.length} persona
+                      {currentEvidenceScores.length !== 1 ? 's' : ''} analyzed
+                    </p>
+                    <p className="text-caption text-steel dark:text-steel-dark mb-4">
+                      Highest score:{' '}
+                      {Math.max(
+                        ...currentEvidenceScores.map(s => s.score)
+                      ).toFixed(0)}
+                      /100
+                    </p>
                   </div>
-                </div>
-                <p className="text-body text-steel dark:text-steel-dark mb-4">
-                  No PRDs analysed yet
-                </p>
-                <button
-                  onClick={() => setIsImportModalOpen(true)}
-                  className="btn-primary"
-                >
-                  Import First PRD
-                </button>
+                ) : (
+                  <div>
+                    <p className="text-body text-steel dark:text-steel-dark mb-4">
+                      No PRDs analysed yet
+                    </p>
+                    <button
+                      onClick={() => setIsImportModalOpen(true)}
+                      className="btn-primary"
+                    >
+                      Import First PRD
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
