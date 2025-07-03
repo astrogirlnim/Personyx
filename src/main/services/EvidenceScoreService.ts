@@ -131,7 +131,7 @@ export class EvidenceScoreService {
       originalTimestamp: dbEvidence.timestamp,
       timestampType: typeof dbEvidence.timestamp,
       timestampConstructor: dbEvidence.timestamp?.constructor?.name,
-      isDate: dbEvidence.timestamp instanceof Date,
+      isDate: false, // timestamp is always a number in database
       isNumber: typeof dbEvidence.timestamp === 'number',
       isString: typeof dbEvidence.timestamp === 'string',
       rawValue: dbEvidence.timestamp,
@@ -144,33 +144,12 @@ export class EvidenceScoreService {
         evidenceId: dbEvidence.id,
         originalTimestamp: dbEvidence.timestamp,
         timestampType: typeof dbEvidence.timestamp,
-        isDate: dbEvidence.timestamp instanceof Date,
+        isDate: false, // timestamp is always a number in database
         timestampConstructor: dbEvidence.timestamp?.constructor?.name,
       });
 
-      // If dbEvidence.timestamp is already a Date object
-      if (dbEvidence.timestamp instanceof Date) {
-        // Check if it's a valid Date
-        const timeMs = dbEvidence.timestamp.getTime();
-        logger.info('🐛 [DEBUG] Date object detected', {
-          evidenceId: dbEvidence.id,
-          timeMs: timeMs,
-          isNaN: isNaN(timeMs),
-          dateString: dbEvidence.timestamp.toString(),
-        });
-
-        if (!isNaN(timeMs)) {
-          timestamp = dbEvidence.timestamp;
-          logger.debug('✅ Timestamp is valid Date object', {
-            evidenceId: dbEvidence.id,
-            timestamp: timestamp.toISOString(),
-            timestampMs: timestamp.getTime(),
-          });
-        } else {
-          // Invalid Date object - need to create new one
-          throw new Error('Date object is invalid (NaN getTime())');
-        }
-      } else if (typeof dbEvidence.timestamp === 'number') {
+      // Database always returns timestamp as number (Unix seconds)
+      if (typeof dbEvidence.timestamp === 'number') {
         logger.info('🐛 [DEBUG] Number timestamp detected', {
           evidenceId: dbEvidence.id,
           numberValue: dbEvidence.timestamp,
@@ -307,11 +286,8 @@ export class EvidenceScoreService {
           evidenceId: dbEvidence.id,
           originalTimestamp: dbEvidence.timestamp,
           originalType: typeof dbEvidence.timestamp,
-          isDate: dbEvidence.timestamp instanceof Date,
-          dateGetTime:
-            dbEvidence.timestamp instanceof Date
-              ? dbEvidence.timestamp.getTime()
-              : 'N/A',
+          isDate: false, // timestamp is always a number in database
+          dateGetTime: 'N/A', // timestamp is stored as Unix seconds
           error: error instanceof Error ? error.message : String(error),
           fallbackDate: fallbackTimestamp.toISOString(),
         }

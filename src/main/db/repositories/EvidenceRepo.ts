@@ -43,7 +43,7 @@ export class EvidenceRepo {
         content: data.content,
         source: data.source,
         sourceType: data.sourceType,
-        timestamp: data.timestamp,
+        timestamp: Math.floor(data.timestamp.getTime() / 1000), // Convert Date to Unix seconds
         tags: JSON.stringify(data.tags || []),
         sentiment: data.sentiment,
         importance: data.importance,
@@ -118,11 +118,8 @@ export class EvidenceRepo {
           timestampType: typeof result.timestamp,
           timestampValue: result.timestamp,
           isNumber: typeof result.timestamp === 'number',
-          isDate: result.timestamp instanceof Date,
-          dateGetTime:
-            result.timestamp instanceof Date
-              ? result.timestamp.getTime()
-              : 'N/A',
+          isDate: false, // timestamp is always a number in database
+          dateGetTime: 'N/A', // timestamp is stored as Unix seconds
           asMilliseconds:
             typeof result.timestamp === 'number'
               ? result.timestamp * 1000
@@ -269,41 +266,10 @@ export class EvidenceRepo {
       originalTimestamp: dbEvidence.timestamp,
       timestampType: typeof dbEvidence.timestamp,
       isNumber: typeof dbEvidence.timestamp === 'number',
-      isDate: dbEvidence.timestamp instanceof Date,
-      dateGetTime:
-        dbEvidence.timestamp instanceof Date
-          ? dbEvidence.timestamp.getTime()
-          : 'N/A',
     });
 
-    // Handle different timestamp formats from Drizzle
-    if (dbEvidence.timestamp instanceof Date) {
-      // If Drizzle returns a Date object, check if it's valid
-      const timeMs = dbEvidence.timestamp.getTime();
-      logger.info('🐛 [DEBUG] Date object detected from Drizzle', {
-        evidenceId: dbEvidence.id,
-        timeMs: timeMs,
-        isNaN: isNaN(timeMs),
-        dateString: dbEvidence.timestamp.toString(),
-      });
-
-      if (!isNaN(timeMs)) {
-        timestamp = dbEvidence.timestamp;
-        logger.debug('✅ Valid Date object from Drizzle', {
-          evidenceId: dbEvidence.id,
-          timestamp: timestamp.toISOString(),
-        });
-      } else {
-        // Invalid Date from Drizzle - this indicates the core issue
-        logger.error('❌ Invalid Date object from Drizzle - this is the bug!', {
-          evidenceId: dbEvidence.id,
-          invalidDate: dbEvidence.timestamp,
-          timeMs: timeMs,
-        });
-        // Fall back to current time
-        timestamp = new Date();
-      }
-    } else if (typeof dbEvidence.timestamp === 'number') {
+    // Handle timestamp formats from Drizzle - database always stores as Unix seconds (number)
+    if (typeof dbEvidence.timestamp === 'number') {
       // If Drizzle returns a number, treat as Unix seconds
       const timestampMs = dbEvidence.timestamp * 1000;
       timestamp = new Date(timestampMs);
