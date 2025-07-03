@@ -96,7 +96,7 @@ export function EvidenceScoreGauge({
         2
       )
     );
-  }, [score, displayScore]);
+  }, [score]);
 
   // Determine score color class based on value
   const getScoreColorClass = (scoreValue: number | null): string => {
