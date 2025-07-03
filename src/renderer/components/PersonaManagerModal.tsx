@@ -309,7 +309,7 @@ export function PersonaManagerModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0">
           {activeTab === 'visual' ? (
             <VisualEditor
               personas={editedPersonas}
