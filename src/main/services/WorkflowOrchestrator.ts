@@ -219,6 +219,20 @@ export class WorkflowOrchestrator extends EventEmitter {
         content: `Generated ${result.evidenceCreated.length} evidence items from ${result.transcriptFileName}`,
       });
 
+      // Phase 3.1.7: Emit success toast event for transcript analysis completion
+      this.emitToRenderer('transcript-success-toast', {
+        type: 'transcript-success' as const,
+        title: 'Transcript Analysed',
+        message: `Evidence added • ${result.evidenceCreated.length} items • ${result.personasAffected.length} personas affected`,
+        fileName: result.transcriptFileName,
+        evidenceCount: result.evidenceCreated.length,
+        personasAffected: result.personasAffected,
+        processingTime: result.processingTime,
+        timestamp: new Date(),
+        dismissible: true,
+        autoDismissMs: 6000, // 6 seconds for transcript success
+      });
+
       // Success message
       this.emit('transcript-processed', {
         fileName: transcriptEvent.fileName,

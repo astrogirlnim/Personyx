@@ -15,6 +15,10 @@ import type {
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
 import { TranscriptImportModal } from './components/TranscriptImportModal';
 import { GlobalErrorToast, ErrorToast } from './components/GlobalErrorToast';
+import {
+  GlobalSuccessToast,
+  SuccessToast,
+} from './components/GlobalSuccessToast';
 import { useEvidenceScores } from './hooks/useEvidenceScores';
 import {
   getLastImportedPRD,
@@ -1212,6 +1216,9 @@ export function App(): JSX.Element {
   // Phase 3.1.4: Global error toast state
   const [errorToasts, setErrorToasts] = useState<ErrorToast[]>([]);
 
+  // Phase 3.1.7: Global success toast state
+  const [successToasts, setSuccessToasts] = useState<SuccessToast[]>([]);
+
   // Phase 4.3: Use evidence scores utility hook
   const { scores, maxScore, debugInfo } = useEvidenceScores(
     currentEvidenceScores
@@ -1229,6 +1236,17 @@ export function App(): JSX.Element {
   const dismissErrorToast = useCallback((toastId: string) => {
     console.log('🗑️ Dismissing error toast:', toastId);
     setErrorToasts(prev => prev.filter(toast => toast.id !== toastId));
+  }, []);
+
+  // Phase 3.1.7: Success toast management
+  const addSuccessToast = useCallback((toast: SuccessToast) => {
+    console.log('✅ Adding success toast:', toast);
+    setSuccessToasts(prev => [...prev, toast]);
+  }, []);
+
+  const dismissSuccessToast = useCallback((toastId: string) => {
+    console.log('🗑️ Dismissing success toast:', toastId);
+    setSuccessToasts(prev => prev.filter(toast => toast.id !== toastId));
   }, []);
 
   useEffect(() => {
@@ -1398,6 +1416,29 @@ export function App(): JSX.Element {
         addErrorToast(errorToast);
       });
 
+      // Phase 3.1.7: Listen for transcript success toast events
+      window.electronAPI.onTranscriptSuccessToast((data: unknown) => {
+        console.log('✅ Transcript success received:', data);
+        const successData = data as IPCEvents['transcript-success-toast'];
+
+        // Create success toast from the success data
+        const successToast: SuccessToast = {
+          id: `transcript-success-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: successData.type,
+          title: successData.title,
+          message: successData.message,
+          timestamp: new Date(successData.timestamp),
+          dismissible: successData.dismissible !== false,
+          autoDismissMs: successData.autoDismissMs || 6000,
+          fileName: successData.fileName,
+          evidenceCount: successData.evidenceCount,
+          personasAffected: successData.personasAffected,
+          processingTime: successData.processingTime,
+        };
+
+        addSuccessToast(successToast);
+      });
+
       // Listen for evidence score events
       window.electronAPI.onPRDImported((data: unknown) => {
         console.log(
@@ -1552,7 +1593,13 @@ export function App(): JSX.Element {
       window.removeEventListener('keydown', handleKeyDown);
       // Note: electronAPI listeners are automatically cleaned up by preload script
     };
-  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen, addErrorToast]);
+  }, [
+    isChatOpen,
+    isImportModalOpen,
+    isTranscriptModalOpen,
+    addErrorToast,
+    addSuccessToast,
+  ]);
 
   // Debug evidence scores state changes
   useEffect(() => {
@@ -2106,6 +2153,13 @@ export function App(): JSX.Element {
       <GlobalErrorToast
         toasts={errorToasts}
         onDismiss={dismissErrorToast}
+        position="top-right"
+      />
+
+      {/* Phase 3.1.7: Global Success Toast */}
+      <GlobalSuccessToast
+        toasts={successToasts}
+        onDismiss={dismissSuccessToast}
         position="top-right"
       />
     </div>

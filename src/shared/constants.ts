@@ -13,6 +13,7 @@ export const IPC_CHANNELS = {
   // Main to Renderer
   EVIDENCE_SCORE_UPDATED: 'evidence-score-updated',
   TRANSCRIPT_INGESTED: 'transcript-ingested',
+  TRANSCRIPT_SUCCESS: 'transcript-success',
   PRD_IMPORTED: 'prd-imported',
   APP_READY: 'app-ready',
   SETTINGS_UPDATED: 'settings-updated',
@@ -20,6 +21,7 @@ export const IPC_CHANNELS = {
   CLOUD_SUBSCRIPTION_INFO: 'cloud-subscription-info',
   ERROR: 'error',
   GLOBAL_ERROR: 'global-error', // Phase 3.1.4: Global error toast events
+  TRANSCRIPT_SUCCESS_TOAST: 'transcript-success-toast', // Phase 3.1.7: Success toast events
 
   // Renderer to Main
   IMPORT_PRD: 'import-prd',

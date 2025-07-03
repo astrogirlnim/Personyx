@@ -40,6 +40,8 @@ interface ElectronAPI {
   onError: (callback: (error: unknown) => void) => void;
   // Phase 3.1.4: Global error toast listener
   onGlobalError: (callback: (error: unknown) => void) => void;
+  // Phase 3.1.7: Success toast listener
+  onTranscriptSuccessToast: (callback: (data: unknown) => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (
     callback: (data: { filePath: string }) => void
@@ -156,6 +158,11 @@ const electronAPI: ElectronAPI = {
   // Phase 3.1.4: Global error toast listener
   onGlobalError: (callback: (error: unknown) => void) => {
     ipcRenderer.on('global-error', (_, error) => callback(error));
+  },
+
+  // Phase 3.1.7: Success toast listener
+  onTranscriptSuccessToast: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('transcript-success-toast', (_, data) => callback(data));
   },
 
   onOpenChatWindow: (callback: () => void) => {
