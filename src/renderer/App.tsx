@@ -1227,6 +1227,9 @@ export function App(): JSX.Element {
   // Phase 4.2: Get current document ID for persistence
   const [, setCurrentDocumentId] = useState<string | null>(null);
 
+  // Track if IPC listeners have been set up to prevent duplicates
+  const listenersSetupRef = useRef(false);
+
   // Phase 3.1.4: Error toast management
   const dismissErrorToast = useCallback((toastId: string) => {
     console.log('🗑️ Dismissing error toast:', toastId);
@@ -1289,6 +1292,17 @@ export function App(): JSX.Element {
 
   // Handle keyboard shortcuts and IPC events
   useEffect(() => {
+    console.log('🔧 Setting up IPC event listeners and keyboard shortcuts');
+
+    // Prevent multiple listener registrations
+    if (listenersSetupRef.current) {
+      console.log('⚠️ IPC listeners already set up, skipping registration');
+      return;
+    }
+
+    listenersSetupRef.current = true;
+    console.log('✅ Marking IPC listeners as set up');
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl/Cmd + K to open chat
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1408,7 +1422,7 @@ export function App(): JSX.Element {
       });
 
       // Phase 3.1.7: Listen for transcript success toast events
-      window.electronAPI.onTranscriptSuccessToast((data: unknown) => {
+      const handleTranscriptSuccess = (data: unknown) => {
         console.log('✅ Transcript success received:', data);
         const successData = data as IPCEvents['transcript-success-toast'];
 
@@ -1427,9 +1441,12 @@ export function App(): JSX.Element {
           processingTime: successData.processingTime,
         };
 
+        console.log('🎯 Creating success toast with ID:', successToast.id);
         // Use callback form to avoid stale closure issues
         setSuccessToasts(prev => [...prev, successToast]);
-      });
+      };
+
+      window.electronAPI.onTranscriptSuccessToast(handleTranscriptSuccess);
 
       // Listen for evidence score events
       window.electronAPI.onPRDImported((data: unknown) => {
@@ -1582,10 +1599,22 @@ export function App(): JSX.Element {
     }
 
     return () => {
+      console.log('🧹 Cleaning up IPC event listeners and keyboard shortcuts');
       window.removeEventListener('keydown', handleKeyDown);
-      // Note: electronAPI listeners are automatically cleaned up by preload script
+
+      // Reset listeners setup flag to allow re-registration if component remounts
+      listenersSetupRef.current = false;
+      console.log('♻️ Reset IPC listeners setup flag');
+
+      // Clean up Electron API listeners to prevent duplicate registrations
+      if (window.electronAPI && window.electronAPI.removeAllListeners) {
+        window.electronAPI.removeAllListeners('transcript-success-toast');
+        window.electronAPI.removeAllListeners('global-error');
+        window.electronAPI.removeAllListeners('prd-imported');
+        window.electronAPI.removeAllListeners('evidence-score-updated');
+      }
     };
-  }, []); // Remove modal dependencies to prevent re-registering event listeners
+  }, []); // Empty dependency array to ensure listeners are only set up once
 
   // Debug evidence scores state changes
   useEffect(() => {
