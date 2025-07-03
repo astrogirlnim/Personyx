@@ -5,7 +5,7 @@
 personas:
   - id: solo_founder
     name: 'Solo Founder'
-    description: 'Independent entrepreneur building their first product with limited resources and time. Focused on rapid validation and lean development to reach product-market fit quickly. Going to change this.'
+    description: 'Independent entrepreneur building their first product with limited resources and time. Focused on rapid validation and lean development to reach product-market fit quickly.'
     primaryGoal: 'Ship MVP fast with minimal tooling overhead'
     mainPainPoint: 'Context switching between development and uncertain feature value'
     keywords:

@@ -33,7 +33,6 @@ export function PersonaManagerModal({
     saveYamlConfig,
     reloadPersonas,
     clearError,
-    updateYamlContent,
   } = usePersonas();
 
   // Local component state
@@ -71,13 +70,11 @@ export function PersonaManagerModal({
     }
   }, [editedYaml, yamlContent]);
 
-  const handleYamlChange = useCallback(
-    (value: string) => {
-      setEditedYaml(value);
-      updateYamlContent(value);
-    },
-    [updateYamlContent]
-  );
+  const handleYamlChange = useCallback((value: string) => {
+    setEditedYaml(value);
+    // Note: Don't call updateYamlContent here - it should only be called
+    // when we successfully save or load, not during editing
+  }, []);
 
   const handleSave = useCallback(async () => {
     try {
@@ -401,9 +398,21 @@ export function PersonaManagerModal({
 }
 
 /**
+ * Basic persona interface for the Visual Editor
+ */
+interface PersonaEditorProps {
+  id: string;
+  name: string;
+  description: string;
+  primaryGoal: string;
+  mainPainPoint: string;
+  keywords?: string[];
+}
+
+/**
  * Visual Editor Component for persona management
  */
-function VisualEditor({ personas }: { personas: any[] }) {
+function VisualEditor({ personas }: { personas: PersonaEditorProps[] }) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-6">
