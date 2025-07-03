@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[~] **Phase 2:** Data Layer 🔄 NEARLY COMPLETE (4.75/6 features)  
+[X] **Phase 2:** Data Layer ✅ COMPLETE (6/6 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -94,14 +94,14 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **5.3** Add logic to select between local and cloud embedding at runtime ✅ COMPLETE
 - [x] **5.4** Unit-test key retrieval, cloud fallback & error states
 
-[ ] **Feature 6 – Interview Evidence Generator**
+[X] **Feature 6 – Interview Evidence Generator** ✅ COMPLETE
 
-- [ ] **6.1** Implement `TranscriptIngestService` to monitor `/interviews` and emit `transcript-imported`.
-- [ ] **6.2** Extract & chunk transcript text into analysable blocks.
-- [ ] **6.3** Classify chunks by persona and generate embeddings via LangGraph/OpenAI.
-- [ ] **6.4** Persist evidence rows with embeddings to SQLite and emit `evidence-created`.
-- [ ] **6.5** Trigger `EvidenceScoreService.recalculateAll` and broadcast `evidence-score-updated`.
-- [ ] **6.6** Unit & integration tests covering ingest → evidence → score delta.
+- [x] **6.1** Implement `TranscriptIngestService` to monitor `/interviews` and emit `transcript-imported`. ✅ COMPLETE
+- [x] **6.2** Extract & chunk transcript text into analysable blocks. ✅ COMPLETE
+- [x] **6.3** Classify chunks by persona and generate embeddings via LangGraph/OpenAI. ✅ COMPLETE
+- [x] **6.4** Persist evidence rows with embeddings to SQLite and emit `evidence-created`. ✅ COMPLETE
+- [x] **6.5** Trigger `EvidenceScoreService.recalculateAll` and broadcast `evidence-score-updated`. ✅ COMPLETE
+- [x] **6.6** Unit & integration tests covering ingest → evidence → score delta. ✅ COMPLETE
 
 ---
 

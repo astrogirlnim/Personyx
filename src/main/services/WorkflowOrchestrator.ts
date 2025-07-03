@@ -1,7 +1,8 @@
 /**
  * Workflow Orchestrator
- * Connects Interview Folder Watcher with LangGraph Service and handles IPC events
+ * Connects Interview Folder Watcher with LangGraph Service and TranscriptIngestService
  * Phase 1, Feature 3.4 - Emit "TranscriptIngested" IPC event to the Tray process
+ * Phase 2, Feature 6 - Complete interview evidence generation pipeline
  */
 
 import { EventEmitter } from 'events';
@@ -11,11 +12,8 @@ import {
   InterviewFolderWatcher,
   type TranscriptFileEvent,
 } from './InterviewFolderWatcher';
-import {
-  LangGraphService,
-  type ProcessingResult,
-  type PersonaClassification,
-} from './LangGraphService';
+import { LangGraphService } from './LangGraphService';
+import { TranscriptIngestService } from './TranscriptIngestService';
 import { PersonaConfigLoader } from './PersonaConfigLoader';
 import type { IPCEvents } from '@shared/types';
 
@@ -24,6 +22,7 @@ const logger = new Logger('workflow-orchestrator');
 export class WorkflowOrchestrator extends EventEmitter {
   private interviewWatcher: InterviewFolderWatcher;
   private langGraphService: LangGraphService;
+  private transcriptIngestService: TranscriptIngestService;
   private personaConfigLoader: PersonaConfigLoader;
   private mainWindow: BrowserWindow | null = null;
   private isRunning = false;
@@ -32,38 +31,10 @@ export class WorkflowOrchestrator extends EventEmitter {
     super();
     this.interviewWatcher = new InterviewFolderWatcher();
     this.langGraphService = new LangGraphService();
+    this.transcriptIngestService = new TranscriptIngestService();
     this.personaConfigLoader = new PersonaConfigLoader();
 
     this.setupEventHandlers();
-  }
-
-  /**
-   * Initialize the workflow orchestrator
-   */
-  async initialize(): Promise<void> {
-    logger.info('🚀 Initializing Workflow Orchestrator...');
-
-    try {
-      // Step 1: Load personas configuration
-      await this.personaConfigLoader.loadPersonas();
-      logger.info('✅ Personas loaded');
-
-      // Step 2: Initialize LangGraph service
-      await this.langGraphService.initialize();
-      logger.info('✅ LangGraph service initialized');
-
-      // Step 3: Start interview folder watcher
-      this.interviewWatcher.startWatching();
-      logger.info('✅ Interview folder watcher started');
-
-      this.isRunning = true;
-      logger.info('🎯 Workflow Orchestrator ready for transcript processing');
-
-      this.emit('ready');
-    } catch (error) {
-      logger.error('❌ Failed to initialize Workflow Orchestrator', error);
-      throw error;
-    }
   }
 
   /**
@@ -71,41 +42,95 @@ export class WorkflowOrchestrator extends EventEmitter {
    */
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
-    logger.debug('🪟 Main window set for IPC communication');
+    this.transcriptIngestService = new TranscriptIngestService(window); // Update with window reference
+    logger.debug('📢 Main window set for IPC communication');
+  }
+
+  /**
+   * Start the workflow orchestrator
+   */
+  async start(): Promise<void> {
+    if (this.isRunning) {
+      logger.warn('⚠️ Workflow orchestrator already running');
+      return;
+    }
+
+    logger.info('🚀 Starting workflow orchestrator');
+
+    try {
+      // Initialize services
+      await this.personaConfigLoader.loadPersonas();
+      await this.langGraphService.initialize();
+
+      // Start watching for interview files
+      this.interviewWatcher.startWatching();
+
+      this.isRunning = true;
+      logger.info('✅ Workflow orchestrator started successfully');
+
+      this.emitToRenderer('app-ready', {});
+    } catch (error) {
+      logger.error('❌ Failed to start workflow orchestrator', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stop the workflow orchestrator
+   */
+  async stop(): Promise<void> {
+    if (!this.isRunning) {
+      logger.warn('⚠️ Workflow orchestrator not running');
+      return;
+    }
+
+    logger.info('🛑 Stopping workflow orchestrator');
+
+    try {
+      await this.interviewWatcher.stopWatching();
+      this.isRunning = false;
+      logger.info('✅ Workflow orchestrator stopped successfully');
+    } catch (error) {
+      logger.error('❌ Error stopping workflow orchestrator', error);
+      throw error;
+    }
   }
 
   /**
    * Setup event handlers for interview processing pipeline
    */
   private setupEventHandlers(): void {
-    // Interview file added
+    // Feature 6.1: Interview file added - use new TranscriptIngestService
     this.interviewWatcher.on(
       'transcript-added',
       async (transcriptEvent: TranscriptFileEvent) => {
         logger.info(
-          '📄 New transcript detected, starting processing pipeline',
+          '📄 New transcript detected, starting evidence generation pipeline',
           {
             fileName: transcriptEvent.fileName,
           }
         );
 
-        await this.processTranscript(transcriptEvent, 'added');
+        await this.processTranscriptWithIngestService(transcriptEvent, 'added');
       }
     );
 
-    // Interview file updated
+    // Interview file updated - use new TranscriptIngestService
     this.interviewWatcher.on(
       'transcript-updated',
       async (transcriptEvent: TranscriptFileEvent) => {
-        logger.info('📝 Updated transcript detected, reprocessing', {
+        logger.info('📝 Updated transcript detected, regenerating evidence', {
           fileName: transcriptEvent.fileName,
         });
 
-        await this.processTranscript(transcriptEvent, 'updated');
+        await this.processTranscriptWithIngestService(
+          transcriptEvent,
+          'updated'
+        );
       }
     );
 
-    // Interview file manually processed
+    // Interview file manually processed - use new TranscriptIngestService
     this.interviewWatcher.on(
       'transcript-manual',
       async (transcriptEvent: TranscriptFileEvent) => {
@@ -113,7 +138,10 @@ export class WorkflowOrchestrator extends EventEmitter {
           fileName: transcriptEvent.fileName,
         });
 
-        await this.processTranscript(transcriptEvent, 'manual');
+        await this.processTranscriptWithIngestService(
+          transcriptEvent,
+          'manual'
+        );
       }
     );
 
@@ -145,97 +173,77 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   /**
-   * Process a transcript through the LangGraph pipeline
+   * Feature 6: Process transcript using the new TranscriptIngestService
+   * This replaces the legacy LangGraphService processing with the complete evidence generation pipeline
    */
-  private async processTranscript(
+  private async processTranscriptWithIngestService(
     transcriptEvent: TranscriptFileEvent,
-    triggerType: 'added' | 'updated' | 'manual'
+    trigger: 'added' | 'updated' | 'manual'
   ): Promise<void> {
-    logger.info(
-      `🔄 Processing transcript: ${transcriptEvent.fileName} (${triggerType})`
-    );
-
     try {
-      // Check if LangGraph service is ready
-      if (!this.langGraphService.isReady()) {
-        logger.warn('⚠️ LangGraph service not ready, skipping processing');
-        return;
-      }
+      logger.info('🎤 Starting transcript evidence generation', {
+        fileName: transcriptEvent.fileName,
+        trigger,
+        contentLength: transcriptEvent.content.length,
+      });
 
-      // Process through LangGraph pipeline
-      const result: ProcessingResult =
-        await this.langGraphService.processTranscript(transcriptEvent);
+      // Process transcript through the complete pipeline
+      const result =
+        await this.transcriptIngestService.processTranscript(transcriptEvent);
 
-      if (result.processed) {
-        logger.info('✅ Transcript processed successfully', {
-          fileName: transcriptEvent.fileName,
-          evidenceId: result.evidenceId,
-          personaClassifications: result.personaClassifications.length,
-          embeddings: result.embeddings.length,
-        });
+      logger.info('✅ Transcript evidence generation completed', {
+        fileName: result.transcriptFileName,
+        evidenceCreated: result.evidenceCreated.length,
+        personasAffected: result.personasAffected.length,
+        processingTime: result.processingTime,
+        successRate: `${result.processedChunks}/${result.totalChunks}`,
+      });
 
-        // Find the best persona classification for the IPC event
-        let bestClassification: PersonaClassification | null = null;
-        if (result.personaClassifications.length > 0) {
-          bestClassification = result.personaClassifications.reduce(
-            (best, current) => {
-              return current.confidence > best.confidence ? current : best;
-            }
-          );
-        }
+      // Emit completion event to renderer
+      this.emitToRenderer('transcript-ingested', {
+        evidenceId: result.evidenceCreated[0] || '', // Use first evidence ID
+        personaId: result.personasAffected[0] || '', // Use first persona ID
+        content: `Generated ${result.evidenceCreated.length} evidence items from ${result.transcriptFileName}`,
+      });
 
-        if (bestClassification) {
-          // Emit IPC event to renderer process (Feature 3.4)
-          this.emitToRenderer('transcript-ingested', {
-            evidenceId: result.evidenceId,
-            personaId: bestClassification.personaId,
-            content: transcriptEvent.content.substring(0, 500) + '...', // Truncated for IPC
-          });
-
-          logger.info('📡 IPC event emitted to renderer', {
-            evidenceId: result.evidenceId,
-            personaId: bestClassification.personaId,
-          });
-        }
-
-        this.emit('transcript-processed', {
-          transcriptEvent,
-          result,
-          triggerType,
-        });
-      } else {
-        logger.error('❌ Transcript processing failed', {
-          fileName: transcriptEvent.fileName,
-          error: result.error,
-        });
-
-        this.emitToRenderer('error', {
-          message: `Failed to process transcript: ${transcriptEvent.fileName}`,
-          details: result.error,
-        });
-      }
+      // Success message
+      this.emit('transcript-processed', {
+        fileName: transcriptEvent.fileName,
+        result,
+        trigger,
+      });
     } catch (error) {
-      logger.error('❌ Unexpected error during transcript processing', error);
+      logger.error('❌ Transcript evidence generation failed', {
+        fileName: transcriptEvent.fileName,
+        trigger,
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       this.emitToRenderer('error', {
-        message: `Unexpected error processing transcript: ${transcriptEvent.fileName}`,
+        message: `Failed to generate evidence from transcript: ${transcriptEvent.fileName}`,
         details: error,
+      });
+
+      this.emit('transcript-error', {
+        fileName: transcriptEvent.fileName,
+        error,
+        trigger,
       });
     }
   }
 
   /**
-   * Emit IPC event to renderer process
+   * Helper method to emit IPC events to renderer
    */
   private emitToRenderer<T extends keyof IPCEvents>(
-    eventType: T,
+    event: T,
     data: IPCEvents[T]
   ): void {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(eventType, data);
-      logger.debug(`📡 IPC event sent: ${eventType}`);
+      this.mainWindow.webContents.send(event, data);
+      logger.debug(`📢 Emitted IPC event: ${event}`);
     } else {
-      logger.warn('⚠️ No main window available for IPC communication');
+      logger.warn(`⚠️ Cannot emit ${event} - main window not available`);
     }
   }
 
@@ -275,6 +283,7 @@ export class WorkflowOrchestrator extends EventEmitter {
     running: boolean;
     watcherActive: boolean;
     langGraphReady: boolean;
+    transcriptIngestReady: boolean;
     personasLoaded: boolean;
     interviewsDirectory: string;
     existingTranscripts: number;
@@ -283,6 +292,8 @@ export class WorkflowOrchestrator extends EventEmitter {
       running: this.isRunning,
       watcherActive: this.interviewWatcher.isCurrentlyWatching(),
       langGraphReady: this.langGraphService.isReady(),
+      transcriptIngestReady:
+        this.transcriptIngestService.getProcessingStats().isReady,
       personasLoaded: this.personaConfigLoader.isPersonasLoaded(),
       interviewsDirectory: this.interviewWatcher.getInterviewsDirectory(),
       existingTranscripts:
@@ -291,29 +302,11 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   /**
-   * Stop the workflow orchestrator
+   * Force reload personas from configuration
    */
-  async stop(): Promise<void> {
-    logger.info('🛑 Stopping Workflow Orchestrator...');
-
-    try {
-      // Stop interview folder watcher
-      await this.interviewWatcher.stopWatching();
-
-      this.isRunning = false;
-      logger.info('✅ Workflow Orchestrator stopped');
-
-      this.emit('stopped');
-    } catch (error) {
-      logger.error('❌ Error stopping Workflow Orchestrator', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if orchestrator is running
-   */
-  isActive(): boolean {
-    return this.isRunning;
+  async reloadPersonas(): Promise<void> {
+    logger.info('🔄 Reloading personas configuration');
+    await this.personaConfigLoader.loadPersonas();
+    logger.info('✅ Personas reloaded successfully');
   }
 }

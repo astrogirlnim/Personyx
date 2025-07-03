@@ -591,11 +591,13 @@ class PersonyxApp {
         this.logger.info('ℹ️ Using local AI service configuration');
       }
 
-      // Initialize workflow orchestrator (Phase 1.3)
+      // Initialize workflow orchestrator (Phase 1.3 + Phase 2.6)
       this.logger.info('🔄 Initializing workflow orchestrator...');
       this.workflowOrchestrator = new WorkflowOrchestrator();
-      await this.workflowOrchestrator.initialize();
-      this.logger.info('✅ Workflow orchestrator initialized');
+      await this.workflowOrchestrator.start();
+      this.logger.info(
+        '✅ Workflow orchestrator initialized with transcript ingest service'
+      );
 
       // Load personas configuration (Phase 1.4)
       this.logger.info('🎭 Loading personas from YAML configuration...');
