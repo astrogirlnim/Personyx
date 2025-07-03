@@ -36,6 +36,13 @@ interface ElectronAPI {
   onOpenImportModalWithFile: (
     callback: (data: { filePath: string }) => void
   ) => void;
+  onOpenImportModalWithFileContent: (
+    callback: (data: {
+      fileName: string;
+      fileContent: string;
+      fileSize: number;
+    }) => void
+  ) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;

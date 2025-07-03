@@ -350,6 +350,32 @@ class PersonyxApp {
       }
     });
 
+    // Handle file drops from tray drop zone with content
+    ipcMain.on(
+      'tray-file-drop-with-content',
+      async (_event, data: { fileName: string; fileContent: string }) => {
+        this.logger.info(
+          `🗂️ File dropped on tray zone with content: ${data.fileName}`
+        );
+
+        // Ensure main window is open and focused
+        this.createMainWindow();
+        const mainWindow = this.getMainWindow();
+
+        if (mainWindow) {
+          // Send message to renderer to open import modal with the file content
+          mainWindow.webContents.send('open-import-modal-with-file-content', {
+            fileName: data.fileName,
+            fileContent: data.fileContent,
+            fileSize: data.fileContent.length,
+          });
+          this.logger.info(
+            '✅ Main window notified to open import modal with file content'
+          );
+        }
+      }
+    );
+
     // Check for updates
     ipcMain.handle('check-for-updates', async () => {
       this.logger.info('🔄 Manual update check requested');

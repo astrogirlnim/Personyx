@@ -418,23 +418,128 @@ function ImportPRDModal({
   }, []);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
 
+      console.log('🔍 Import modal dataTransfer analysis:', {
+        files: e.dataTransfer.files,
+        filesLength: e.dataTransfer.files.length,
+        items: e.dataTransfer.items,
+        itemsLength: e.dataTransfer.items.length,
+        types: e.dataTransfer.types,
+      });
+
+      // Method 1: Try standard files API
+      let file: File | null = null;
       const files = Array.from(e.dataTransfer.files);
+
       if (files.length > 0) {
-        const file = files[0];
-        console.log('🗂️ Dropped file:', {
+        file = files[0];
+        console.log('✅ Got file via files API in modal:', file.name);
+      }
+      // Method 2: Try DataTransferItemList API
+      else if (e.dataTransfer.items.length > 0) {
+        console.log('🔄 Trying DataTransferItems API in modal...');
+        const items = Array.from(e.dataTransfer.items);
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          console.log(`📋 Modal Item ${i}:`, {
+            kind: item.kind,
+            type: item.type,
+          });
+
+          if (item.kind === 'file') {
+            const itemFile = item.getAsFile();
+            if (itemFile) {
+              file = itemFile;
+              console.log('✅ Got file via items API in modal:', file.name);
+              break;
+            }
+          }
+          // Check for text/uri-list (file paths)
+          else if (
+            item.type === 'text/uri-list' ||
+            item.type === 'text/plain'
+          ) {
+            try {
+              const data = await new Promise<string>(resolve => {
+                item.getAsString(resolve);
+              });
+              console.log('📝 Text data from modal item:', data);
+
+              // Check if it looks like a file path
+              if (
+                data &&
+                (data.includes('.md') ||
+                  data.includes('.txt') ||
+                  data.includes('.markdown'))
+              ) {
+                const filePath = data.replace('file://', '').trim();
+                console.log('📂 Detected file path in modal:', filePath);
+                setSelectedFilePath(filePath);
+                setSelectedFile(null);
+                setError(null);
+                return;
+              }
+            } catch (error) {
+              console.warn('⚠️ Error reading text data in modal:', error);
+            }
+          }
+        }
+      }
+
+      // Method 3: Check for text data (file paths from external drops)
+      if (!file) {
+        console.log('🔄 Checking for text/uri-list data in modal...');
+        try {
+          const uriData = e.dataTransfer.getData('text/uri-list');
+          const textData = e.dataTransfer.getData('text/plain');
+
+          console.log('📝 URI data in modal:', uriData);
+          console.log('📝 Text data in modal:', textData);
+
+          const pathData = uriData || textData;
+          if (
+            pathData &&
+            (pathData.includes('.md') ||
+              pathData.includes('.txt') ||
+              pathData.includes('.markdown'))
+          ) {
+            const filePath = pathData.replace('file://', '').trim();
+            console.log(
+              '📂 Using file path from text data in modal:',
+              filePath
+            );
+            setSelectedFilePath(filePath);
+            setSelectedFile(null);
+            setError(null);
+            return;
+          }
+        } catch (error) {
+          console.warn(
+            '⚠️ Error reading text data from dataTransfer in modal:',
+            error
+          );
+        }
+      }
+
+      // Process the file if we got one
+      if (file) {
+        console.log('🗂️ Dropped file in modal:', {
           name: file.name,
           size: file.size,
           type: file.type,
         });
         if (validateFile(file)) {
           setSelectedFile(file);
+          setSelectedFilePath(null);
           setError(null);
         }
+      } else {
+        console.warn('⚠️ No file data found in modal drop');
       }
     },
     [validateFile]
@@ -1079,6 +1184,19 @@ export function App(): JSX.Element {
         );
         setDraggedFile(null); // Clear any existing dragged file
         setTrayFilePath(data.filePath); // Store the tray file path
+        setIsImportModalOpen(true);
+      });
+      window.electronAPI.onOpenImportModalWithFileContent(data => {
+        console.log(
+          '📄 Opening import modal from tray file content drop:',
+          data.fileName
+        );
+        // Create a File object from the content
+        const file = new File([data.fileContent], data.fileName, {
+          type: data.fileName.endsWith('.md') ? 'text/markdown' : 'text/plain',
+        });
+        setTrayFilePath(null); // Clear any existing tray file path
+        setDraggedFile(file); // Set the file object created from content
         setIsImportModalOpen(true);
       });
     }

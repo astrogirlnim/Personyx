@@ -516,9 +516,21 @@ export class TrayManager {
                 const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
                 
                 if (validExtensions.includes(fileExtension) && file.size <= 10 * 1024 * 1024) {
-                  console.log('✅ Valid file, opening main app with import modal');
-                  // Send file to main process to open main window with import modal
-                  window.electronAPI?.handleTrayFileDrop(file.path);
+                  console.log('✅ Valid file, reading content and opening main app with import modal');
+                  
+                  // Read file content and send to main process
+                  const reader = new FileReader();
+                  reader.onload = function(e) {
+                    const fileContent = e.target.result;
+                    console.log('📄 File content read, length:', fileContent.length);
+                    // Send file content to main process to open main window with import modal
+                    window.electronAPI?.handleTrayFileDropWithContent(file.name, fileContent);
+                  };
+                  reader.onerror = function() {
+                    console.error('❌ Error reading file');
+                    alert('Error reading file. Please try again.');
+                  };
+                  reader.readAsText(file);
                 } else {
                   console.warn('⚠️ Invalid file dropped');
                   alert('Please drop a valid PRD file (.md, .txt, .markdown) under 10MB');
