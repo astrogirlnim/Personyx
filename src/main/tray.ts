@@ -148,9 +148,19 @@ export class TrayManager {
       },
       { type: 'separator' },
       {
-        label: 'Settings...',
-        accelerator: 'CmdOrCtrl+,',
-        click: () => this.handleAction('open-settings'),
+        label: 'Settings',
+        submenu: [
+          {
+            label: 'AI Service Settings...',
+            accelerator: 'CmdOrCtrl+,',
+            click: () => this.handleAction('open-settings'),
+          },
+          {
+            label: 'Persona Manager...',
+            accelerator: 'CmdOrCtrl+Shift+P',
+            click: () => this.handleAction('open-persona-manager'),
+          },
+        ],
       },
       { type: 'separator' },
       {
@@ -243,7 +253,7 @@ export class TrayManager {
    * Handle tray menu actions
    */
   private async handleAction(
-    action: TrayAction | 'show-drop-zone'
+    action: TrayAction | 'show-drop-zone' | 'open-persona-manager'
   ): Promise<void> {
     this.logger.info(`🔧 Tray action START: ${action}`);
     this.logger.debug(`🔧 Action timestamp: ${new Date().toISOString()}`);
@@ -301,6 +311,26 @@ export class TrayManager {
             );
           }
           this.logger.info('✅ open-settings completed');
+          break;
+        }
+
+        case 'open-persona-manager': {
+          this.logger.debug('🔧 Executing: open-persona-manager');
+          personyxApp.createMainWindow();
+
+          // Send message to renderer to open persona manager modal
+          const mainWindow = personyxApp.getMainWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('open-persona-manager-window');
+            this.logger.info(
+              '📢 Sent open-persona-manager-window IPC to renderer'
+            );
+          } else {
+            this.logger.warn(
+              '⚠️ Could not send open-persona-manager-window - main window not available'
+            );
+          }
+          this.logger.info('✅ open-persona-manager completed');
           break;
         }
 

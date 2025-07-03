@@ -1,0 +1,39 @@
+# Personyx Persona Definitions
+# These personas drive evidence analysis and scoring throughout the application
+# Format: YAML array of persona objects
+
+personas:
+  - id: solo_founder
+    name: 'Solo Founder'
+    description: 'Independent entrepreneur building their first product with limited resources and time. Focused on rapid validation and lean development to reach product-market fit quickly. Going to change this.'
+    primaryGoal: 'Ship MVP fast with minimal tooling overhead'
+    mainPainPoint: 'Context switching between development and uncertain feature value'
+    keywords:
+      - 'mvp'
+      - 'validation'
+      - 'lean startup'
+      - 'potatoes'
+      - 'product-market fit'
+      - 'bootstrap'
+      - 'time to market'
+      - 'resource constraints'
+      - 'feature priority'
+      - 'user feedback'
+      - 'iteration speed'
+
+  - id: agency_marketer
+    name: 'Agency Marketer'
+    description: 'Marketing professional at a digital agency managing multiple client campaigns. Needs to optimize conversion funnels and provide clear ROI reporting to justify marketing spend.'
+    primaryGoal: 'Optimize funnels and deliver measurable client reporting'
+    mainPainPoint: 'Copy iteration speed and proving return on investment'
+    keywords:
+      - 'conversion optimization'
+      - 'funnel analysis'
+      - 'a/b testing'
+      - 'roi reporting'
+      - 'client management'
+      - 'campaign performance'
+      - 'lead generation'
+      - 'copywriting'
+      - 'analytics'
+      - 'attribution modeling'

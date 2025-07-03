@@ -15,6 +15,7 @@ import type {
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
 import { TranscriptImportModal } from './components/TranscriptImportModal';
 import { AIServiceSettingsModal } from './components/AIServiceSettingsModal';
+import { PersonaManagerModal } from './components/PersonaManagerModal';
 import { GlobalErrorToast, ErrorToast } from './components/GlobalErrorToast';
 import {
   GlobalSuccessToast,
@@ -1261,6 +1262,7 @@ export function App(): JSX.Element {
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false); // Phase 3.1.6: Activity log panel state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); // Phase 3.5.1: Settings modal state
+  const [isPersonaManagerOpen, setIsPersonaManagerOpen] = useState(false); // Phase 3.5.3: Persona manager modal state
   const [isCardDragging, setIsCardDragging] = useState(false);
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
   const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
@@ -1391,6 +1393,11 @@ export function App(): JSX.Element {
         e.preventDefault();
         setIsSettingsModalOpen(true);
       }
+      // Ctrl/Cmd + Shift + P to open persona manager modal (Phase 3.5.3)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+        e.preventDefault();
+        setIsPersonaManagerOpen(true);
+      }
       // Escape to close modals
       if (e.key === 'Escape') {
         if (isChatOpen) {
@@ -1403,6 +1410,8 @@ export function App(): JSX.Element {
           setIsActivityLogOpen(false);
         } else if (isSettingsModalOpen) {
           setIsSettingsModalOpen(false);
+        } else if (isPersonaManagerOpen) {
+          setIsPersonaManagerOpen(false);
         }
       }
     };
@@ -1418,6 +1427,12 @@ export function App(): JSX.Element {
       setIsSettingsModalOpen(true);
     };
 
+    // Phase 3.5.3: Handle persona manager modal opening from tray
+    const handleOpenPersonaManagerWindow = () => {
+      console.log('🎭 Opening persona manager modal from tray');
+      setIsPersonaManagerOpen(true);
+    };
+
     // TODO: Use this handler when tray import functionality is added
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _handleOpenImportModal = () => {
@@ -1430,6 +1445,9 @@ export function App(): JSX.Element {
     if (window.electronAPI) {
       window.electronAPI.onOpenChatWindow(handleOpenChatWindow);
       window.electronAPI.onOpenSettingsWindow(handleOpenSettingsWindow); // Phase 3.5.1
+      window.electronAPI.onOpenPersonaManagerWindow(
+        handleOpenPersonaManagerWindow
+      ); // Phase 3.5.3
       window.electronAPI.onOpenImportModalWithFile(data => {
         console.log(
           '🗂️ Opening import modal from tray file drop:',
@@ -2303,6 +2321,12 @@ export function App(): JSX.Element {
       <AIServiceSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      {/* Phase 3.5.3: Persona Manager Modal */}
+      <PersonaManagerModal
+        isOpen={isPersonaManagerOpen}
+        onClose={() => setIsPersonaManagerOpen(false)}
       />
 
       {/* Phase 3.1.4: Global Error Toast */}

@@ -51,6 +51,11 @@ export const IPC_CHANNELS = {
   TEST_THIRD_PARTY_TOKEN: 'test-third-party-token',
   REMOVE_THIRD_PARTY_TOKEN: 'remove-third-party-token',
   GET_MISSING_TOKEN_WARNINGS: 'get-missing-token-warnings',
+  // Phase 3.5.3: Persona manager channels
+  GET_PERSONAS_CONFIG: 'get-personas-config',
+  SAVE_PERSONAS_CONFIG: 'save-personas-config',
+  RELOAD_PERSONAS: 'reload-personas',
+  PERSONAS_UPDATED: 'personas-updated',
 } as const;
 
 // File paths and directories

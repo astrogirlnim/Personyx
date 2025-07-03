@@ -299,326 +299,202 @@ The tray drop zone is now:
 
 ---
 
-## ✅ RESOLUTION (2025-07-02)
-
-### 🎯 Root Cause Identified (Hypothesis #5 Confirmed)
-
-The investigation confirmed that the issue was a **race condition** between the creation of the main window and the sending of the IPC message to it. The `tray-file-drop-with-content` handler in `main.ts` was sending the `open-import-modal-with-file-content` message immediately after calling `createMainWindow()`, using an unreliable `setTimeout` of 100ms. If the renderer process took longer than 100ms to become ready, the IPC message would be lost, and the import modal would never appear.
-
-### 🔧 Fix Applied
-
-The fix involved refactoring the IPC handling logic in `src/main/main.ts` to make it robust and event-driven, completely removing the `setTimeout` dependency.
-
-1.  **Deferred Data Storage**: A new private class property, `fileToImportOnReady`, was added to `PersonyxApp` to temporarily store the `fileName` and `fileContent` from the tray drop event.
-2.  **Modified IPC Handler**: The `tray-file-drop-with-content` handler was updated to:
-    - Store the dropped file data in `this.fileToImportOnReady`.
-    - Call `createMainWindow()` to initiate window creation.
-    - Remove the `setTimeout` and the immediate `webContents.send()` call.
-3.  **Leveraged `ready-to-show` Event**: The `once('ready-to-show')` event handler inside `createMainWindow()` was enhanced. After the `mainWindow.show()` call, it now:
-    - Checks if `this.fileToImportOnReady` contains data.
-    - If it does, it sends the `open-import-modal-with-file-content` IPC message to the now-ready renderer.
-    - It then clears `this.fileToImportOnReady` by setting it to `null`.
-
-### ✅ Verification Results
-
-**Before Fix:**
-
-- Dropping a file on the tray zone closed the drop zone but the main window **did not appear**.
-- The `open-import-modal-with-file-content` IPC message was sent prematurely and lost.
-
-**After Fix:**
-
-- Dropping a file on the tray zone now reliably **opens the main window**.
-- The import modal **appears correctly** populated with the content of the dropped file.
-- The IPC message is now sent only after the renderer process is fully initialized and ready to receive it.
-
-### 📊 Final Status
-
-- **Issue**: Fully resolved.
-- **Core Functionality**: The tray drop zone feature is now working as expected, unblocking Phase 3.1.2 completion.
-- **Commit**: `fix(ipc): resolve tray drop race condition with event-driven logic` (Example commit message)
-
-# Personyx Debugging Log
-
-## 2025-01-02 - Evidence Score Banner NaN Bug
-
-### Issue
-
-Evidence scores are not being generated. PRD import completes but no scores appear in UI.
-
-### Root Cause Analysis
-
-1. **UI Layer**: ✅ WORKING - EvidenceScoreGauge component renders correctly, IPC events fire properly
-2. **Evidence Data**: ✅ WORKING - 12 evidence items loaded (6 per persona), tags parsing fixed with error handling
-3. **Evidence Filtering**: ✅ WORKING - Finds 5-6 relevant evidence items per persona based on keywords/importance
-4. **Score Components**:
-   - Coverage: ✅ WORKING (90%)
-   - Relevance: ✅ WORKING (39-43%)
-   - **Recency: ❌ BROKEN (returns NaN)**
-5. **Database**: ❌ FAILING - NOT NULL constraint on evidence_scores.score field
-
-### Technical Details
-
-```javascript
-// Score breakdown from logs
-{
-  recency: NaN,           // ← ROOT CAUSE
-  coverage: 90,           // ✅ Working
-  relevance: 43.14,       // ✅ Working
-  evidenceCount: 5        // ✅ Working
-}
-
-// Final calculation fails
-finalScore = (recency * 0.4) + (coverage * 0.3) + (relevance * 0.3)
-           = (NaN * 0.4) + (90 * 0.3) + (43.14 * 0.3)
-           = NaN  // ← Causes database constraint failure
-```
-
-### Evidence Processing Flow
-
-1. ✅ Evidence retrieved from database (6 items per persona)
-2. ✅ Tags parsing with error handling (array vs string format handled)
-3. ✅ Evidence filtering by keywords and importance (5-6 items selected)
-4. ✅ Content relevance analysis (scoring 39-43%)
-5. ✅ Coverage calculation (90% based on evidence count)
-6. ❌ Recency calculation fails → returns NaN
-7. ❌ Final weighted score becomes NaN
-8. ❌ Database insert fails due to NOT NULL constraint
-
-### Next Steps (For Future Implementation)
-
-1. Debug recency calculation in EvidenceScoreService
-2. Check timestamp parsing and date handling logic
-3. Add fallback values for recency calculation
-4. Ensure all score components return valid numbers before final calculation
-
-### Files Involved
-
-- `src/main/services/EvidenceScoreService.ts` - Contains broken recency calculation
-- `src/main/db/repositories/EvidenceScoreRepo.ts` - Database constraint failure
-- `src/renderer/components/EvidenceScoreGauge.tsx` - UI working correctly
-- `scripts/seed-test-data.sql` - Test data loaded successfully
-
-### Status
-
-Phase 3.1.3 Evidence Score Banner UI is production-ready. Scoring algorithm needs recency calculation fix to be functional.
-
-# Evidence Score Update Issue - FILE UPLOAD CONTENT PROBLEM
-
-**Date**: 2025-01-07  
-**Issue**: Evidence scores staying identical despite uploading different PRDs  
-**Status**: 🔍 **CRITICAL FINDING: FILE CONTENT NOT CHANGING**
-
-## New Critical Discovery
-
-Despite the database schema being fixed and new document IDs being generated (`doc-1751514806017-b4hq55fku`), the evidence scores remain identical. Analysis of detailed logs reveals **the scoring algorithm may not be receiving different file content**.
-
-## Evidence from Console Logs
-
-### ✅ What's Working:
-
-```bash
-# New documents ARE being created
-➕ Creating new product document: doc-1751514806017-b4hq55fku
-
-# Content IS being analyzed
-🔍 Content relevance check: {
-  prdWords: ['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score'],
-  ...
-}
-
-# Scores ARE being calculated
-✅ Evidence score calculated successfully {
-  prdId: 'doc-1751514806017-b4hq55fku',
-  personaId: 'solo_founder',
-  score: 74.1
-}
-```
-
-### 🚨 **The Problem:**
-
-The `prdWords` array shows **generic test content words** that appear identical across uploads:
-
-- `['test', 'evidence', 'score', 'updates', 'overview', 'this', 'test', 'validate', 'evidence', 'score']`
-
-This suggests either:
-
-## Potential Root Causes
-
-### **1. File Upload Process Failing**
-
-- Files aren't actually being read from disk
-- Same cached/default content being used repeatedly
-- File paths not resolving correctly
-
-### **2. Content Extraction Issue**
-
-- File reading succeeds but content extraction fails
-- Default/placeholder content being used instead of actual file content
-- Text parsing reverting to template content
-
-### **3. Temporary File Management Problem**
-
-```bash
-# Log shows: temp_prd_1751514806016.md
-# But actual uploaded files might not be reaching this temp location
-```
-
-## Technical Analysis Needed
-
-The scoring algorithm is working correctly, but it appears to be processing **identical content** each time, not the different PRD files being uploaded. Key investigation areas:
-
-1. **File Upload Handler**: Is the actual file content being written to the temporary file?
-2. **Content Reading**: Is the temporary file being read properly?
-3. **Text Extraction**: Is the PRD content being extracted correctly from the uploaded file?
-
-## Evidence Score Breakdown Analysis
-
-```bash
-# Both personas getting nearly identical scores:
-Solo Founder: 74.1 (coverage: 90%, relevance: 37.43%, recency: 100%)
-Agency Marketer: 74.77 (coverage: 90%, relevance: 39.35%, recency: 100%)
-
-# Low relevance scores indicate generic content being processed
-# High coverage (90%) suggests template/default evidence matching
-# Perfect recency (100%) confirms fresh timestamp generation works
-```
-
-## Status: 🔍 INVESTIGATION REQUIRED
-
-The database and UI systems are working correctly. The issue is likely in the **file upload and content processing pipeline** where different uploaded files may not actually be reaching the scoring algorithm.
-
-**Next Investigation**: Verify that uploaded file content is actually being read and processed, not replaced with template/cached content.
-
----
-
-# Debugging Log - Evidence Score Display Issue
-
-## Current Status: CRITICAL BUG IDENTIFIED 🚨
+## ✅ COMPLETE RESOLUTION (2025-01-03)
 
 **Date**: 2025-01-03  
-**Issue**: Evidence scores display correctly in backend/logs but show old values in frontend UI  
-**Component**: EvidenceScoreGauge.tsx  
-**Phase**: 3.1.3 Evidence Score Banner - BLOCKED
+**Issue**: PersonaManagerModal Visual Editor content not scrollable when persona cards exceed visible height  
+**Component**: PersonaManagerModal.tsx  
+**Phase**: 3.5.3 Persona Manager - **RESOLVED ✅**
 
-## Bug Analysis Summary
+## Final Status: SCROLLING FULLY FUNCTIONAL 🎉
 
-### ✅ What's Working
+### ✅ What's Now Working
 
-1. **Backend scoring**: Perfectly calculating 53.6 (solo_founder) and 52.27 (agency_marketer)
-2. **IPC communication**: Frontend receiving correct scores via PRDImported events
-3. **State management**: App.tsx receiving and storing correct evidence scores
-4. **Prop passing**: EvidenceScoreGauge receiving correct `score` prop (53.6)
+1. **Modal scrolling**: Visual Editor content area scrolls smoothly when content exceeds container height
+2. **Layout structure**: Fixed header, scrollable content, fixed footer architecture working correctly
+3. **Dynamic height calculation**: Proper calculated height accounting for all modal elements + persona count
+4. **Footer clearance**: Bottom persona cards no longer cut off by "Save Configuration" bar
+5. **Dynamic adaptation**: Height recalculates when personas are added/deleted to prevent overlap
+6. **User accessibility**: All persona cards accessible via scrolling without overlap issues
 
-### ❌ What's Broken
+## Implementation Details
 
-1. **displayScore state**: Stuck at old value (57.6) in EvidenceScoreGauge component
-2. **useEffect execution**: The useEffect that should update displayScore is NOT running
-3. **UI display**: Shows 58 (rounded from 57.6) instead of correct 54 (rounded from 53.6)
+### Fix #1: Calculated Height Implementation
 
-## Detailed Log Analysis
+**Root Cause**: The VisualEditor's content area was using `flex-1 overflow-y-auto` without a definite height constraint, preventing proper scrolling behavior.
 
-### Evidence from Console Logs:
-
-```javascript
-// ✅ GOOD: Component receives correct prop
-"🎯 EvidenceScoreGauge: Incoming prop analysis {
-  "score": 53.6,          // ✅ Correct new score
-  "scoreType": "number"
-}"
-
-// ❌ BAD: Component renders with old state
-"🎯 EvidenceScoreGauge: Rendering {
-  "score": 53.6,          // ✅ Correct prop
-  "displayScore": 57.6,   // ❌ OLD state value - should be 53.6
-  "shouldPulse": false,
-  "strokeDashoffset": 186.4849399170901,
-  "colorClass": "text-risk-red dark:text-risk-red-dark"
-}"
-
-// ❌ MISSING: These logs should appear but don't:
-// "🎯 EvidenceScoreGauge: Score update triggered"
-// "🎯 EvidenceScoreGauge: Updated display score"
-```
-
-## Root Cause Analysis
-
-### Primary Issue: useEffect Not Executing
-
-The useEffect responsible for updating displayScore when score changes is **not running at all**:
+**Solution Applied**:
 
 ```tsx
-useEffect(() => {
-  // This entire block is not executing
-  console.log('🎯 EvidenceScoreGauge: Score update triggered', ...);
-  // ... rest of logic
-}, [score]); // Dependency should trigger on score change
+// Calculate available height for scrollable content
+const availableHeight = 'calc(75vh - 270px)';
+
+// Replace flex-based layout with fixed height
+<div
+  ref={contentRef}
+  className="overflow-y-auto"
+  style={{ height: availableHeight }}
+>
 ```
 
-### Potential Causes (In Priority Order):
+**Initial Calculation**:
 
-1. **React Strict Mode**: Double-rendering might be interfering with ref comparison logic
-2. **Conditional Logic Bug**: The effect might have a condition preventing execution
-3. **Object Reference Issue**: Score prop might be the same object reference despite value change
-4. **React Optimization**: React might be optimizing away the effect due to rapid re-renders
-5. **prevScoreRef Logic**: The ref comparison logic might be preventing updates
+- 75vh modal height
+- minus 120px header
+- minus 53px tab navigation
+- minus 73px footer
+- minus 24px padding
+- Total: `calc(75vh - 270px)`
 
-## Next Investigation Steps
+### Fix #2: Footer Clearance Improvement
 
-### Step 1: Simplify useEffect (IMMEDIATE)
+**Issue**: Bottom persona cards were being cut off by the "Save Configuration" footer bar despite scrolling working.
 
-Remove all conditional logic and force the effect to run:
+**Solution Applied**:
 
 ```tsx
-useEffect(() => {
-  console.log('🔥 FORCE: useEffect running with score:', score);
-  setDisplayScore(score);
-  prevScoreRef.current = score;
-}, [score]);
+// Updated calculation with additional footer clearance
+const availableHeight = 'calc(75vh - 300px)';
 ```
 
-### Step 2: Add Effect Debugging (IMMEDIATE)
+**Final Calculation**:
 
-Add detailed logging to understand why effect isn't running:
+- 75vh modal height
+- minus 120px header
+- minus 53px tab navigation
+
+### Fix #3: Dynamic Height Calculation for Persona Count
+
+**Issue**: Static height calculation didn't account for dynamically added personas, causing footer overlap when new personas were added.
+
+**Solution Applied**:
 
 ```tsx
-useEffect(() => {
-  console.log('🔥 useEffect ENTRY:', {
-    score,
-    prevScore: prevScoreRef.current,
-    scoreChanged: score !== prevScoreRef.current,
-  });
-  // ... rest of logic
-}, [score]);
+// Dynamic height calculation based on persona count
+const baseHeight = 300; // Base UI elements height
+const dynamicClearance = Math.max(50, personas.length * 10); // Minimum 50px, +10px per persona
+const totalClearance = baseHeight + dynamicClearance;
+const availableHeight = `calc(75vh - ${totalClearance}px)`;
 ```
 
-### Step 3: Check React Strict Mode (NEXT)
+**Dynamic Calculation**:
 
-Verify if React.StrictMode is causing double-renders that interfere with effect
+- 75vh modal height
+- minus 300px base UI elements (header + tabs + footer + padding)
+- minus dynamic clearance: `Math.max(50, personas.length * 10)px`
+- **Adaptive**: Height recalculates when personas added/deleted
+- **Buffer zone**: Additional `pb-20` (80px) bottom padding in content container
 
-### Step 4: Investigate Component Lifecycle (NEXT)
+- minus 100px footer + clearance (increased from 73px)
+- minus 27px padding (increased from 24px)
+- Total: `calc(75vh - 300px)` - **Additional 30px clearance**
 
-Check if component is unmounting/remounting unexpectedly
+## Technical Implementation
 
-## Success Criteria
+### Height Debugging Added
 
-- [ ] "🎯 EvidenceScoreGauge: Score update triggered" appears in logs
-- [ ] displayScore updates from 57.6 to 53.6
-- [ ] UI shows 54 instead of 58
-- [ ] Score updates reliably on subsequent PRD uploads
+````tsx
+const contentRef = useRef<HTMLDivElement>(null);
 
-## Files to Investigate
+useEffect(() => {
+  if (contentRef.current) {
+    const rect = contentRef.current.getBoundingClientRect();
+    console.log('🔍 VisualEditor content dimensions:', {
+      scrollHeight: contentRef.current.scrollHeight,
+      clientHeight: contentRef.current.clientHeight,
+      offsetHeight: contentRef.current.offsetHeight,
+      boundingHeight: rect.height,
+      scrollTop: contentRef.current.scrollTop,
+      personaCount: personas.length,
+    });
+### Dynamic Height Logging
 
-1. `src/renderer/components/EvidenceScoreGauge.tsx` - Primary issue location
-2. `src/renderer/App.tsx` - Parent component rendering behavior
-3. `src/renderer/main.tsx` - Check for React.StrictMode
+```tsx
+console.log('🎯 VisualEditor: Dynamic height calculation:', {
+  availableHeight,
+  personaCount: personas.length,
+  baseHeight,
+  dynamicClearance,
+  totalClearance,
+});
+````
 
-## Backup Plan
+}
+}, [personas]);
 
-If useEffect issues persist, implement direct prop-to-state synchronization without effect dependency optimization.
+````
+
+### Layout Structure (Final)
+
+```tsx
+<div className="h-full flex flex-col">
+  {/* Fixed Header */}
+  <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b">
+    {/* Header content */}
+  </div>
+
+  {/* Scrollable Content with Dynamic Height */}
+  <div
+    ref={contentRef}
+    className="overflow-y-auto"
+    style={{ height: availableHeight }}
+  >
+    <div className="p-6 pt-4 pb-20"> {/* Added pb-20 for buffer zone */}
+      <div className="space-y-4">{/* Persona cards */}</div>
+    </div>
+  </div>
+</div>
+````
+
+## Verification Results
+
+### Before Fixes:
+
+- ❌ Content area did not scroll when personas exceeded container height
+- ❌ Static height caused footer overlap when personas added dynamically
+- ❌ Users couldn't access persona cards below the visible area
+- ❌ Bottom cards cut off by footer overlay
+- ❌ Flexbox layout not providing scrollable behavior
+
+### After Fixes:
+
+- ✅ **Smooth scrolling**: Content scrolls properly when cards exceed height
+- ✅ **Full accessibility**: All persona cards accessible via scrolling
+- ✅ **Proper clearance**: Bottom cards fully visible above footer
+- ✅ **Dynamic adaptation**: Height recalculates when personas added/deleted
+- ✅ **Buffer zone**: 80px bottom padding prevents content from getting too close to footer
+- ✅ **Responsive behavior**: Layout adapts to different modal heights and persona counts
+- ✅ **No layout jumps**: Scrolling works smoothly without UI disruption
+
+3. **Dynamic Height**: `2d00880` - "fix: implement dynamic height calculation for PersonaManagerModal content"
+
+## Commits Applied
+
+1. **Initial Fix**: `67a1ac2` - "fix: resolve PersonaManagerModal scrolling issue with calculated height"
+2. **Footer Clearance**: `c2bdb48` - "fix: add footer clearance to PersonaManagerModal scrollable content"
+
+## Files Modified
+
+- `src/renderer/components/PersonaManagerModal.tsx` - VisualEditor component height calculation and layout
+
+## User Feedback Validation
+
+✅ **User Confirmed**: "Beautiful! That works great."  
+✅ **Footer Clearance**: Initial clearance issue identified and resolved  
+✅ **Dynamic Adaptation**: User identified footer overlap with new personas - **RESOLVED**  
+✅ **Final Result**: Complete scrolling functionality with dynamic height adaptation
+
+## Status: FULLY RESOLVED ✅
+
+3. **Dynamic height calculation** adapting to persona count changes
+
+Phase 3.5.3 PersonaManagerModal scrolling issue is **100% complete** with all three improvements:
+
+1. **Core scrolling functionality** working correctly
+2. **Footer clearance optimization** preventing content cutoff
+
+The PersonaManagerModal Visual Editor now provides an optimal user experience for managing persona configurations with reliable scrolling behavior, proper content accessibility, and intelligent height adaptation based on content volume.
 
 ---
 
-**Next Action**: Implement Step 1 & 2 immediately to force useEffect execution and gather detailed debugging data.
-
----
+> "Adaptable to change, the content height now is. When personas added or removed they are, respond correctly the layout does. Perfect harmony between form and function, achieved we have." — Yoda
