@@ -15,7 +15,7 @@ Legend — `[ ]` Not Started `[~]` In Progress `[X]` Done `[!]` Blocked
 ## Phases Overview
 
 [X] **Phase 1:** Foundation ✅ COMPLETE  
-[X] **Phase 2:** Data Layer ✅ COMPLETE (6/6 features)  
+[X] **Phase 2:** Data Layer ✅ COMPLETE (7/7 features)  
 [ ] **Phase 3:** Interface Layer  
 [ ] **Phase 4:** Implementation Layer
 
@@ -103,13 +103,13 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **6.5** Trigger `EvidenceScoreService.recalculateAll` and broadcast `evidence-score-updated`. ✅ COMPLETE
 - [x] **6.6** Unit & integration tests covering ingest → evidence → score delta. ✅ COMPLETE
 
-[ ] **Feature 7 – Automatic Persona Evolution**
+[X] **Feature 7 – Automatic Persona Evolution** ✅ COMPLETE
 
-- [ ] **7.1** Analyse interview transcripts for persona attribute deltas (goals, pains, terminology).
-- [ ] **7.2** Implement `PersonaEvolutionService` that updates existing personas or creates new ones based on confidence thresholds.
-- [ ] **7.3** Extend `TranscriptIngestService` to trigger persona evolution and emit `persona-evolved` IPC events.
-- [ ] **7.4** Persist persona change history (`persona_history` table) for audit & rollback.
-- [ ] **7.5** Add unit & integration tests for transcript → persona update → hot-reload flow.
+- [x] **7.1** Analyse interview transcripts for persona attribute deltas (goals, pains, terminology). ✅ COMPLETE
+- [x] **7.2** Implement `PersonaEvolutionService` that updates existing personas or creates new ones based on confidence thresholds. ✅ COMPLETE
+- [x] **7.3** Extend `TranscriptIngestService` to trigger persona evolution and emit `persona-evolved` IPC events. ✅ COMPLETE
+- [x] **7.4** Persist persona change history (`persona_history` table) for audit & rollback. ✅ COMPLETE
+- [x] **7.5** Add unit & integration tests for transcript → persona update → hot-reload flow. ✅ COMPLETE
 
 ---
 
