@@ -15,6 +15,10 @@ import type {
 import EvidenceScoreGauge from './components/EvidenceScoreGauge';
 import { TranscriptImportModal } from './components/TranscriptImportModal';
 import { GlobalErrorToast, ErrorToast } from './components/GlobalErrorToast';
+import {
+  GlobalSuccessToast,
+  SuccessToast,
+} from './components/GlobalSuccessToast';
 import { useEvidenceScores } from './hooks/useEvidenceScores';
 import {
   getLastImportedPRD,
@@ -1212,6 +1216,9 @@ export function App(): JSX.Element {
   // Phase 3.1.4: Global error toast state
   const [errorToasts, setErrorToasts] = useState<ErrorToast[]>([]);
 
+  // Phase 3.1.7: Global success toast state
+  const [successToasts, setSuccessToasts] = useState<SuccessToast[]>([]);
+
   // Phase 4.3: Use evidence scores utility hook
   const { scores, maxScore, debugInfo } = useEvidenceScores(
     currentEvidenceScores
@@ -1220,15 +1227,19 @@ export function App(): JSX.Element {
   // Phase 4.2: Get current document ID for persistence
   const [, setCurrentDocumentId] = useState<string | null>(null);
 
-  // Phase 3.1.4: Error toast management
-  const addErrorToast = useCallback((toast: ErrorToast) => {
-    console.log('🚨 Adding error toast:', toast);
-    setErrorToasts(prev => [...prev, toast]);
-  }, []);
+  // Track if IPC listeners have been set up to prevent duplicates
+  const listenersSetupRef = useRef(false);
 
+  // Phase 3.1.4: Error toast management
   const dismissErrorToast = useCallback((toastId: string) => {
     console.log('🗑️ Dismissing error toast:', toastId);
     setErrorToasts(prev => prev.filter(toast => toast.id !== toastId));
+  }, []);
+
+  // Phase 3.1.7: Success toast management
+  const dismissSuccessToast = useCallback((toastId: string) => {
+    console.log('🗑️ Dismissing success toast:', toastId);
+    setSuccessToasts(prev => prev.filter(toast => toast.id !== toastId));
   }, []);
 
   useEffect(() => {
@@ -1281,6 +1292,17 @@ export function App(): JSX.Element {
 
   // Handle keyboard shortcuts and IPC events
   useEffect(() => {
+    console.log('🔧 Setting up IPC event listeners and keyboard shortcuts');
+
+    // Prevent multiple listener registrations
+    if (listenersSetupRef.current) {
+      console.log('⚠️ IPC listeners already set up, skipping registration');
+      return;
+    }
+
+    listenersSetupRef.current = true;
+    console.log('✅ Marking IPC listeners as set up');
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl/Cmd + K to open chat
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1395,8 +1417,36 @@ export function App(): JSX.Element {
           autoDismissMs: errorData.autoDismissMs || 5000,
         };
 
-        addErrorToast(errorToast);
+        // Use callback form to avoid stale closure issues
+        setErrorToasts(prev => [...prev, errorToast]);
       });
+
+      // Phase 3.1.7: Listen for transcript success toast events
+      const handleTranscriptSuccess = (data: unknown) => {
+        console.log('✅ Transcript success received:', data);
+        const successData = data as IPCEvents['transcript-success-toast'];
+
+        // Create success toast from the success data
+        const successToast: SuccessToast = {
+          id: `transcript-success-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: successData.type,
+          title: successData.title,
+          message: successData.message,
+          timestamp: new Date(successData.timestamp),
+          dismissible: successData.dismissible !== false,
+          autoDismissMs: successData.autoDismissMs || 6000,
+          fileName: successData.fileName,
+          evidenceCount: successData.evidenceCount,
+          personasAffected: successData.personasAffected,
+          processingTime: successData.processingTime,
+        };
+
+        console.log('🎯 Creating success toast with ID:', successToast.id);
+        // Use callback form to avoid stale closure issues
+        setSuccessToasts(prev => [...prev, successToast]);
+      };
+
+      window.electronAPI.onTranscriptSuccessToast(handleTranscriptSuccess);
 
       // Listen for evidence score events
       window.electronAPI.onPRDImported((data: unknown) => {
@@ -1549,10 +1599,22 @@ export function App(): JSX.Element {
     }
 
     return () => {
+      console.log('🧹 Cleaning up IPC event listeners and keyboard shortcuts');
       window.removeEventListener('keydown', handleKeyDown);
-      // Note: electronAPI listeners are automatically cleaned up by preload script
+
+      // Reset listeners setup flag to allow re-registration if component remounts
+      listenersSetupRef.current = false;
+      console.log('♻️ Reset IPC listeners setup flag');
+
+      // Clean up Electron API listeners to prevent duplicate registrations
+      if (window.electronAPI && window.electronAPI.removeAllListeners) {
+        window.electronAPI.removeAllListeners('transcript-success-toast');
+        window.electronAPI.removeAllListeners('global-error');
+        window.electronAPI.removeAllListeners('prd-imported');
+        window.electronAPI.removeAllListeners('evidence-score-updated');
+      }
     };
-  }, [isChatOpen, isImportModalOpen, isTranscriptModalOpen, addErrorToast]);
+  }, []); // Empty dependency array to ensure listeners are only set up once
 
   // Debug evidence scores state changes
   useEffect(() => {
@@ -2106,6 +2168,13 @@ export function App(): JSX.Element {
       <GlobalErrorToast
         toasts={errorToasts}
         onDismiss={dismissErrorToast}
+        position="top-right"
+      />
+
+      {/* Phase 3.1.7: Global Success Toast */}
+      <GlobalSuccessToast
+        toasts={successToasts}
+        onDismiss={dismissSuccessToast}
         position="top-right"
       />
     </div>

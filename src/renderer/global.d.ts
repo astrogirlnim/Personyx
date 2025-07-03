@@ -35,6 +35,8 @@ interface ElectronAPI {
   onError: (callback: (error: unknown) => void) => void;
   // Phase 3.1.4: Global error toast listener
   onGlobalError: (callback: (error: unknown) => void) => void;
+  // Phase 3.1.7: Success toast listener
+  onTranscriptSuccessToast: (callback: (data: unknown) => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (
     callback: (data: { filePath: string }) => void

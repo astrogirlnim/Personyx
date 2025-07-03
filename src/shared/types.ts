@@ -65,6 +65,14 @@ export interface IPCEvents {
     personaId: string;
     content: string;
   };
+  'transcript-success': {
+    id: string;
+    fileName: string;
+    evidenceCount: number;
+    personasAffected: string[];
+    processingTime: number;
+    timestamp: Date;
+  };
   'prd-imported': {
     documentId: string;
     title: string;
@@ -99,6 +107,19 @@ export interface IPCEvents {
     message: string;
     fileName?: string; // For file-related errors
     operation?: 'prd-import' | 'transcript-import' | 'general'; // Operation that failed
+    timestamp: Date;
+    dismissible?: boolean;
+    autoDismissMs?: number;
+  };
+  // Phase 3.1.7: Success toast events
+  'transcript-success-toast': {
+    type: 'transcript-success' | 'evidence-success' | 'general-success';
+    title: string;
+    message: string;
+    fileName?: string;
+    evidenceCount?: number;
+    personasAffected?: string[];
+    processingTime?: number;
     timestamp: Date;
     dismissible?: boolean;
     autoDismissMs?: number;
