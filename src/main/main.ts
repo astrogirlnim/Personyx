@@ -33,6 +33,7 @@ import { SettingsService } from './services/SettingsService';
 import { PersonyxCloudService } from './services/PersonyxCloudService';
 import { LangGraphService } from './services/LangGraphService';
 import { ActivityLogService } from './services/ActivityLogService';
+import { EvidenceScoreService } from './services/EvidenceScoreService';
 import { PersonaManagerService } from './services/PersonaManagerService';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type {
@@ -62,6 +63,7 @@ class PersonyxApp {
   private cloudService: PersonyxCloudService | null = null;
   private langGraphService: LangGraphService | null = null;
   private activityLogService: ActivityLogService | null = null;
+  private evidenceScoreService: EvidenceScoreService | null = null;
   private personaManagerService: PersonaManagerService | null = null;
   private logger: Logger;
   private isAppReady = false;
@@ -738,10 +740,16 @@ class PersonyxApp {
       this.activityLogService = new ActivityLogService();
       this.logger.info('✅ Activity log service initialized');
 
+      // Initialize evidence score service (for persona manager integration)
+      this.logger.info('📊 Initializing evidence score service...');
+      this.evidenceScoreService = new EvidenceScoreService(this.mainWindow);
+      this.logger.info('✅ Evidence score service initialized');
+
       // Initialize persona manager service (Phase 3.5.3)
       this.logger.info('🎭 Initializing persona manager service...');
       this.personaManagerService = new PersonaManagerService(
-        this.activityLogService
+        this.activityLogService,
+        this.evidenceScoreService
       );
       this.logger.info('✅ Persona manager service initialized');
 

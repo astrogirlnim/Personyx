@@ -7,6 +7,7 @@
  * - Validating YAML content and persona definitions
  * - Writing updated YAML configurations
  * - Hot-reloading persona data without app restart
+ * - Triggering evidence score recalculation when personas change
  */
 
 import * as fs from 'fs';
@@ -17,6 +18,8 @@ import { PATHS } from '@shared/constants';
 import { PersonaLoader } from './PersonaLoader';
 import { PersonaConfigLoader } from './PersonaConfigLoader';
 import { ActivityLogService } from './ActivityLogService';
+import { EvidenceScoreService } from './EvidenceScoreService';
+import { ProductDocumentRepo } from '@main/db/repositories/ProductDocumentRepo';
 import type { Persona } from '@shared/types';
 
 const logger = new Logger('persona-manager-service');
@@ -54,12 +57,19 @@ export class PersonaManagerService {
   private personaLoader: PersonaLoader;
   private personaConfigLoader: PersonaConfigLoader;
   private activityLogService: ActivityLogService;
+  private evidenceScoreService: EvidenceScoreService;
+  private productDocumentRepo: ProductDocumentRepo;
 
-  constructor(activityLogService: ActivityLogService) {
+  constructor(
+    activityLogService: ActivityLogService,
+    evidenceScoreService: EvidenceScoreService
+  ) {
     this.yamlPath = path.join(process.cwd(), PATHS.PERSONAS_CONFIG);
     this.personaLoader = new PersonaLoader();
     this.personaConfigLoader = new PersonaConfigLoader();
     this.activityLogService = activityLogService;
+    this.evidenceScoreService = evidenceScoreService;
+    this.productDocumentRepo = new ProductDocumentRepo();
 
     logger.info('🎭 PersonaManagerService initialized');
     logger.debug(`📄 YAML path: ${this.yamlPath}`);
@@ -346,13 +356,22 @@ export class PersonaManagerService {
       // Get updated personas from PersonaConfigLoader
       const personas = await this.personaConfigLoader.reloadPersonas();
 
+      // Phase 3.5.3: Trigger evidence score recalculation for all personas
+      // Since persona characteristics (keywords, descriptions) affect scoring
+      logger.info(
+        '📊 Triggering evidence score recalculation after persona reload'
+      );
+      await this.recalculateEvidenceScores(personas.map(p => p.id));
+
       // Log activity
       await this.activityLogService.logPersonaReloaded({
         personaCount: personas.length,
         loadedCount,
       });
 
-      logger.info(`✅ Successfully reloaded ${personas.length} personas`);
+      logger.info(
+        `✅ Successfully reloaded ${personas.length} personas with updated evidence scores`
+      );
       return {
         success: true,
         personas,
@@ -363,6 +382,70 @@ export class PersonaManagerService {
         success: false,
         error: `Failed to reload personas: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
+    }
+  }
+
+  /**
+   * Recalculate evidence scores for affected personas after configuration changes
+   * @private
+   */
+  private async recalculateEvidenceScores(personaIds: string[]): Promise<void> {
+    logger.info('📊 Recalculating evidence scores for updated personas', {
+      affectedPersonas: personaIds.length,
+      personaIds,
+    });
+
+    try {
+      // Get all PRDs to recalculate scores for
+      const productDocuments = await this.productDocumentRepo.list();
+
+      let recalculatedCount = 0;
+      let failedCount = 0;
+
+      for (const personaId of personaIds) {
+        for (const document of productDocuments) {
+          try {
+            // Recalculate score for this PRD-persona combination
+            await this.evidenceScoreService.calculateAndPersistScore(
+              document.id,
+              personaId
+            );
+
+            recalculatedCount++;
+            logger.debug('✅ Evidence score recalculated', {
+              documentId: document.id,
+              personaId,
+              documentTitle: document.title,
+            });
+          } catch (error) {
+            failedCount++;
+            logger.error('❌ Failed to recalculate evidence score', {
+              documentId: document.id,
+              personaId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+      }
+
+      logger.info('✅ Evidence score recalculation complete', {
+        affectedPersonas: personaIds.length,
+        affectedDocuments: productDocuments.length,
+        recalculatedCount,
+        failedCount,
+      });
+
+      // Log the recalculation activity
+      await this.activityLogService.logEvidenceScoreUpdate(
+        'persona-update', // Use as document ID placeholder
+        personaIds,
+        undefined // No old/new score comparison for persona updates
+      );
+    } catch (error) {
+      logger.error('❌ Evidence score recalculation failed', {
+        personaIds,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
