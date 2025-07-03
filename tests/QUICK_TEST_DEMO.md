@@ -44,15 +44,25 @@ This is a quick 5-minute demo to test the most important error toast scenarios.
 4. **Expected**: Red error toast with "Invalid file type" message
 5. **Verify**: Toast auto-dismisses after 5 seconds
 
-### Test 3: Transcript Import Error (8-second auto-dismiss)
+### Test 3: Transcript Size Validation Error (5-second auto-dismiss)
 
-**Purpose**: Test ingest error toast with longer auto-dismiss
+**Purpose**: Test transcript file size validation
 
 1. Right-click system tray → "Import Transcript"
-2. Select `interviews/test_empty_transcript.txt`
+2. Select `interviews/test_oversized_transcript.txt` (11MB file)
 3. Click "Import Transcript"
-4. **Expected**: Red error toast with "Transcript Import Failed"
-5. **Verify**: Toast auto-dismisses after 8 seconds
+4. **Expected**: Red error toast with "File size must be less than 10MB"
+5. **Verify**: Toast auto-dismisses after 5 seconds
+
+### Test 3b: Empty Transcript File Error
+
+**Purpose**: Test empty transcript validation
+
+1. Right-click system tray → "Import Transcript"
+2. Select `interviews/test_truly_empty_transcript.txt` (0 bytes)
+3. Click "Import Transcript"
+4. **Expected**: Red error toast with "File cannot be empty"
+5. **Verify**: Toast auto-dismisses after 5 seconds
 
 ### Test 4: Manual Dismiss
 
@@ -69,6 +79,24 @@ This is a quick 5-minute demo to test the most important error toast scenarios.
 1. Quickly trigger Test 1 and Test 2 (use different files)
 2. **Expected**: Multiple toasts stack vertically
 3. **Verify**: Each can be dismissed individually
+
+## ⚠️ Important: Real Errors vs. Slow Processing
+
+**REAL ERRORS** (trigger error toasts):
+
+- File size > 10MB
+- Empty files (0 bytes)
+- Invalid file types (.pdf, .docx, etc.)
+- Binary/non-text files
+
+**NOT ERRORS** (just slow processing):
+
+- Large valid files with repetitive content
+- Files that take 10+ minutes to process
+- Low persona confidence scores (0-20%)
+- Verbose console debug output
+
+**If a file is "processing" with lots of console messages, it's NOT an error - it's just slow!**
 
 ## 🎯 What to Look For
 
@@ -107,8 +135,9 @@ After testing, remove test files:
 rm tests/files/test_invalid_prd_empty.md
 rm tests/files/test_large_prd.md
 rm tests/files/test_invalid_binary.pdf
-rm interviews/test_empty_transcript.txt
-rm interviews/test_malformed_transcript.txt
+rm interviews/test_truly_empty_transcript.txt
+rm interviews/test_oversized_transcript.txt
+rm interviews/test_invalid_binary_transcript.dat
 ```
 
 ---
