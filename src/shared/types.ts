@@ -95,7 +95,7 @@ export interface IPCEvents {
 
   // Renderer to Main
   'import-prd': {
-    filePath: string;
+    filePath: string; // Can be either a file path or file content
   };
   'get-evidence-scores': {
     documentId: string;

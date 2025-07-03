@@ -423,6 +423,11 @@ export class TrayManager {
               background: rgba(255, 255, 255, 0.1);
               transform: scale(1.02);
             }
+            .select-zone.drag-over {
+              border-color: #ffffff;
+              background: rgba(255, 255, 255, 0.2);
+              transform: scale(1.05);
+            }
             .icon {
               font-size: 48px;
               margin-bottom: 16px;
@@ -445,18 +450,80 @@ export class TrayManager {
           </style>
         </head>
         <body>
-          <div class="select-zone" id="selectZone" onclick="openFileDialog()">
+          <div class="select-zone" id="selectZone" 
+               onclick="openFileDialog()"
+               ondrop="handleDrop(event)"
+               ondragover="handleDragOver(event)"
+               ondragenter="handleDragEnter(event)"
+               ondragleave="handleDragLeave(event)">
             <div class="icon">📄</div>
             <div class="title">Select PRD File</div>
-            <div class="subtitle">Click here to browse for your Product Requirements Document</div>
+            <div class="subtitle">Drag & drop files here or click to browse</div>
             <div class="supported-formats">Supports: .md, .txt, .markdown</div>
           </div>
           
           <script>
+            let dragCounter = 0;
+            
             function openFileDialog() {
               console.log('📂 Opening file dialog...');
               // Send message to main process to open file dialog
               window.electronAPI?.openFileDialog();
+            }
+            
+            function handleDragOver(event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            
+            function handleDragEnter(event) {
+              event.preventDefault();
+              event.stopPropagation();
+              dragCounter++;
+              
+              // Add visual feedback
+              document.getElementById('selectZone').classList.add('drag-over');
+              console.log('🗂️ Drag enter - tray drop zone');
+            }
+            
+            function handleDragLeave(event) {
+              event.preventDefault();
+              event.stopPropagation();
+              dragCounter--;
+              
+              // Only remove visual feedback when actually leaving the drop zone
+              if (dragCounter === 0) {
+                document.getElementById('selectZone').classList.remove('drag-over');
+                console.log('🗂️ Drag leave - tray drop zone');
+              }
+            }
+            
+            function handleDrop(event) {
+              event.preventDefault();
+              event.stopPropagation();
+              dragCounter = 0;
+              
+              // Remove visual feedback
+              document.getElementById('selectZone').classList.remove('drag-over');
+              
+              const files = event.dataTransfer.files;
+              if (files.length > 0) {
+                const file = files[0];
+                console.log('🗂️ File dropped on tray zone:', file.name);
+                
+                // Validate file type
+                const validExtensions = ['.md', '.txt', '.markdown'];
+                const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (validExtensions.includes(fileExtension) && file.size <= 10 * 1024 * 1024) {
+                  console.log('✅ Valid file, opening main app with import modal');
+                  // Send file to main process to open main window with import modal
+                  window.electronAPI?.handleTrayFileDrop(file.path);
+                } else {
+                  console.warn('⚠️ Invalid file dropped');
+                  alert('Please drop a valid PRD file (.md, .txt, .markdown) under 10MB');
+                }
+              }
             }
           </script>
         </body>
@@ -507,10 +574,12 @@ export class TrayManager {
       // Trigger the actual PRD processing pipeline through main process
       this.logger.info(`🚀 Sending file to secure ingest service: ${filePath}`);
 
-      // Emit IPC event to main process for file processing
+      // Emit IPC event to main process to open import modal with file
       const mainWindow = personyxApp.getMainWindow();
       if (mainWindow) {
-        mainWindow.webContents.send('import-prd', { filePath });
+        mainWindow.webContents.send('open-import-modal-with-file', {
+          filePath,
+        });
       }
 
       // Show initial notification (final result will come from main process)

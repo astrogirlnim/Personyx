@@ -8,6 +8,7 @@ import type { Persona, ChatResponse } from '../shared/types';
 interface ElectronAPI {
   // File operations
   openFileDialog: () => void;
+  handleTrayFileDrop: (filePath: string) => void;
   importPRD: (filePath: string) => Promise<unknown>;
 
   // App operations
@@ -32,6 +33,9 @@ interface ElectronAPI {
   onAppReady: (callback: () => void) => void;
   onError: (callback: (error: unknown) => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
+  onOpenImportModalWithFile: (
+    callback: (data: { filePath: string }) => void
+  ) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;

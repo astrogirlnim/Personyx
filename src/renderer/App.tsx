@@ -278,6 +278,8 @@ function ChatWindow({
 interface ImportPRDModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialFile?: File | null; // Add support for pre-selected file
+  initialFilePath?: string | null; // Add support for file paths from tray
 }
 
 interface ProgressStage {
@@ -289,10 +291,13 @@ interface ProgressStage {
 function ImportPRDModal({
   isOpen,
   onClose,
+  initialFile = null, // Accept initial file
+  initialFilePath = null, // Accept initial file path from tray
 }: ImportPRDModalProps): JSX.Element | null {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressStage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -306,17 +311,47 @@ function ImportPRDModal({
     { name: 'Calculating evidence scores', status: 'pending' },
   ];
 
-  // Reset state when modal opens/closes
+  // Reset state when modal opens/closes, or set initial file/path
   useEffect(() => {
+    console.log('🔄 Modal useEffect triggered:', {
+      isOpen,
+      hasInitialFile: !!initialFile,
+      hasInitialFilePath: !!initialFilePath,
+      initialFileName: initialFile?.name,
+      initialFilePath,
+    });
+
     if (!isOpen) {
+      console.log('🚪 Import modal closing - resetting state');
       setSelectedFile(null);
+      setSelectedFilePath(null);
       setIsProcessing(false);
       setProgress([]);
       setError(null);
       setResult(null);
       setIsDragging(false);
+    } else {
+      console.log('🚪 Import modal opening');
+      // Set initial file if provided - but don't auto-import!
+      if (initialFile) {
+        console.log('🔍 Setting initial file in modal:', {
+          name: initialFile.name,
+          size: initialFile.size,
+          type: initialFile.type,
+        });
+        setSelectedFile(initialFile);
+        setSelectedFilePath(null);
+        setError(null);
+      } else if (initialFilePath) {
+        console.log('🔍 Setting initial file path in modal:', initialFilePath);
+        setSelectedFile(null);
+        setSelectedFilePath(initialFilePath);
+        setError(null);
+      } else {
+        console.log('🔍 No initial file or path provided');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialFile, initialFilePath]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -433,7 +468,7 @@ function ImportPRDModal({
   );
 
   const handleImport = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile && !selectedFilePath) return;
 
     setIsProcessing(true);
     setError(null);
@@ -469,55 +504,52 @@ function ImportPRDModal({
       // Stage 2: Reading content
       updateProgress(1, 'active');
 
-      // Read file content for processing
-      // TODO: Use this content in real implementation
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _fileContent = await selectedFile.text();
+      let importResult: ImportResult;
 
-      // For security and cross-platform compatibility, we'll need to save the file
-      // to a temporary location that the main process can access
-      // In a real implementation, we would:
-      // 1. Send the file content to main process via IPC
-      // 2. Main process saves it temporarily and processes it
-      // 3. Main process sends back the results
+      if (selectedFile) {
+        // Handle File object (from drag/drop or file picker)
+        const fileContent = await selectedFile.text();
 
-      // For now, we'll create a mock file path since we can't directly
-      // pass File objects through IPC (they're not serializable)
-      // TODO: Use this filename in real implementation
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _tempFileName = `temp_${Date.now()}_${selectedFile.name}`;
+        updateProgress(1, 'complete');
 
-      updateProgress(1, 'complete');
+        // Stage 3: Processing with main process
+        updateProgress(2, 'active', 'Sending to main process...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UI feedback
+        updateProgress(2, 'complete');
 
-      // Stage 3: Processing with main process
-      updateProgress(2, 'active', 'Sending to main process...');
+        // Stage 4: Generating embeddings
+        updateProgress(3, 'active', 'Processing with AI...');
 
-      // TODO: In a real implementation, we would:
-      // 1. Send file content to main process
-      // 2. Main process saves temporarily and calls SecureFileIngestService
-      // 3. Get real progress updates via IPC events
+        // Stage 5: Calculating evidence scores
+        updateProgress(4, 'active', 'Calculating scores...');
 
-      // For now, simulate the backend processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updateProgress(2, 'complete');
+        // Call the actual IPC handler with file content
+        importResult = (await window.electronAPI.importPRD(
+          fileContent
+        )) as ImportResult;
+      } else if (selectedFilePath) {
+        // Handle file path (from tray drop)
+        updateProgress(1, 'complete');
 
-      // Stage 4: Generating embeddings
-      updateProgress(3, 'active', 'Processing with AI...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      updateProgress(3, 'complete');
+        // Stage 3: Processing with main process
+        updateProgress(2, 'active', 'Sending to main process...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for UI feedback
+        updateProgress(2, 'complete');
 
-      // Stage 5: Calculating evidence scores
-      updateProgress(4, 'active', 'Calculating scores...');
+        // Stage 4: Generating embeddings
+        updateProgress(3, 'active', 'Processing with AI...');
 
-      // In a real implementation, this would call:
-      // const importResult = await window.electronAPI.importPRD(tempFilePath);
-      const importResult: ImportResult = {
-        success: true,
-        documentId: `doc_${Date.now()}`,
-        evidenceScores: [], // Would be populated by the actual service
-      };
+        // Stage 5: Calculating evidence scores
+        updateProgress(4, 'active', 'Calculating scores...');
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        // Call the actual IPC handler with file path
+        importResult = (await window.electronAPI.importPRD(
+          selectedFilePath
+        )) as ImportResult;
+      } else {
+        throw new Error('No file or file path selected');
+      }
+
       updateProgress(4, 'complete');
 
       setResult(importResult);
@@ -547,7 +579,24 @@ function ImportPRDModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
+
+  console.log('🎭 Rendering Import PRD Modal', {
+    selectedFile: selectedFile?.name,
+    selectedFilePath,
+    isProcessing,
+    hasFile: !!(selectedFile || selectedFilePath),
+    renderingState:
+      !selectedFile && !selectedFilePath && !result
+        ? 'file-selection'
+        : (selectedFile || selectedFilePath) && !result
+          ? 'file-processing'
+          : result
+            ? 'success'
+            : 'unknown',
+  });
 
   return (
     <div className="fixed inset-0 bg-slate/50 dark:bg-slate-dark/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -602,7 +651,7 @@ function ImportPRDModal({
 
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {!selectedFile && !result ? (
+          {!selectedFile && !selectedFilePath && !result ? (
             /* File Selection */
             <div className="space-y-6">
               <div
@@ -685,7 +734,7 @@ function ImportPRDModal({
                 </div>
               )}
             </div>
-          ) : selectedFile && !result ? (
+          ) : (selectedFile || selectedFilePath) && !result ? (
             /* File Processing */
             <div className="space-y-6">
               {/* Selected File Info */}
@@ -706,18 +755,25 @@ function ImportPRDModal({
                   </svg>
                   <div className="flex-1">
                     <p className="text-body-lg font-medium text-slate dark:text-slate-dark">
-                      {selectedFile?.name}
+                      {selectedFile?.name ||
+                        (selectedFilePath
+                          ? selectedFilePath.split('/').pop()
+                          : 'Unknown file')}
                     </p>
                     <p className="text-caption text-steel dark:text-steel-dark">
                       {selectedFile
-                        ? (selectedFile.size / 1024).toFixed(1)
-                        : '0'}{' '}
-                      KB • {selectedFile?.type || 'Text file'}
+                        ? `${(selectedFile.size / 1024).toFixed(1)} KB • ${selectedFile.type || 'Text file'}`
+                        : selectedFilePath
+                          ? `File path: ${selectedFilePath}`
+                          : 'Unknown file type'}
                     </p>
                   </div>
                   {!isProcessing && (
                     <button
-                      onClick={() => setSelectedFile(null)}
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setSelectedFilePath(null);
+                      }}
                       className="p-1 rounded-full hover:bg-graphite/20 dark:hover:bg-graphite-dark/20 transition-colors"
                     >
                       <svg
@@ -886,14 +942,19 @@ function ImportPRDModal({
         <div className="p-6 border-t border-graphite dark:border-graphite-dark">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              {selectedFile && !isProcessing && !result && (
-                <button
-                  onClick={() => setSelectedFile(null)}
-                  className="text-steel dark:text-steel-dark hover:text-slate dark:hover:text-slate-dark transition-colors"
-                >
-                  ← Choose different file
-                </button>
-              )}
+              {(selectedFile || selectedFilePath) &&
+                !isProcessing &&
+                !result && (
+                  <button
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setSelectedFilePath(null);
+                    }}
+                    className="text-steel dark:text-steel-dark hover:text-slate dark:hover:text-slate-dark transition-colors"
+                  >
+                    ← Choose different file
+                  </button>
+                )}
             </div>
             <div className="flex space-x-3">
               {!isProcessing &&
@@ -901,7 +962,7 @@ function ImportPRDModal({
                   <button onClick={handleClose} className="btn-primary">
                     Done
                   </button>
-                ) : selectedFile ? (
+                ) : selectedFile || selectedFilePath ? (
                   <button onClick={handleImport} className="btn-primary">
                     Import PRD
                   </button>
@@ -945,6 +1006,8 @@ export function App(): JSX.Element {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isCardDragging, setIsCardDragging] = useState(false);
+  const [draggedFile, setDraggedFile] = useState<File | null>(null);
+  const [trayFilePath, setTrayFilePath] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('🚀 Personyx App component mounted');
@@ -1009,8 +1072,15 @@ export function App(): JSX.Element {
     // Set up IPC listeners for opening windows from tray
     if (window.electronAPI) {
       window.electronAPI.onOpenChatWindow(handleOpenChatWindow);
-      // TODO: Add import modal IPC listener once tray is updated
-      // window.electronAPI.onOpenImportModal(_handleOpenImportModal);
+      window.electronAPI.onOpenImportModalWithFile(data => {
+        console.log(
+          '🗂️ Opening import modal from tray file drop:',
+          data.filePath
+        );
+        setDraggedFile(null); // Clear any existing dragged file
+        setTrayFilePath(data.filePath); // Store the tray file path
+        setIsImportModalOpen(true);
+      });
     }
 
     return () => {
@@ -1023,40 +1093,193 @@ export function App(): JSX.Element {
   const handleCardDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log('🎯 Drag over main card');
     setIsCardDragging(true);
   }, []);
 
   const handleCardDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsCardDragging(false);
+    // Only set dragging to false if we're actually leaving the drop zone
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      console.log('🎯 Drag leave main card');
+      setIsCardDragging(false);
+    }
   }, []);
 
-  const handleCardDrop = useCallback((e: React.DragEvent) => {
+  const handleCardDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log('🎯 Drop on main card');
     setIsCardDragging(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      const file = files[0];
+    console.log('🔍 Full dataTransfer analysis:', {
+      files: e.dataTransfer.files,
+      filesLength: e.dataTransfer.files.length,
+      items: e.dataTransfer.items,
+      itemsLength: e.dataTransfer.items.length,
+      types: e.dataTransfer.types,
+      effectAllowed: e.dataTransfer.effectAllowed,
+      dropEffect: e.dataTransfer.dropEffect,
+    });
 
-      // Validate file type quickly
+    // Method 1: Try standard files API
+    let file: File | null = null;
+    const files = Array.from(e.dataTransfer.files);
+    console.log('📦 Files array:', files);
+
+    if (files.length > 0) {
+      file = files[0];
+      console.log('✅ Got file via files API:', file.name);
+    }
+    // Method 2: Try DataTransferItemList API
+    else if (e.dataTransfer.items.length > 0) {
+      console.log('🔄 Trying DataTransferItems API...');
+      const items = Array.from(e.dataTransfer.items);
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        console.log(`📋 Item ${i}:`, { kind: item.kind, type: item.type });
+
+        if (item.kind === 'file') {
+          const itemFile = item.getAsFile();
+          if (itemFile) {
+            file = itemFile;
+            console.log('✅ Got file via items API:', file.name);
+            break;
+          }
+        }
+        // Check for text/uri-list (file paths)
+        else if (item.type === 'text/uri-list' || item.type === 'text/plain') {
+          try {
+            const data = await new Promise<string>(resolve => {
+              item.getAsString(resolve);
+            });
+            console.log('📝 Text data from item:', data);
+
+            // Check if it looks like a file path
+            if (
+              data &&
+              (data.includes('.md') ||
+                data.includes('.txt') ||
+                data.includes('.markdown'))
+            ) {
+              const filePath = data.replace('file://', '').trim();
+              console.log('📂 Detected file path:', filePath);
+              setTrayFilePath(filePath);
+              setIsImportModalOpen(true);
+              return;
+            }
+          } catch (error) {
+            console.warn('⚠️ Error reading text data:', error);
+          }
+        }
+      }
+    }
+
+    // Method 3: Check for text data (file paths from external drops)
+    if (!file) {
+      console.log('🔄 Checking for text/uri-list data...');
+      try {
+        const uriData = e.dataTransfer.getData('text/uri-list');
+        const textData = e.dataTransfer.getData('text/plain');
+
+        console.log('📝 URI data:', uriData);
+        console.log('📝 Text data:', textData);
+
+        const pathData = uriData || textData;
+        if (
+          pathData &&
+          (pathData.includes('.md') ||
+            pathData.includes('.txt') ||
+            pathData.includes('.markdown'))
+        ) {
+          const filePath = pathData.replace('file://', '').trim();
+          console.log('📂 Using file path from text data:', filePath);
+          setTrayFilePath(filePath);
+          setIsImportModalOpen(true);
+          return;
+        }
+      } catch (error) {
+        console.warn('⚠️ Error reading text data from dataTransfer:', error);
+      }
+    }
+
+    // Process the file if we got one
+    if (file) {
+      console.log('📎 Processing file:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      });
+
+      // Validate file type
       const validExtensions = ['.md', '.txt', '.markdown'];
       const hasValidExtension = validExtensions.some(ext =>
         file.name.toLowerCase().endsWith(ext)
       );
 
       if (hasValidExtension && file.size <= 10 * 1024 * 1024) {
-        // File looks valid, open modal and set the file
+        console.log('✅ File validated, opening modal');
+        setDraggedFile(file);
         setIsImportModalOpen(true);
-        // Note: We'll need to pass the file to the modal somehow
-        // For now, we'll just open the modal and let the user select the file again
-        console.log('📎 File dropped on main card:', file.name);
       } else {
-        console.warn('⚠️ Invalid file dropped:', file.name);
-        // TODO: Show error notification
+        console.warn('⚠️ Invalid file:', {
+          hasValidExtension,
+          size: file.size,
+        });
+        alert(
+          'Please drop a valid markdown file (.md, .txt, .markdown) under 10MB'
+        );
       }
+    } else {
+      console.warn('⚠️ No file data found - opening modal as fallback');
+      // Open modal without file - user can use file picker
+      setIsImportModalOpen(true);
+    }
+  }, []);
+
+  // Handle drag and drop for the entire app (fallback)
+  const handleAppDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🎯 App-level drag over');
+  }, []);
+
+  const handleAppDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🎯 App-level drop');
+
+    console.log('🔍 App-level dataTransfer:', {
+      files: e.dataTransfer.files,
+      filesLength: e.dataTransfer.files.length,
+      types: e.dataTransfer.types,
+    });
+
+    // If the drop didn't happen on the main card, handle it here
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      const file = files[0];
+      console.log('📎 File dropped on app:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+
+      const validExtensions = ['.md', '.txt', '.markdown'];
+      const hasValidExtension = validExtensions.some(ext =>
+        file.name.toLowerCase().endsWith(ext)
+      );
+
+      if (hasValidExtension && file.size <= 10 * 1024 * 1024) {
+        console.log('✅ File validated, opening modal with file:', file.name);
+        setDraggedFile(file);
+        setIsImportModalOpen(true);
+      }
+    } else {
+      console.warn('⚠️ No files found in app-level drop event');
     }
   }, []);
 
@@ -1074,7 +1297,11 @@ export function App(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-mist dark:bg-mist-dark p-6">
+    <div
+      className="min-h-screen bg-mist dark:bg-mist-dark p-6"
+      onDragOver={handleAppDragOver}
+      onDrop={handleAppDrop}
+    >
       {/* Evidence Gate Layout */}
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -1301,7 +1528,14 @@ export function App(): JSX.Element {
 
       <ImportPRDModal
         isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
+        onClose={() => {
+          console.log('🚪 Closing import modal - clearing state');
+          setIsImportModalOpen(false);
+          setDraggedFile(null); // Clear dragged file when modal closes
+          setTrayFilePath(null); // Clear tray file path when modal closes
+        }}
+        initialFile={draggedFile}
+        initialFilePath={trayFilePath}
       />
     </div>
   );

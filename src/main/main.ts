@@ -136,7 +136,10 @@ class PersonyxApp {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        webSecurity: true,
         preload: join(__dirname, 'preload.js'),
+        // Enable file access for drag and drop
+        sandbox: false,
       },
       titleBarStyle: IS_MAC ? 'hiddenInset' : 'default',
       vibrancy: IS_MAC ? 'under-window' : undefined,
@@ -172,6 +175,25 @@ class PersonyxApp {
     });
 
     // Handle external links
+    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    });
+
+    // Enable drag and drop file operations
+    this.mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+      const parsedUrl = new URL(navigationUrl);
+
+      // Allow navigation to our own renderer and dev server
+      if (
+        parsedUrl.origin !== URL_SCHEMES.RENDERER_DEV.replace(/\/$/, '') &&
+        !navigationUrl.startsWith('file://')
+      ) {
+        event.preventDefault();
+      }
+    });
+
+    // Prevent new window creation from drag and drop
     this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       shell.openExternal(url);
       return { action: 'deny' };
@@ -257,7 +279,7 @@ class PersonyxApp {
     ipcMain.handle(
       IPC_CHANNELS.IMPORT_PRD,
       async (_, data: IPCEvents['import-prd']) => {
-        this.logger.info(`📄 Import PRD request: ${data.filePath}`);
+        this.logger.info(`📄 Import PRD request`);
         return await this.handleImportPRD(data.filePath);
       }
     );
@@ -308,6 +330,23 @@ class PersonyxApp {
       this.logger.info('📁 File dialog requested from drop zone');
       if (this.trayManager) {
         // This will be handled by the tray manager
+      }
+    });
+
+    // Handle file drops from tray drop zone
+    ipcMain.on('tray-file-drop', async (_event, data: { filePath: string }) => {
+      this.logger.info(`🗂️ File dropped on tray zone: ${data.filePath}`);
+
+      // Ensure main window is open and focused
+      this.createMainWindow();
+      const mainWindow = this.getMainWindow();
+
+      if (mainWindow) {
+        // Send message to renderer to open import modal with the dropped file
+        mainWindow.webContents.send('open-import-modal-with-file', {
+          filePath: data.filePath,
+        });
+        this.logger.info('✅ Main window notified to open import modal');
       }
     });
 
@@ -485,18 +524,54 @@ class PersonyxApp {
   /**
    * Handle PRD import (Phase 2.3 - Secure File Ingest)
    */
-  private async handleImportPRD(filePath: string): Promise<ImportResult> {
+  private async handleImportPRD(
+    filePathOrContent: string
+  ): Promise<ImportResult> {
     try {
-      this.logger.info(`📥 Processing PRD import: ${filePath}`);
+      this.logger.info(`📥 Processing PRD import`);
 
       if (!this.secureFileIngestService) {
         this.logger.warn('⚠️ SecureFileIngestService not initialized');
         throw new Error('Secure file ingest service not available');
       }
 
+      let filePath: string;
+      let isTemporaryFile = false;
+
+      // Check if the input is a file path or file content
+      if (filePathOrContent.includes('\n') || filePathOrContent.length > 500) {
+        // Likely file content, create a temporary file
+        const fs = await import('fs');
+        const path = await import('path');
+        const os = await import('os');
+
+        const tempDir = os.tmpdir();
+        const tempFileName = `temp_prd_${Date.now()}.md`;
+        filePath = path.join(tempDir, tempFileName);
+
+        fs.writeFileSync(filePath, filePathOrContent, 'utf8');
+        isTemporaryFile = true;
+        this.logger.info(`📝 Created temporary file: ${filePath}`);
+      } else {
+        // Assume it's a file path
+        filePath = filePathOrContent;
+        this.logger.info(`📂 Using file path: ${filePath}`);
+      }
+
       // Use the new secure file ingest service (Phase 2.3)
       const ingestResult =
         await this.secureFileIngestService.ingestPRDFile(filePath);
+
+      // Clean up temporary file if created
+      if (isTemporaryFile) {
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(filePath);
+          this.logger.info(`🗑️ Cleaned up temporary file: ${filePath}`);
+        } catch (error) {
+          this.logger.warn(`⚠️ Failed to clean up temporary file: ${error}`);
+        }
+      }
 
       if (ingestResult.success) {
         this.logger.info('✅ PRD import completed successfully', {
