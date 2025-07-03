@@ -309,7 +309,7 @@ export function PersonaManagerModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {activeTab === 'visual' ? (
             <VisualEditor
               personas={editedPersonas}
@@ -524,67 +524,64 @@ function VisualEditor({
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6">
-          {/* Header with Add Button */}
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-body font-medium text-slate dark:text-slate-dark">
-              Personas ({personas.length})
-            </h3>
-            <button
-              onClick={handleAddPersona}
-              disabled={loading}
-              className="px-3 py-1 text-sm bg-persona/10 hover:bg-persona/20 dark:bg-persona-dark/10 dark:hover:bg-persona-dark/20 text-persona dark:text-persona-dark rounded-md transition-colors disabled:opacity-50"
-            >
-              + Add Persona
-            </button>
-          </div>
+    <div className="h-full overflow-y-auto">
+      <div className="p-6 pb-8">
+        {/* Header with Add Button */}
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-body font-medium text-slate dark:text-slate-dark">
+            Personas ({personas.length})
+          </h3>
+          <button
+            onClick={handleAddPersona}
+            disabled={loading}
+            className="px-3 py-1 text-sm bg-persona/10 hover:bg-persona/20 dark:bg-persona-dark/10 dark:hover:bg-persona-dark/20 text-persona dark:text-persona-dark rounded-md transition-colors disabled:opacity-50"
+          >
+            + Add Persona
+          </button>
+        </div>
 
-          {/* Personas List */}
-          <div className="space-y-4">
-            {personas.length > 0 ? (
-              personas.map(persona => (
-                <PersonaCard
-                  key={persona.id}
-                  persona={persona}
-                  isEditing={editingId === persona.id}
-                  onEdit={() => setEditingId(persona.id)}
-                  onSave={() => setEditingId(null)}
-                  onCancel={() => setEditingId(null)}
-                  onUpdate={updates => handleUpdatePersona(persona.id, updates)}
-                  onDelete={() => handleDeletePersona(persona.id)}
-                  onKeywordChange={keywords =>
-                    handleKeywordChange(persona.id, keywords)
-                  }
-                  loading={loading}
+        {/* Personas List */}
+        <div className="space-y-4">
+          {personas.length > 0 ? (
+            personas.map(persona => (
+              <PersonaCard
+                key={persona.id}
+                persona={persona}
+                isEditing={editingId === persona.id}
+                onEdit={() => setEditingId(persona.id)}
+                onSave={() => setEditingId(null)}
+                onCancel={() => setEditingId(null)}
+                onUpdate={updates => handleUpdatePersona(persona.id, updates)}
+                onDelete={() => handleDeletePersona(persona.id)}
+                onKeywordChange={keywords =>
+                  handleKeywordChange(persona.id, keywords)
+                }
+                loading={loading}
+              />
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <svg
+                className="w-12 h-12 text-steel dark:text-steel-dark mx-auto mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                 />
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <svg
-                  className="w-12 h-12 text-steel dark:text-steel-dark mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                <h3 className="text-body font-medium text-slate dark:text-slate-dark mb-2">
-                  No personas configured
-                </h3>
-                <p className="text-body-sm text-steel dark:text-steel-dark mb-4">
-                  Click "Add Persona" to create your first persona
-                  configuration.
-                </p>
-              </div>
-            )}
-          </div>
+              </svg>
+              <h3 className="text-body font-medium text-slate dark:text-slate-dark mb-2">
+                No personas configured
+              </h3>
+              <p className="text-body-sm text-steel dark:text-steel-dark mb-4">
+                Click "Add Persona" to create your first persona configuration.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
