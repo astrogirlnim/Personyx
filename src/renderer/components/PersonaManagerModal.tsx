@@ -252,7 +252,7 @@ export function PersonaManagerModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0">
           {activeTab === 'visual' ? (
             <VisualEditor personas={personas} />
           ) : (
@@ -405,156 +405,159 @@ export function PersonaManagerModal({
  */
 function VisualEditor({ personas }: { personas: any[] }) {
   return (
-    <div className="p-6 h-full overflow-y-auto">
-      <div className="space-y-4">
-        {/* Add New Persona Button */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-body font-medium text-slate dark:text-slate-dark">
-            Personas ({personas.length})
-          </h3>
-          <button className="px-3 py-1 text-sm bg-persona/10 hover:bg-persona/20 dark:bg-persona-dark/10 dark:hover:bg-persona-dark/20 text-persona dark:text-persona-dark rounded-md transition-colors">
-            + Add Persona
-          </button>
-        </div>
+    <div className="h-full overflow-y-auto">
+      <div className="p-6">
+        <div className="space-y-4">
+          {/* Add New Persona Button */}
+          <div className="flex justify-between items-center">
+            <h3 className="text-body font-medium text-slate dark:text-slate-dark">
+              Personas ({personas.length})
+            </h3>
+            <button className="px-3 py-1 text-sm bg-persona/10 hover:bg-persona/20 dark:bg-persona-dark/10 dark:hover:bg-persona-dark/20 text-persona dark:text-persona-dark rounded-md transition-colors">
+              + Add Persona
+            </button>
+          </div>
 
-        <div className="grid gap-4">
-          {personas.length > 0 ? (
-            personas.map(persona => (
-              <div
-                key={persona.id}
-                className="p-4 border border-graphite dark:border-graphite-dark rounded-lg bg-mist dark:bg-mist-dark/20"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-body font-semibold text-slate dark:text-slate-dark">
-                      {persona.name}
-                    </h3>
-                    <p className="text-caption text-persona dark:text-persona-dark mt-1">
-                      ID: {persona.id}
-                    </p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      className="p-1 text-steel dark:text-steel-dark hover:text-slate dark:hover:text-slate-dark rounded transition-colors"
-                      title="Edit persona"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+          <div className="grid gap-4">
+            {personas.length > 0 ? (
+              personas.map(persona => (
+                <div
+                  key={persona.id}
+                  className="p-4 border border-graphite dark:border-graphite-dark rounded-lg bg-mist dark:bg-mist-dark/20"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-body font-semibold text-slate dark:text-slate-dark">
+                        {persona.name}
+                      </h3>
+                      <p className="text-caption text-persona dark:text-persona-dark mt-1">
+                        ID: {persona.id}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        className="p-1 text-steel dark:text-steel-dark hover:text-slate dark:hover:text-slate-dark rounded transition-colors"
+                        title="Edit persona"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      className="p-1 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 rounded transition-colors"
-                      title="Delete persona"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        className="p-1 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 rounded transition-colors"
+                        title="Delete persona"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
-                      Description:
-                    </label>
-                    <p className="text-body-sm text-steel dark:text-steel-dark bg-paper dark:bg-paper-dark p-2 rounded border border-graphite/50 dark:border-graphite-dark/50">
-                      {persona.description}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
-                      Primary Goal:
-                    </label>
-                    <p className="text-body-sm text-steel dark:text-steel-dark bg-paper dark:bg-paper-dark p-2 rounded border border-graphite/50 dark:border-graphite-dark/50">
-                      {persona.primaryGoal}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
-                      Main Pain Point:
-                    </label>
-                    <p className="text-body-sm text-steel dark:text-steel-dark bg-paper dark:bg-paper-dark p-2 rounded border border-graphite/50 dark:border-graphite-dark/50">
-                      {persona.mainPainPoint}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
-                      Keywords:
-                    </label>
-                    <div className="flex flex-wrap gap-1">
-                      {persona.keywords?.map(
-                        (keyword: string, index: number) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 text-caption bg-persona/10 dark:bg-persona-dark/10 text-persona dark:text-persona-dark rounded border border-persona/20 dark:border-persona-dark/20"
-                          >
-                            {keyword}
-                          </span>
-                        )
-                      )}
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Edit Mode Notice */}
-                <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm">
-                  <p className="text-yellow-800 dark:text-yellow-200">
-                    💡 <strong>Visual editing coming soon!</strong> For now, use
-                    the YAML Editor tab to make changes.
-                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
+                        Description:
+                      </label>
+                      <p className="text-body-sm text-steel dark:text-steel-dark bg-paper dark:bg-paper-dark p-2 rounded border border-graphite/50 dark:border-graphite-dark/50">
+                        {persona.description}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
+                        Primary Goal:
+                      </label>
+                      <p className="text-body-sm text-steel dark:text-steel-dark bg-paper dark:bg-paper-dark p-2 rounded border border-graphite/50 dark:border-graphite-dark/50">
+                        {persona.primaryGoal}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
+                        Main Pain Point:
+                      </label>
+                      <p className="text-body-sm text-steel dark:text-steel-dark bg-paper dark:bg-paper-dark p-2 rounded border border-graphite/50 dark:border-graphite-dark/50">
+                        {persona.mainPainPoint}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-caption font-medium text-slate dark:text-slate-dark block mb-1">
+                        Keywords:
+                      </label>
+                      <div className="flex flex-wrap gap-1">
+                        {persona.keywords?.map(
+                          (keyword: string, index: number) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 text-caption bg-persona/10 dark:bg-persona-dark/10 text-persona dark:text-persona-dark rounded border border-persona/20 dark:border-persona-dark/20"
+                            >
+                              {keyword}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Edit Mode Notice */}
+                  <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm">
+                    <p className="text-yellow-800 dark:text-yellow-200">
+                      💡 <strong>Visual editing coming soon!</strong> For now,
+                      use the YAML Editor tab to make changes.
+                    </p>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <svg
+                  className="w-12 h-12 text-steel dark:text-steel-dark mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <h3 className="text-body font-medium text-slate dark:text-slate-dark mb-2">
+                  No personas configured
+                </h3>
+                <p className="text-body-sm text-steel dark:text-steel-dark mb-4">
+                  Switch to the YAML editor to add personas to your
+                  configuration.
+                </p>
+                <button className="px-4 py-2 text-sm bg-persona hover:bg-persona/90 dark:bg-persona-dark dark:hover:bg-persona-dark/90 text-white rounded-md transition-colors">
+                  Switch to YAML Editor
+                </button>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <svg
-                className="w-12 h-12 text-steel dark:text-steel-dark mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              <h3 className="text-body font-medium text-slate dark:text-slate-dark mb-2">
-                No personas configured
-              </h3>
-              <p className="text-body-sm text-steel dark:text-steel-dark mb-4">
-                Switch to the YAML editor to add personas to your configuration.
-              </p>
-              <button className="px-4 py-2 text-sm bg-persona hover:bg-persona/90 dark:bg-persona-dark dark:hover:bg-persona-dark/90 text-white rounded-md transition-colors">
-                Switch to YAML Editor
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
