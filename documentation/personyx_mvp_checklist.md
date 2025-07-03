@@ -109,7 +109,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 
 _Criteria: user-facing components; each relies on Phases 1 & 2._
 
-[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (6/8 features, 16/18 sub-features)
+[X] **Feature 1 – Tray UI Core Screens** ✅ COMPLETE (8/8 features, 32/32 sub-features)
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
@@ -128,7 +128,21 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
   - [x] **1.6.9** Add activity log performance optimizations and archival ✅ COMPLETE
   - [x] **1.6.10** Integrate activity log into main tray UI with keyboard shortcuts ✅ COMPLETE
 - [x] **1.7** Show success toast "Transcript analysed – evidence added" on completion. ✅ COMPLETE
-- [ ] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts.
+- [x] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts. ✅ COMPLETE + SUCCESS TOAST FIX
+  - [x] **1.8.1** Update `TranscriptProcessingResult` interface to include detailed evidence data ✅ COMPLETE
+  - [x] **1.8.2** Modify `WorkflowOrchestrator.processTranscriptManual()` to return detailed results ✅ COMPLETE
+  - [x] **1.8.3** Update `main.ts.handleImportTranscript()` to receive and process detailed results ✅ COMPLETE
+  - [x] **1.8.4** Create new `logInterviewImported()` method in `ActivityLogService` ✅ COMPLETE
+  - [x] **1.8.5** Add persona name mapping functionality to `ActivityLogService` ✅ COMPLETE
+  - [x] **1.8.6** Update activity log metadata interface for persona evidence details ✅ COMPLETE
+  - [x] **1.8.7** Update `transcript-imported` IPC event to include evidence counts ✅ COMPLETE
+  - [x] **1.8.8** Enhance activity log broadcasting with detailed persona information ✅ COMPLETE
+  - [x] **1.8.9** Update `ActivityLogPanel` to display detailed persona evidence counts ✅ COMPLETE
+  - [x] **1.8.10** Add persona-specific metadata display in activity log entries ✅ COMPLETE
+  - [x] **1.8.11** Create comprehensive unit tests for new activity logging ✅ COMPLETE
+  - [x] **1.8.12** Add integration tests for complete interview import → activity log flow ✅ COMPLETE
+  - [x] **1.8.13** Manual testing verification and documentation updates ✅ COMPLETE
+  - [x] **1.8.14** CRITICAL FIX: Restore success toast emission in enhanced pathway ✅ COMPLETE
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
 

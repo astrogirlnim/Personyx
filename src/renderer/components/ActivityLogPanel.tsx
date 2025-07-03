@@ -417,31 +417,70 @@ export function ActivityLogPanel({
 
                             {/* Metadata */}
                             {entry.metadata && (
-                              <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-500">
-                                {entry.metadata.fileName && (
-                                  <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                    📄 {entry.metadata.fileName}
-                                  </span>
-                                )}
-                                {entry.metadata.evidenceCount !== undefined && (
-                                  <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                    📊 {entry.metadata.evidenceCount} evidence
-                                  </span>
-                                )}
-                                {entry.metadata.personasAffected &&
-                                  entry.metadata.personasAffected.length >
-                                    0 && (
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-500">
+                                  {entry.metadata.fileName && (
                                     <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                      👥{' '}
-                                      {entry.metadata.personasAffected.length}{' '}
-                                      personas
+                                      📄 {entry.metadata.fileName}
                                     </span>
                                   )}
-                                {entry.metadata.processingTime && (
-                                  <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                    ⏱️ {entry.metadata.processingTime}ms
-                                  </span>
-                                )}
+                                  {entry.metadata.evidenceCount !==
+                                    undefined && (
+                                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                      📊 {entry.metadata.evidenceCount} evidence
+                                    </span>
+                                  )}
+                                  {entry.metadata.personasAffected &&
+                                    entry.metadata.personasAffected.length >
+                                      0 && (
+                                      <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                        👥{' '}
+                                        {entry.metadata.personasAffected.length}{' '}
+                                        personas
+                                      </span>
+                                    )}
+                                  {entry.metadata.processingTime && (
+                                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                      ⏱️ {entry.metadata.processingTime}ms
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Phase 3.1.8: Enhanced persona evidence display */}
+                                {entry.metadata.evidenceCountByPersona &&
+                                  entry.metadata.personaNames &&
+                                  Object.keys(
+                                    entry.metadata.evidenceCountByPersona
+                                  ).length > 0 && (
+                                    <div className="mt-2 space-y-1">
+                                      {entry.metadata.personaNames.map(
+                                        (persona: {
+                                          id: string;
+                                          name: string;
+                                        }) => {
+                                          const evidenceCount =
+                                            entry.metadata!
+                                              .evidenceCountByPersona![
+                                              persona.id
+                                            ] || 0;
+                                          if (evidenceCount === 0) return null;
+                                          return (
+                                            <div
+                                              key={persona.id}
+                                              className="flex items-center gap-2 text-xs"
+                                            >
+                                              <span className="bg-persona/10 text-persona border border-persona/20 px-2 py-1 rounded">
+                                                👤 {persona.name}
+                                              </span>
+                                              <span className="bg-evidence/10 text-evidence border border-evidence/20 px-2 py-1 rounded">
+                                                📊 {evidenceCount} evidence
+                                              </span>
+                                            </div>
+                                          );
+                                        }
+                                      )}
+                                    </div>
+                                  )}
                               </div>
                             )}
                           </div>

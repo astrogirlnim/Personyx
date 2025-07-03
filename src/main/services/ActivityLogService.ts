@@ -169,6 +169,128 @@ export class ActivityLogService extends EventEmitter {
   }
 
   /**
+   * Phase 3.1.8: Log interview import with detailed persona evidence counts
+   */
+  async logInterviewImported(
+    fileName: string,
+    evidenceCountByPersona: Record<string, number>,
+    processingTime?: number
+  ): Promise<ActivityLog> {
+    try {
+      logger.info('📝 Logging interview import with detailed evidence counts', {
+        fileName,
+        evidenceCountByPersona,
+        processingTime,
+      });
+
+      // Get persona names for display
+      const personaNames = await this.getPersonaNames(
+        Object.keys(evidenceCountByPersona)
+      );
+
+      // Create readable description with persona names
+      const evidenceDetails = personaNames
+        .map(persona => {
+          const count = evidenceCountByPersona[persona.id] || 0;
+          return `${count} evidence for ${persona.name}`;
+        })
+        .join(', ');
+
+      const totalEvidenceCount = Object.values(evidenceCountByPersona).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+      const description = `Interview "${fileName}" imported - ${evidenceDetails}`;
+
+      return this.logActivity({
+        type: 'import-success',
+        title: 'Interview Imported',
+        description,
+        source: 'transcript-import',
+        metadata: {
+          fileName,
+          evidenceCountByPersona,
+          personaNames: personaNames.map(p => ({ id: p.id, name: p.name })),
+          totalEvidenceCount,
+          personasAffectedCount: Object.keys(evidenceCountByPersona).length,
+          processingTime,
+          operation: 'interview-import',
+        },
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      logger.error(
+        '❌ Failed to log interview import with detailed evidence counts',
+        error
+      );
+      // Fallback to basic logging
+      const totalEvidenceCount = Object.values(evidenceCountByPersona).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+      return this.logActivity({
+        type: 'import-success',
+        title: 'Interview Imported',
+        description: `Interview "${fileName}" imported - ${totalEvidenceCount} evidence items created`,
+        source: 'transcript-import',
+        metadata: {
+          fileName,
+          evidenceCountByPersona,
+          totalEvidenceCount,
+          personasAffectedCount: Object.keys(evidenceCountByPersona).length,
+          processingTime,
+          operation: 'interview-import',
+        },
+        timestamp: new Date(),
+      });
+    }
+  }
+
+  /**
+   * Phase 3.1.8: Get persona names for given persona IDs
+   */
+  private async getPersonaNames(
+    personaIds: string[]
+  ): Promise<Array<{ id: string; name: string }>> {
+    try {
+      logger.debug('🎭 Getting persona names for IDs', { personaIds });
+
+      // Import PersonaRepo to get persona details
+      const { PersonaRepo } = await import('@main/db/repositories/PersonaRepo');
+      const personaRepo = new PersonaRepo();
+
+      const personaNames: Array<{ id: string; name: string }> = [];
+
+      for (const personaId of personaIds) {
+        try {
+          const persona = await personaRepo.findById(personaId);
+          if (persona) {
+            personaNames.push({ id: persona.id, name: persona.name });
+          } else {
+            logger.warn('⚠️ Persona not found for ID', { personaId });
+            // Fallback to ID as name
+            personaNames.push({ id: personaId, name: personaId });
+          }
+        } catch (error) {
+          logger.warn('⚠️ Failed to fetch persona', {
+            personaId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Fallback to ID as name
+          personaNames.push({ id: personaId, name: personaId });
+        }
+      }
+
+      logger.debug('✅ Persona names retrieved', { personaNames });
+      return personaNames;
+    } catch (error) {
+      logger.error('❌ Failed to get persona names', error);
+      // Fallback to using IDs as names
+      return personaIds.map(id => ({ id, name: id }));
+    }
+  }
+
+  /**
    * Log transcript import error
    */
   async logTranscriptImportError(

@@ -15,6 +15,13 @@
       "when": 1751377796020,
       "tag": "0001_narrow_virginia_dare",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1751542886696,
+      "tag": "0002_minor_hellfire_club",
+      "breakpoints": true
     }
   ]
 }
