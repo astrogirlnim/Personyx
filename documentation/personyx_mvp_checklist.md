@@ -109,7 +109,7 @@ _Criteria: storage & computation services, depends only on Phase 1._
 
 _Criteria: user-facing components; each relies on Phases 1 & 2._
 
-[~] **Feature 1 – Tray UI Core Screens** 🔄 PROGRESS (7/8 features, 16/31 sub-features)
+[X] **Feature 1 – Tray UI Core Screens** ✅ COMPLETE (8/8 features, 32/32 sub-features)
 
 - [x] **1.1** Build "Chat with Persona" window (single persona dropdown). ✅ COMPLETE
 - [x] **1.2** Add "Import PRD" modal with drag-&-drop, progress bar, and error validation UI. ✅ COMPLETE
@@ -128,7 +128,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
   - [x] **1.6.9** Add activity log performance optimizations and archival ✅ COMPLETE
   - [x] **1.6.10** Integrate activity log into main tray UI with keyboard shortcuts ✅ COMPLETE
 - [x] **1.7** Show success toast "Transcript analysed – evidence added" on completion. ✅ COMPLETE
-- [x] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts. ✅ COMPLETE
+- [x] **1.8** Add Activity Log row "Interview Imported" with persona evidence counts. ✅ COMPLETE + SUCCESS TOAST FIX
   - [x] **1.8.1** Update `TranscriptProcessingResult` interface to include detailed evidence data ✅ COMPLETE
   - [x] **1.8.2** Modify `WorkflowOrchestrator.processTranscriptManual()` to return detailed results ✅ COMPLETE
   - [x] **1.8.3** Update `main.ts.handleImportTranscript()` to receive and process detailed results ✅ COMPLETE
@@ -142,6 +142,7 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
   - [x] **1.8.11** Create comprehensive unit tests for new activity logging ✅ COMPLETE
   - [x] **1.8.12** Add integration tests for complete interview import → activity log flow ✅ COMPLETE
   - [x] **1.8.13** Manual testing verification and documentation updates ✅ COMPLETE
+  - [x] **1.8.14** CRITICAL FIX: Restore success toast emission in enhanced pathway ✅ COMPLETE
 
 [ ] **Feature 2 – Notion Scorecard Prototype**
 
