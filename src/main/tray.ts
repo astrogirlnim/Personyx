@@ -552,6 +552,18 @@ export class TrayManager {
       if (!validation.valid) {
         this.logger.error(`❌ Invalid file: ${validation.error}`);
         this.showDropNotification(filePath, false);
+
+        // Emit global error toast for validation failures
+        personyxApp.emitGlobalError({
+          type: 'validation-error',
+          title: 'PRD Import Failed',
+          message: `${validation.error}`,
+          fileName: filePath.split('/').pop() || 'Unknown file',
+          operation: 'prd-import',
+          timestamp: new Date(),
+          dismissible: true,
+          autoDismissMs: 5000,
+        });
         return;
       }
 
@@ -593,6 +605,18 @@ export class TrayManager {
     } catch (error) {
       this.logger.error('❌ Failed to process dropped file', error);
       this.showDropNotification(filePath, false);
+
+      // Emit global error toast for processing failures
+      personyxApp.emitGlobalError({
+        type: 'ingest-error',
+        title: 'PRD Import Failed',
+        message: `Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        fileName: filePath.split('/').pop() || 'Unknown file',
+        operation: 'prd-import',
+        timestamp: new Date(),
+        dismissible: true,
+        autoDismissMs: 8000,
+      });
     }
   }
 

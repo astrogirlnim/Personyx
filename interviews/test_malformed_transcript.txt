@@ -1,0 +1,15 @@
+# Malformed Transcript Test File
+
+This file contains malformed data that should trigger processing errors.
+
+---CORRUPTED DATA---
+<<<<>>>>
+INVALID_ENCODING_åæøß∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫
+NULL_CHARS_
+MALFORMED_JSON: {"incomplete": "object", "missing": }
+BROKEN_MARKDOWN: [link](
+INVALID_TIMESTAMPS: 00:99:99 - This is an invalid timestamp
+CORRUPTED_TRANSCRIPT_DATA: ∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫∂∆∑∏π∫
+---END CORRUPTED DATA---
+
+This content is designed to trigger various processing errors in the transcript import system. 

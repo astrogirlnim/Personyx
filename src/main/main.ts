@@ -1487,7 +1487,7 @@ I'd love to help you think through this from both a strategic and tactical persp
   /**
    * Phase 3.1.4: Emit global error event to renderer for error toast
    */
-  private emitGlobalError(errorData: IPCEvents['global-error']): void {
+  public emitGlobalError(errorData: IPCEvents['global-error']): void {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send(IPC_CHANNELS.GLOBAL_ERROR, errorData);
       this.logger.debug('📢 Emitted global error event', {
