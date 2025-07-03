@@ -51,6 +51,7 @@ export class TranscriptIngestService {
   private langGraphService: LangGraphService;
   private embeddingManager: EmbeddingProviderManager;
   private mainWindow: BrowserWindow | null;
+  private isInitialized = false;
 
   // Processing configuration
   private static readonly CHUNK_CONFIG = {
@@ -78,6 +79,39 @@ export class TranscriptIngestService {
   }
 
   /**
+   * Initialize the transcript ingest service
+   * Sets up embedding providers and language processing
+   */
+  async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    logger.info('🔧 Initializing TranscriptIngestService...');
+
+    try {
+      // Initialize LangGraph service for persona classification
+      if (!this.langGraphService.isReady()) {
+        await this.langGraphService.initialize();
+      }
+
+      // Initialize and auto-select the best available embedding provider
+      await this.embeddingManager.autoSelectProvider();
+
+      logger.info('✅ Embedding provider configured', {
+        activeProvider: this.embeddingManager.getActiveProviderType(),
+        availableProviders: this.embeddingManager.getAvailableProviders(),
+      });
+
+      this.isInitialized = true;
+      logger.info('✅ TranscriptIngestService initialized successfully');
+    } catch (error) {
+      logger.error('❌ Failed to initialize TranscriptIngestService', error);
+      throw error;
+    }
+  }
+
+  /**
    * Feature 6.1: Main entry point for transcript processing
    * Processes a transcript file and generates evidence with embeddings
    */
@@ -94,6 +128,11 @@ export class TranscriptIngestService {
     });
 
     try {
+      // Ensure service is initialized before processing
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
       // Feature 6.2: Extract and chunk transcript text
       const chunks = await this.chunkTranscriptText(transcriptEvent.content);
       logger.info(`📄 Transcript chunked into ${chunks.length} segments`, {
@@ -596,10 +635,12 @@ export class TranscriptIngestService {
       typeof TranscriptIngestService.PROCESSING_CONFIG;
   } {
     return {
-      isReady: this.langGraphService.isReady(),
+      isReady: this.isInitialized && this.langGraphService.isReady(),
       servicesReady: {
         langGraph: this.langGraphService.isReady(),
-        embeddings: true, // EmbeddingProviderManager is always ready
+        embeddings:
+          this.isInitialized &&
+          this.embeddingManager.getActiveProviderType() !== null,
         database: true, // Assume database is ready if service instantiated
       },
       configuration: {
