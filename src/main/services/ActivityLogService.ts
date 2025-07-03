@@ -559,6 +559,50 @@ export class ActivityLogService extends EventEmitter {
   }
 
   /**
+   * Phase 3.5.3: Log persona configuration update
+   */
+  async logPersonaConfigUpdated(metadata: {
+    personaCount: number;
+    validationWarnings?: string[];
+  }): Promise<ActivityLog> {
+    const warningsText = metadata.validationWarnings?.length
+      ? ` (${metadata.validationWarnings.length} warnings)`
+      : '';
+
+    return this.logActivity({
+      type: 'general-activity',
+      title: 'Persona Configuration Updated',
+      description: `Personas configuration saved with ${metadata.personaCount} personas${warningsText}`,
+      source: 'general',
+      metadata: {
+        ...metadata,
+        operation: 'persona-config-update',
+      },
+      timestamp: new Date(),
+    });
+  }
+
+  /**
+   * Phase 3.5.3: Log persona reload
+   */
+  async logPersonaReloaded(metadata: {
+    personaCount: number;
+    loadedCount: number;
+  }): Promise<ActivityLog> {
+    return this.logActivity({
+      type: 'general-activity',
+      title: 'Personas Reloaded',
+      description: `Personas reloaded from configuration - ${metadata.personaCount} personas available`,
+      source: 'general',
+      metadata: {
+        ...metadata,
+        operation: 'persona-reload',
+      },
+      timestamp: new Date(),
+    });
+  }
+
+  /**
    * Shutdown the service
    */
   async shutdown(): Promise<void> {

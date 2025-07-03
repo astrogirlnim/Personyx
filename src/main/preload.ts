@@ -46,6 +46,11 @@ interface ElectronAPI {
   removeThirdPartyToken: (service: string) => Promise<unknown>;
   getMissingTokenWarnings: () => Promise<unknown>;
 
+  // Phase 3.5.3: Persona manager operations
+  getPersonasConfig: () => Promise<unknown>;
+  savePersonasConfig: (yaml: string) => Promise<unknown>;
+  reloadPersonas: () => Promise<unknown>;
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -110,6 +115,10 @@ interface ElectronAPI {
   // Phase 3.5.2: Third-party token management event listeners
   onTokenStatusUpdated: (callback: (data: unknown) => void) => void;
   onThirdPartyTokenTestResult: (callback: (data: unknown) => void) => void;
+
+  // Phase 3.5.3: Persona manager event listeners
+  onPersonasUpdated: (callback: (data: unknown) => void) => void;
+  onOpenPersonaManagerWindow: (callback: () => void) => void;
 
   // Cleanup
   removeAllListeners: (channel: string) => void;
@@ -233,6 +242,22 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke('get-missing-token-warnings');
   },
 
+  // Phase 3.5.3: Persona manager operations
+  getPersonasConfig: () => {
+    console.log('📋 Getting personas configuration');
+    return ipcRenderer.invoke('get-personas-config');
+  },
+
+  savePersonasConfig: (yaml: string) => {
+    console.log('💾 Saving personas configuration');
+    return ipcRenderer.invoke('save-personas-config', { yaml });
+  },
+
+  reloadPersonas: () => {
+    console.log('🔄 Reloading personas');
+    return ipcRenderer.invoke('reload-personas');
+  },
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -328,6 +353,15 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('third-party-token-test-result', (_, data) =>
       callback(data)
     );
+  },
+
+  // Phase 3.5.3: Persona manager event listeners
+  onPersonasUpdated: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('personas-updated', (_, data) => callback(data));
+  },
+
+  onOpenPersonaManagerWindow: (callback: () => void) => {
+    ipcRenderer.on('open-persona-manager-window', () => callback());
   },
 
   onOpenSettingsWindow: (callback: () => void) => {

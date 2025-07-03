@@ -46,6 +46,11 @@ interface ElectronAPI {
   removeThirdPartyToken: (service: string) => Promise<unknown>;
   getMissingTokenWarnings: () => Promise<unknown>;
 
+  // Phase 3.5.3: Persona manager operations
+  getPersonasConfig: () => Promise<unknown>;
+  savePersonasConfig: (yaml: string) => Promise<unknown>;
+  reloadPersonas: () => Promise<unknown>;
+
   // Phase 3.1.6: Activity log operations
   getActivityLog: (options?: {
     page?: number;
@@ -87,6 +92,9 @@ interface ElectronAPI {
   // Phase 3.5.2: Third-party token event listeners
   onTokenStatusUpdated: (callback: (data: unknown) => void) => void;
   onThirdPartyTokenTestResult: (callback: (data: unknown) => void) => void;
+  // Phase 3.5.3: Persona manager event listeners
+  onPersonasUpdated: (callback: (data: unknown) => void) => void;
+  onOpenPersonaManagerWindow: (callback: () => void) => void;
   onOpenSettingsWindow: (callback: () => void) => void;
   onOpenChatWindow: (callback: () => void) => void;
   onOpenImportModalWithFile: (

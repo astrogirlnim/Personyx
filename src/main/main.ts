@@ -33,6 +33,7 @@ import { SettingsService } from './services/SettingsService';
 import { PersonyxCloudService } from './services/PersonyxCloudService';
 import { LangGraphService } from './services/LangGraphService';
 import { ActivityLogService } from './services/ActivityLogService';
+import { PersonaManagerService } from './services/PersonaManagerService';
 import { IPC_CHANNELS, PATHS, UI, URL_SCHEMES } from '@shared/constants';
 import type {
   IPCEvents,
@@ -61,6 +62,7 @@ class PersonyxApp {
   private cloudService: PersonyxCloudService | null = null;
   private langGraphService: LangGraphService | null = null;
   private activityLogService: ActivityLogService | null = null;
+  private personaManagerService: PersonaManagerService | null = null;
   private logger: Logger;
   private isAppReady = false;
   private fileToImportOnReady: {
@@ -618,6 +620,25 @@ class PersonyxApp {
       this.logger.info('⚠️ Get missing token warnings request');
       return await this.handleGetMissingTokenWarnings();
     });
+
+    // Phase 3.5.3: Persona manager IPC handlers
+    ipcMain.handle(IPC_CHANNELS.GET_PERSONAS_CONFIG, async () => {
+      this.logger.info('📋 Get personas config request');
+      return await this.handleGetPersonasConfig();
+    });
+
+    ipcMain.handle(
+      IPC_CHANNELS.SAVE_PERSONAS_CONFIG,
+      async (_, data: IPCEvents['save-personas-config']) => {
+        this.logger.info('💾 Save personas config request');
+        return await this.handleSavePersonasConfig(data.yaml);
+      }
+    );
+
+    ipcMain.handle(IPC_CHANNELS.RELOAD_PERSONAS, async () => {
+      this.logger.info('🔄 Reload personas request');
+      return await this.handleReloadPersonas();
+    });
   }
 
   /**
@@ -716,6 +737,13 @@ class PersonyxApp {
       this.logger.info('📝 Initializing activity log service...');
       this.activityLogService = new ActivityLogService();
       this.logger.info('✅ Activity log service initialized');
+
+      // Initialize persona manager service (Phase 3.5.3)
+      this.logger.info('🎭 Initializing persona manager service...');
+      this.personaManagerService = new PersonaManagerService(
+        this.activityLogService
+      );
+      this.logger.info('✅ Persona manager service initialized');
 
       // Clean and reload personas to ensure correct YAML IDs
       await this.cleanAndReloadPersonas();
@@ -2022,6 +2050,101 @@ I'd love to help you think through this from both a strategic and tactical persp
       return { warnings };
     } catch (error) {
       this.logger.error('❌ Failed to get missing token warnings', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.3: Handle get personas config request
+   */
+  private async handleGetPersonasConfig() {
+    try {
+      this.logger.info('📋 Getting personas configuration');
+
+      if (!this.personaManagerService) {
+        this.logger.warn('⚠️ PersonaManagerService not initialized');
+        throw new Error('Persona manager service not available');
+      }
+
+      const yamlContent = await this.personaManagerService.getYaml();
+
+      this.logger.info('✅ Personas configuration retrieved successfully');
+      return { yaml: yamlContent };
+    } catch (error) {
+      this.logger.error('❌ Failed to get personas configuration', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.3: Handle save personas config request
+   */
+  private async handleSavePersonasConfig(yaml: string) {
+    try {
+      this.logger.info('💾 Saving personas configuration');
+
+      if (!this.personaManagerService) {
+        this.logger.warn('⚠️ PersonaManagerService not initialized');
+        throw new Error('Persona manager service not available');
+      }
+
+      const result = await this.personaManagerService.saveYaml(yaml);
+
+      if (result.success) {
+        // Emit personas updated event to renderer
+        if (this.mainWindow) {
+          this.mainWindow.webContents.send(IPC_CHANNELS.PERSONAS_UPDATED, {
+            personas: result.personas || [],
+            success: true,
+          });
+        }
+
+        this.logger.info('✅ Personas configuration saved successfully');
+        return result;
+      } else {
+        this.logger.warn(
+          '⚠️ Failed to save personas configuration',
+          result.error
+        );
+        return result;
+      }
+    } catch (error) {
+      this.logger.error('❌ Failed to save personas configuration', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 3.5.3: Handle reload personas request
+   */
+  private async handleReloadPersonas() {
+    try {
+      this.logger.info('🔄 Reloading personas');
+
+      if (!this.personaManagerService) {
+        this.logger.warn('⚠️ PersonaManagerService not initialized');
+        throw new Error('Persona manager service not available');
+      }
+
+      const result = await this.personaManagerService.reload();
+
+      if (result.success) {
+        // Emit personas updated event to renderer
+        if (this.mainWindow) {
+          this.mainWindow.webContents.send(IPC_CHANNELS.PERSONAS_UPDATED, {
+            personas: result.personas || [],
+            success: true,
+          });
+        }
+
+        this.logger.info('✅ Personas reloaded successfully');
+        return result;
+      } else {
+        this.logger.warn('⚠️ Failed to reload personas', result.error);
+        return result;
+      }
+    } catch (error) {
+      this.logger.error('❌ Failed to reload personas', error);
       throw error;
     }
   }

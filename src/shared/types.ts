@@ -202,6 +202,12 @@ export interface IPCEvents {
     totalCount: number;
     stats: ActivityLogStats;
   };
+  // Phase 3.5.3: Persona manager events
+  'personas-updated': {
+    personas: Persona[];
+    success: boolean;
+    error?: string;
+  };
 
   // Renderer to Main
   'import-prd': {
@@ -252,6 +258,12 @@ export interface IPCEvents {
     service: string;
   };
   'get-missing-token-warnings': Record<string, never>;
+  // Phase 3.5.3: Persona manager requests
+  'get-personas-config': Record<string, never>;
+  'save-personas-config': {
+    yaml: string;
+  };
+  'reload-personas': Record<string, never>;
   'app-quit': Record<string, never>;
   // Phase 3.1.6: Activity log requests
   'get-activity-log': {
