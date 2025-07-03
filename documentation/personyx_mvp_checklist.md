@@ -103,6 +103,14 @@ _Criteria: storage & computation services, depends only on Phase 1._
 - [x] **6.5** Trigger `EvidenceScoreService.recalculateAll` and broadcast `evidence-score-updated`. ✅ COMPLETE
 - [x] **6.6** Unit & integration tests covering ingest → evidence → score delta. ✅ COMPLETE
 
+[ ] **Feature 7 – Automatic Persona Evolution**
+
+- [ ] **7.1** Analyse interview transcripts for persona attribute deltas (goals, pains, terminology).
+- [ ] **7.2** Implement `PersonaEvolutionService` that updates existing personas or creates new ones based on confidence thresholds.
+- [ ] **7.3** Extend `TranscriptIngestService` to trigger persona evolution and emit `persona-evolved` IPC events.
+- [ ] **7.4** Persist persona change history (`persona_history` table) for audit & rollback.
+- [ ] **7.5** Add unit & integration tests for transcript → persona update → hot-reload flow.
+
 ---
 
 ## Phase 3 – **Interface Layer**
@@ -188,6 +196,19 @@ _Criteria: user-facing components; each relies on Phases 1 & 2._
 - [x] **5.3** Add Persona Manager (view / edit `personas.yml`; trigger reload without restart). ✅ COMPLETE
 - [ ] **5.4** Persist dark / light theme toggle to local prefs.
 
+[ ] **Feature 6 – Evidence Insight Enhancements**
+
+- [ ] **6.1** Add "Latest Persona Feedback" card on Tray Home showing one-line takeaway per persona for the most recent PRD.
+- [ ] **6.2** Expand Evidence Score banner with a "Why this score?" collapsible panel including per-persona sub-scores & key factors.
+- [ ] **6.3** Provide a link to open full evidence quotes list from the insight panel.
+
+[ ] **Feature 7 – PRD-Aware Persona Chat**
+
+- [ ] **7.1** Add "Discuss this PRD" button in PRD detail view and Activity Log rows.
+- [ ] **7.2** Pass selected PRD context into LangGraph prompt pipeline for chat completions.
+- [ ] **7.3** Display PRD summary at the top of chat and maintain scoped context across turns.
+- [ ] **7.4** Integration tests validating PRD context injection & persona response relevance.
+
 ---
 
 ## Phase 4 – **Implementation Layer**
@@ -220,6 +241,13 @@ _Criteria: value-delivering capabilities built atop 1–3._
 - [ ] **4.2** Turn Tray badge red when any open PRD's Evidence Score < 60.
 - [ ] **4.3** Schedule a "Renewal-risk radar" job that flags missing capabilities 90 days pre-renewal.
 - [ ] **4.4** Build a _Retro Wizard_ that imports a failed feature (CSV or Jira) and quantifies wasted effort.
+
+[ ] **Feature 5 – Success Metrics Tracker**
+
+- [ ] **5.1** Define metric schema (`metrics` table`) capturing PRDs rejected and sprint-cost parameters.
+- [ ] **5.2** Implement `MetricsService` to compute "Sprints Saved" and "Features Rejected" aggregates.
+- [ ] **5.3** Add dashboard widget in Tray Home showing cumulative savings and monthly trend.
+- [ ] **5.4** Include metrics summary in weekly Slack digest (Phase 4.1) and export endpoints.
 
 ---
 
