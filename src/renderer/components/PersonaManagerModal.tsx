@@ -535,13 +535,20 @@ function VisualEditor({
   };
 
   // Calculate available height for scrollable content
-  // 75vh modal height - header (120px) - tab nav (53px) - footer+clearance (100px) - padding (27px)
-  const availableHeight = 'calc(75vh - 300px)';
+  // Base calculation: 75vh modal height - header (120px) - tab nav (53px) - footer+clearance (100px) - padding (27px)
+  // Additional dynamic clearance based on persona count to prevent footer overlap
+  const baseHeight = 300; // Base UI elements height
+  const dynamicClearance = Math.max(50, personas.length * 10); // Minimum 50px, +10px per persona
+  const totalClearance = baseHeight + dynamicClearance;
+  const availableHeight = `calc(75vh - ${totalClearance}px)`;
 
-  console.log(
-    '🎯 VisualEditor: Calculated available height with footer clearance:',
-    availableHeight
-  );
+  console.log('🎯 VisualEditor: Dynamic height calculation:', {
+    availableHeight,
+    personaCount: personas.length,
+    baseHeight,
+    dynamicClearance,
+    totalClearance,
+  });
 
   return (
     <div className="h-full flex flex-col">
@@ -567,7 +574,7 @@ function VisualEditor({
         className="overflow-y-auto"
         style={{ height: availableHeight }}
       >
-        <div className="p-6 pt-4">
+        <div className="p-6 pt-4 pb-20">
           {/* Personas List */}
           <div className="space-y-4">
             {personas.length > 0 ? (
