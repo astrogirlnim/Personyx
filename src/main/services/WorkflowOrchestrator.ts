@@ -19,6 +19,19 @@ import type { IPCEvents } from '@shared/types';
 
 const logger = new Logger('workflow-orchestrator');
 
+/**
+ * Result type for manual transcript processing
+ */
+export interface TranscriptProcessingResult {
+  success: boolean;
+  result?: {
+    fileName: string;
+    contentLength: number;
+    timestamp: Date;
+  };
+  error?: string;
+}
+
 export class WorkflowOrchestrator extends EventEmitter {
   private interviewWatcher: InterviewFolderWatcher;
   private langGraphService: LangGraphService;
@@ -266,11 +279,9 @@ export class WorkflowOrchestrator extends EventEmitter {
    * Manually process a transcript file or content for Phase 3.1.5
    * This method handles both file paths and content strings
    */
-  async processTranscriptManual(filePathOrContent: string): Promise<{
-    success: boolean;
-    result?: any;
-    error?: string;
-  }> {
+  async processTranscriptManual(
+    filePathOrContent: string
+  ): Promise<TranscriptProcessingResult> {
     logger.info('🔧 Manual transcript processing requested via IPC', {
       inputType: typeof filePathOrContent,
       inputLength: filePathOrContent.length,

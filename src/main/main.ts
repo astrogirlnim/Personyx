@@ -22,7 +22,10 @@ import { Logger } from './utils/logger';
 import { AutoUpdater } from './utils/auto-updater';
 import { initDatabase, closeDatabase } from './db/connection';
 import { testTokenVault, getToken } from './security/tokenVault';
-import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
+import {
+  WorkflowOrchestrator,
+  TranscriptProcessingResult,
+} from './services/WorkflowOrchestrator';
 import { PersonaLoader } from './services/PersonaLoader';
 import { EmbeddingRetrievalService } from './services/EmbeddingRetrievalService';
 import { SecureFileIngestService } from './services/SecureFileIngestService';
@@ -834,7 +837,7 @@ class PersonyxApp {
    */
   private async handleImportTranscript(
     filePathOrContent: string
-  ): Promise<{ success: boolean; result?: any; error?: string }> {
+  ): Promise<TranscriptProcessingResult> {
     try {
       this.logger.info(`🎤 Processing transcript import`);
 
