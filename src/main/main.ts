@@ -22,7 +22,10 @@ import { Logger } from './utils/logger';
 import { AutoUpdater } from './utils/auto-updater';
 import { initDatabase, closeDatabase } from './db/connection';
 import { testTokenVault, getToken } from './security/tokenVault';
-import { WorkflowOrchestrator } from './services/WorkflowOrchestrator';
+import {
+  WorkflowOrchestrator,
+  TranscriptProcessingResult,
+} from './services/WorkflowOrchestrator';
 import { PersonaLoader } from './services/PersonaLoader';
 import { EmbeddingRetrievalService } from './services/EmbeddingRetrievalService';
 import { SecureFileIngestService } from './services/SecureFileIngestService';
@@ -326,6 +329,15 @@ class PersonyxApp {
       async (_, data: IPCEvents['import-prd']) => {
         this.logger.info(`📄 Import PRD request`);
         return await this.handleImportPRD(data.filePath);
+      }
+    );
+
+    // Import Interview Transcript (Phase 3.1.5)
+    ipcMain.handle(
+      IPC_CHANNELS.IMPORT_TRANSCRIPT,
+      async (_, data: IPCEvents['import-transcript']) => {
+        this.logger.info(`🎤 Import transcript request`);
+        return await this.handleImportTranscript(data.filePath);
       }
     );
 
@@ -813,6 +825,65 @@ class PersonyxApp {
       }
     } catch (error) {
       this.logger.error('❌ PRD import failed', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Handle transcript import (Phase 3.1.5 - Import Interview Transcript Modal)
+   */
+  private async handleImportTranscript(
+    filePathOrContent: string
+  ): Promise<TranscriptProcessingResult> {
+    try {
+      this.logger.info(`🎤 Processing transcript import`);
+
+      // Log initial input for debugging
+      this.logger.info(`🎤 [DEBUG] Transcript input received:`, {
+        inputType: typeof filePathOrContent,
+        inputLength: filePathOrContent.length,
+        firstChars: filePathOrContent.substring(0, 100),
+        hasNewlines: filePathOrContent.includes('\n'),
+        isLikelyPath:
+          !filePathOrContent.includes('\n') && filePathOrContent.length <= 500,
+      });
+
+      if (!this.workflowOrchestrator) {
+        this.logger.warn('⚠️ WorkflowOrchestrator not initialized');
+        throw new Error('Workflow orchestrator not available');
+      }
+
+      // Use WorkflowOrchestrator to process the transcript manually
+      const result =
+        await this.workflowOrchestrator.processTranscriptManual(
+          filePathOrContent
+        );
+
+      if (result.success) {
+        this.logger.info('✅ Transcript import completed successfully', {
+          fileName: result.result?.fileName,
+          contentLength: result.result?.contentLength,
+        });
+
+        return {
+          success: true,
+          result: result.result,
+        };
+      } else {
+        this.logger.warn('⚠️ Transcript import failed', {
+          error: result.error,
+        });
+
+        return {
+          success: false,
+          error: result.error || 'Transcript import failed',
+        };
+      }
+    } catch (error) {
+      this.logger.error('❌ Transcript import failed', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

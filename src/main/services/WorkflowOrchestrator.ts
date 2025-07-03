@@ -19,6 +19,19 @@ import type { IPCEvents } from '@shared/types';
 
 const logger = new Logger('workflow-orchestrator');
 
+/**
+ * Result type for manual transcript processing
+ */
+export interface TranscriptProcessingResult {
+  success: boolean;
+  result?: {
+    fileName: string;
+    contentLength: number;
+    timestamp: Date;
+  };
+  error?: string;
+}
+
 export class WorkflowOrchestrator extends EventEmitter {
   private interviewWatcher: InterviewFolderWatcher;
   private langGraphService: LangGraphService;
@@ -259,6 +272,104 @@ export class WorkflowOrchestrator extends EventEmitter {
     } catch (error) {
       logger.error('❌ Failed to manually process transcript', error);
       return false;
+    }
+  }
+
+  /**
+   * Manually process a transcript file or content for Phase 3.1.5
+   * This method handles both file paths and content strings
+   */
+  async processTranscriptManual(
+    filePathOrContent: string
+  ): Promise<TranscriptProcessingResult> {
+    logger.info('🔧 Manual transcript processing requested via IPC', {
+      inputType: typeof filePathOrContent,
+      inputLength: filePathOrContent.length,
+      isLikelyPath:
+        !filePathOrContent.includes('\n') && filePathOrContent.length <= 500,
+    });
+
+    try {
+      let transcriptEvent: TranscriptFileEvent;
+
+      // Check if the input is a file path or file content
+      if (filePathOrContent.includes('\n') || filePathOrContent.length > 500) {
+        // Likely file content, create a TranscriptFileEvent from content
+        logger.info('📝 Processing content as transcript text');
+
+        const { writeFileSync, mkdtempSync } = await import('fs');
+        const { join } = await import('path');
+        const { tmpdir } = await import('os');
+
+        // Create a temporary file for the content
+        const tempDir = mkdtempSync(join(tmpdir(), 'personyx-transcript-'));
+        const tempFileName = `manual_transcript_${Date.now()}.md`;
+        const tempFilePath = join(tempDir, tempFileName);
+
+        writeFileSync(tempFilePath, filePathOrContent, 'utf8');
+
+        transcriptEvent = {
+          filePath: tempFilePath,
+          fileName: tempFileName,
+          content: filePathOrContent,
+          fileSize: Buffer.byteLength(filePathOrContent, 'utf8'),
+          timestamp: new Date(),
+          sourceType: 'interview',
+        };
+
+        logger.info('🗂️ Created temporary transcript event from content', {
+          fileName: tempFileName,
+          contentLength: filePathOrContent.length,
+        });
+      } else {
+        // Assume it's a file path, create TranscriptFileEvent from file
+        logger.info('📂 Processing as file path');
+
+        const { readFileSync, statSync } = await import('fs');
+        const { basename } = await import('path');
+
+        const content = readFileSync(filePathOrContent, 'utf8');
+        const stats = statSync(filePathOrContent);
+
+        transcriptEvent = {
+          filePath: filePathOrContent,
+          fileName: basename(filePathOrContent),
+          content: content.trim(),
+          fileSize: stats.size,
+          timestamp: new Date(),
+          sourceType: 'interview',
+        };
+
+        logger.info('🗂️ Created transcript event from file path', {
+          fileName: transcriptEvent.fileName,
+          contentLength: content.length,
+        });
+      }
+
+      // Process the transcript using the existing pipeline
+      await this.processTranscriptWithIngestService(transcriptEvent, 'manual');
+
+      logger.info('✅ Manual transcript processing completed successfully', {
+        fileName: transcriptEvent.fileName,
+      });
+
+      return {
+        success: true,
+        result: {
+          fileName: transcriptEvent.fileName,
+          contentLength: transcriptEvent.content.length,
+          timestamp: transcriptEvent.timestamp,
+        },
+      };
+    } catch (error) {
+      logger.error('❌ Manual transcript processing failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
